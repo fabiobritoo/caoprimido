@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
 
     res.status(200).json({ ok: true });
   } catch (erro) {
-    console.error(erro);
-    res.status(500).json({ erro: 'Erro ao salvar inscrição' });
+    console.error('Erro em /api/subscribe:', erro);
+    res.status(500).json({ erro: 'Erro ao salvar inscrição', detalhe: erro.message });
   }
 };
