@@ -19,6 +19,31 @@ async function avisarCuidador(config, nomeRemedio, horario) {
   }
 }
 
+// Escolhe título/corpo de acordo com quanto tempo já passou sem confirmação —
+// fica mais "urgente" a cada reenvio, pra reforçar a insistência
+function montarMensagemEscalonada(nomeRemedio, dosagem, atrasoMs) {
+  const min = atrasoMs / 60000;
+  if (min < 5) {
+    return { titulo: `Hora de tomar: ${nomeRemedio}`, corpo: dosagem || '' };
+  }
+  if (min < 10) {
+    return {
+      titulo: `⚠️ Remédio pendente: ${nomeRemedio}`,
+      corpo: 'Você ainda não confirmou essa dose.',
+    };
+  }
+  if (min < 20) {
+    return {
+      titulo: `🚨 Atenção: ${nomeRemedio}`,
+      corpo: 'Essa dose ainda não foi confirmada.',
+    };
+  }
+  return {
+    titulo: `🔴 Dose atrasada: ${nomeRemedio}`,
+    corpo: 'Confirme se já tomou esse remédio.',
+  };
+}
+
 export default async function handler(req, res) {
   try {
     const chaveEnviada = req.headers['x-chave-cron'] || req.query.chave;
@@ -93,11 +118,12 @@ export default async function handler(req, res) {
         }
 
         try {
+          const { titulo, corpo } = montarMensagemEscalonada(remedio.nome, remedio.dosagem, atrasoMs);
           await webpush.sendNotification(
             subscription,
             JSON.stringify({
-              titulo: `Hora de tomar: ${remedio.nome}`,
-              corpo: remedio.dosagem || '',
+              titulo,
+              corpo,
               remedioId: remedio.id,
               dia: hoje,
               horario,
