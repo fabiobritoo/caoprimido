@@ -31,8 +31,9 @@ jobs:
 
       - name: Baixa o APK gerado
         run: |
-          BUILD_ID=$(eas build:list --platform android --limit 1 --json --non-interactive | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d)[0].id))")
-          eas build:download --id "$BUILD_ID" --output ./caoprimido.apk
+          ARTIFACT_URL=$(eas build:list --platform android --status finished --limit 1 --json --non-interactive | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>{const b=JSON.parse(d)[0];console.log(b.artifacts.buildUrl);})")
+          echo "Baixando de: $ARTIFACT_URL"
+          curl -L -o ./caoprimido.apk "$ARTIFACT_URL"
 
       - name: Cria uma Release no GitHub com o APK anexado
         uses: softprops/action-gh-release@v2
