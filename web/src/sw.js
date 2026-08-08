@@ -11,15 +11,30 @@ self.addEventListener('push', (evento) => {
   }
 
   evento.waitUntil(
-    self.registration.showNotification(dados.titulo, {
-      body: dados.corpo,
-      icon: '/icon-192.png',
-      badge: '/icon-192.png',
-      vibrate: [300, 150, 300, 150, 300, 150, 300],
-      requireInteraction: true,
-      tag: `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}`,
-      data: dados, // guarda pra usar quando o usuário tocar ou limpar
-    })
+    (async () => {
+      await self.registration.showNotification(dados.titulo, {
+        body: dados.corpo,
+        icon: '/icon-192.png',
+        badge: '/icon-192.png',
+        vibrate: [300, 150, 300, 150, 300, 150, 300],
+        requireInteraction: true,
+        tag: `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}`,
+        data: dados,
+      });
+
+      // atualiza o selo/contador no ícone do app, se o navegador suportar
+      if ('setAppBadge' in self.registration && typeof dados.badge === 'number') {
+        try {
+          if (dados.badge > 0) {
+            await self.registration.setAppBadge(dados.badge);
+          } else {
+            await self.registration.clearAppBadge();
+          }
+        } catch (e) {
+          // sem suporte, ignora
+        }
+      }
+    })()
   );
 });
 

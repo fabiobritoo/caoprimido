@@ -27,8 +27,8 @@ function base64ParaUint8Array(base64) {
 }
 
 // Inscreve o dispositivo pra receber notificações mesmo com o app fechado,
-// e envia a lista atual de remédios pro servidor conseguir avisar na hora certa.
-export async function sincronizarNotificacoesServidor(deviceId, remedios) {
+// e envia a lista atual de remédios (+ configurações) pro servidor.
+export async function sincronizarNotificacoesServidor(deviceId, remedios, configuracoes) {
   if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
 
   try {
@@ -47,7 +47,7 @@ export async function sincronizarNotificacoesServidor(deviceId, remedios) {
     await fetch('/api/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, subscription, remedios }),
+      body: JSON.stringify({ deviceId, subscription, remedios, configuracoes }),
     });
   } catch (e) {
     console.error('Falha ao sincronizar notificações com o servidor', e);

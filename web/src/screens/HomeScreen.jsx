@@ -16,6 +16,8 @@ import {
 import { CORES } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
+import { calcularSequenciaDias } from '../utils/streak.js';
+import { atualizarSeloLocal } from '../utils/selo.js';
 
 const HOJE = formatarData(new Date());
 
@@ -24,6 +26,7 @@ export default function HomeScreen() {
   const [remedios, setRemedios] = useState([]);
   const [registros, setRegistros] = useState({});
   const [diaSelecionado, setDiaSelecionado] = useState(HOJE);
+  const [sequenciaDias, setSequenciaDias] = useState(0);
 
   const diasDaSemana = diasDaSemanaAtualSegunda();
 
@@ -32,6 +35,8 @@ export default function HomeScreen() {
     const regs = await obterRegistros();
     setRemedios(lista);
     setRegistros(regs);
+    setSequenciaDias(calcularSequenciaDias(lista, regs));
+    atualizarSeloLocal(lista, regs);
   }, []);
 
   useEffect(() => {
@@ -64,6 +69,8 @@ export default function HomeScreen() {
     const resultado = await alternarDose(item.remedio, diaSelecionado, item.horario);
     setRemedios(resultado.remedios);
     setRegistros(resultado.registros);
+    setSequenciaDias(calcularSequenciaDias(resultado.remedios, resultado.registros));
+    atualizarSeloLocal(resultado.remedios, resultado.registros);
 
     // se acabou de marcar como tomado, avisa o servidor pra parar de reenviar alarme
     if (resultado.tomadoAgora) {
@@ -115,6 +122,12 @@ export default function HomeScreen() {
           );
         })}
       </div>
+
+      {sequenciaDias > 0 && (
+        <div style={estilos.faixaStreak}>
+          🔥 {sequenciaDias} {sequenciaDias === 1 ? 'dia seguido' : 'dias seguidos'} em dia!
+        </div>
+      )}
 
       <div style={{ padding: 16 }}>
         {dosesDoDia.length > 0 && (
@@ -188,6 +201,10 @@ export default function HomeScreen() {
         <span onClick={() => navigate('/diagnostico')} style={estilos.linkDiagnostico}>
           diagnóstico
         </span>
+        {' · '}
+        <span onClick={() => navigate('/configuracoes')} style={estilos.linkDiagnostico}>
+          config
+        </span>
       </div>
     </div>
   );
@@ -225,6 +242,14 @@ const estilos = {
   },
   diaCirculoSelecionado: { backgroundColor: CORES.primaria, color: '#fff' },
   diaCirculoHoje: { border: `2px solid ${CORES.primaria}` },
+  faixaStreak: {
+    textAlign: 'center',
+    backgroundColor: CORES.primariaClara,
+    color: CORES.primariaEscura,
+    fontWeight: 600,
+    fontSize: 14,
+    padding: '10px 0',
+  },
   cabecalhoLista: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 },
   mascoteCabecalho: { width: 130, height: 130, objectFit: 'contain' },
   textoParabens: { fontSize: 16, fontWeight: 700, color: CORES.primariaEscura, marginTop: -6 },

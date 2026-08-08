@@ -44,6 +44,30 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
     aoFechar();
   }
 
+  async function adiar() {
+    pararAlarme();
+
+    if (remedioId && dia && horario) {
+      try {
+        await fetch('/api/soneca', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deviceId: obterIdDispositivo(),
+            remedioId,
+            dia,
+            horario,
+            minutos: 10,
+          }),
+        });
+      } catch (e) {
+        console.error('Erro ao adiar', e);
+      }
+    }
+
+    aoFechar();
+  }
+
   return (
     <div style={estilos.container}>
       <div style={estilos.iconeAlarme}>⏰</div>
@@ -52,6 +76,10 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
 
       <button onClick={confirmarETomei} style={estilos.botaoParar}>
         Já tomei — Parar alarme
+      </button>
+
+      <button onClick={adiar} style={estilos.botaoAdiar}>
+        Adiar 10 min
       </button>
     </div>
   );
@@ -82,5 +110,15 @@ const estilos = {
     fontSize: 18,
     fontWeight: 700,
     boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+  },
+  botaoAdiar: {
+    backgroundColor: 'transparent',
+    color: '#fff',
+    border: '2px solid rgba(255,255,255,0.6)',
+    borderRadius: 14,
+    padding: '14px 28px',
+    fontSize: 15,
+    fontWeight: 600,
+    marginTop: 14,
   },
 };

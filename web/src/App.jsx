@@ -4,6 +4,7 @@ import HomeScreen from './screens/HomeScreen.jsx';
 import AddMedicineScreen from './screens/AddMedicineScreen.jsx';
 import ManageMedicinesScreen from './screens/ManageMedicinesScreen.jsx';
 import DiagnosticoScreen from './screens/DiagnosticoScreen.jsx';
+import ConfiguracoesScreen from './screens/ConfiguracoesScreen.jsx';
 import TelaAlarme from './components/TelaAlarme.jsx';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
 import { listarRemedios, obterRegistros, doseTomada, obterIdDispositivo } from './utils/storage.js';
@@ -93,6 +94,7 @@ export default function App() {
           <Route path="/editar/:id" element={<AddMedicineScreen />} />
           <Route path="/meus-remedios" element={<ManageMedicinesScreen />} />
           <Route path="/diagnostico" element={<DiagnosticoScreen />} />
+          <Route path="/configuracoes" element={<ConfiguracoesScreen />} />
         </Routes>
       </HashRouter>
     </>

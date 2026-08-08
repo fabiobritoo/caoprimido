@@ -2,8 +2,22 @@ import { kv } from '@vercel/kv';
 import webpush from 'web-push';
 import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso } from './_logica.js';
 
-const INTERVALO_REENVIO_MS = 3 * 60 * 1000; // reenvia a cada 3 minutos
-const JANELA_MAXIMA_MS = 30 * 60 * 1000; // desiste depois de 30 minutos sem confirmação
+const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
+const JANELA_MAXIMA_MS = 30 * 60 * 1000;
+const LIMIAR_AVISO_CUIDADOR_MS = 15 * 60 * 1000;
+
+async function avisarCuidador(config, nomeRemedio, horario) {
+  if (!config?.cuidadorAtivo || !config.cuidadorTelefone || !config.cuidadorApiKey) return;
+  const texto = encodeURIComponent(
+    `⚠️ Cãoprimido: a dose de "${nomeRemedio}" das ${horario} ainda não foi confirmada.`
+  );
+  const url = `https://api.callmebot.com/whatsapp.php?phone=${config.cuidadorTelefone}&text=${texto}&apikey=${config.cuidadorApiKey}`;
+  try {
+    await fetch(url);
+  } catch (e) {
+    console.error('Falha ao avisar cuidador:', e.message);
+  }
+}
 
 export default async function handler(req, res) {
   try {
@@ -32,55 +46,75 @@ export default async function handler(req, res) {
     let notificacoesEnviadas = 0;
 
     for (const deviceId of idsDispositivos) {
-      const dados = await kv.get(`dispositivo:${deviceId}`);
-      if (!dados || !dados.subscription) continue;
+      const dadosDispositivo = await kv.get(`dispositivo:${deviceId}`);
+      if (!dadosDispositivo || !dadosDispositivo.subscription) continue;
 
-      const { remedios = [], subscription } = dados;
+      const { remedios = [], subscription, configuracoes } = dadosDispositivo;
 
+      // Primeiro: descobre todas as doses de hoje já vencidas e não confirmadas
+      // (usado tanto pro selo/contador quanto pra decidir o que reenviar)
+      const dosesPendentes = [];
       for (const remedio of remedios) {
         if (!remedioAplicavelNoDia(remedio.frequencia, hoje)) continue;
-
         for (const horario of remedio.horarios || []) {
-          // só considera horários que já chegaram (não futuros)
           if (horario > horaAtual) continue;
 
           const chaveBase = `${deviceId}:${remedio.id}:${hoje}:${horario}`;
-
-          // já foi confirmado como tomado? não incomoda mais
           const reconhecido = await kv.get(`reconhecido:${chaveBase}`);
           if (reconhecido) continue;
 
-          // calcula quanto tempo já passou desde o horário agendado (sempre no fuso do Brasil)
           const atrasoMs = minutosDeAtraso(horario, horaAtual) * 60000;
-          if (atrasoMs > JANELA_MAXIMA_MS) continue; // desiste, passou muito tempo
+          dosesPendentes.push({ remedio, horario, chaveBase, atrasoMs });
+        }
+      }
 
-          const estado = await kv.get(`estado:${chaveBase}`);
+      const contadorPendente = dosesPendentes.length;
+
+      for (const { remedio, horario, chaveBase, atrasoMs } of dosesPendentes) {
+        // avisa o cuidador uma única vez, depois de X minutos sem confirmação
+        if (atrasoMs >= LIMIAR_AVISO_CUIDADOR_MS) {
+          const jaAvisouCuidador = await kv.get(`avisouCuidador:${chaveBase}`);
+          if (!jaAvisouCuidador) {
+            await avisarCuidador(configuracoes, remedio.nome, horario);
+            await kv.set(`avisouCuidador:${chaveBase}`, true, { ex: 172800 });
+          }
+        }
+
+        if (atrasoMs > JANELA_MAXIMA_MS) continue; // desiste de reenviar push, mas o aviso ao cuidador já foi
+
+        const estado = await kv.get(`estado:${chaveBase}`);
+
+        // respeita um adiamento manual ("soneca"), se houver
+        if (estado?.proximoEnvioForcado && agoraMs < estado.proximoEnvioForcado) continue;
+
+        if (!estado?.proximoEnvioForcado) {
           const ultimoEnvio = estado?.ultimoEnvio || 0;
-          if (agoraMs - ultimoEnvio < INTERVALO_REENVIO_MS) continue; // ainda não é hora de reenviar
+          if (agoraMs - ultimoEnvio < INTERVALO_REENVIO_MS) continue;
+        }
 
-          try {
-            await webpush.sendNotification(
-              subscription,
-              JSON.stringify({
-                titulo: `Hora de tomar: ${remedio.nome}`,
-                corpo: remedio.dosagem || '',
-                remedioId: remedio.id,
-                dia: hoje,
-                horario,
-              })
-            );
-            notificacoesEnviadas++;
-            await kv.set(
-              `estado:${chaveBase}`,
-              { ultimoEnvio: agoraMs, tentativas: (estado?.tentativas || 0) + 1 },
-              { ex: 3600 }
-            );
-          } catch (erroEnvio) {
-            console.error('Falha ao enviar push para', deviceId, erroEnvio.message);
-            if (erroEnvio.statusCode === 404 || erroEnvio.statusCode === 410) {
-              await kv.del(`dispositivo:${deviceId}`);
-              await kv.srem('dispositivos', deviceId);
-            }
+        try {
+          await webpush.sendNotification(
+            subscription,
+            JSON.stringify({
+              titulo: `Hora de tomar: ${remedio.nome}`,
+              corpo: remedio.dosagem || '',
+              remedioId: remedio.id,
+              dia: hoje,
+              horario,
+              badge: contadorPendente,
+            })
+          );
+          notificacoesEnviadas++;
+          await kv.set(
+            `estado:${chaveBase}`,
+            { ultimoEnvio: agoraMs, tentativas: (estado?.tentativas || 0) + 1 },
+            { ex: 3600 }
+          );
+        } catch (erroEnvio) {
+          console.error('Falha ao enviar push para', deviceId, erroEnvio.message);
+          if (erroEnvio.statusCode === 404 || erroEnvio.statusCode === 410) {
+            await kv.del(`dispositivo:${deviceId}`);
+            await kv.srem('dispositivos', deviceId);
           }
         }
       }
