@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listarRemedios, removerRemedio } from '../utils/storage.js';
+import { listarRemedios, removerRemedio, obterIdDispositivo } from '../utils/storage.js';
+import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { rotuloUnidade, descreverFrequencia } from '../utils/constantes.js';
 import { CORES } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -19,7 +20,9 @@ export default function ManageMedicinesScreen() {
 
   async function excluir(remedio) {
     if (!confirm(`Excluir "${remedio.nome}"?`)) return;
-    setRemedios(await removerRemedio(remedio.id));
+    const novaLista = await removerRemedio(remedio.id);
+    setRemedios(novaLista);
+    await sincronizarNotificacoesServidor(obterIdDispositivo(), novaLista);
   }
 
   return (

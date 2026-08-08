@@ -3,8 +3,8 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import HomeScreen from './screens/HomeScreen.jsx';
 import AddMedicineScreen from './screens/AddMedicineScreen.jsx';
 import ManageMedicinesScreen from './screens/ManageMedicinesScreen.jsx';
-import { pedirPermissaoNotificacao, mostrarNotificacao } from './utils/notifications.js';
-import { listarRemedios, obterRegistros, doseTomada } from './utils/storage.js';
+import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
+import { listarRemedios, obterRegistros, doseTomada, obterIdDispositivo } from './utils/storage.js';
 import { remedioAplicavelNoDia, formatarData } from './utils/constantes.js';
 
 export default function App() {
@@ -12,6 +12,12 @@ export default function App() {
 
   useEffect(() => {
     pedirPermissaoNotificacao();
+
+    (async () => {
+      const deviceId = obterIdDispositivo();
+      const remedios = await listarRemedios();
+      await sincronizarNotificacoesServidor(deviceId, remedios);
+    })();
 
     const verificar = async () => {
       const agora = new Date();

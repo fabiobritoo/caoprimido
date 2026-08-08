@@ -1,0 +1,29 @@
+const { kv } = require('@vercel/kv');
+
+module.exports = async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ erro: 'Método não permitido' });
+  }
+
+  try {
+    const { deviceId, subscription, remedios } = req.body;
+
+    if (!deviceId || !subscription) {
+      return res.status(400).json({ erro: 'Faltam dados obrigatórios' });
+    }
+
+    await kv.set(`dispositivo:${deviceId}`, {
+      subscription,
+      remedios: remedios || [],
+      atualizadoEm: Date.now(),
+    });
+
+    // mantém um índice de todos os dispositivos cadastrados
+    await kv.sadd('dispositivos', deviceId);
+
+    res.status(200).json({ ok: true });
+  } catch (erro) {
+    console.error(erro);
+    res.status(500).json({ erro: 'Erro ao salvar inscrição' });
+  }
+};

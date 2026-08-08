@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { adicionarRemedio, atualizarRemedio, listarRemedios } from '../utils/storage.js';
+import { adicionarRemedio, atualizarRemedio, listarRemedios, obterIdDispositivo } from '../utils/storage.js';
+import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { UNIDADES, DIAS_SEMANA, formatarData } from '../utils/constantes.js';
 import { CORES } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -116,6 +117,9 @@ export default function AddMedicineScreen() {
     } else {
       await adicionarRemedio({ id: Date.now().toString(), ...dadosRemedio });
     }
+
+    const listaAtualizada = await listarRemedios();
+    await sincronizarNotificacoesServidor(obterIdDispositivo(), listaAtualizada);
 
     setSalvando(false);
     navigate(-1);
