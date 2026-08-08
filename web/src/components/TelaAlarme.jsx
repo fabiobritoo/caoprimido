@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
 import { CORES } from '../utils/tema.js';
 import { iniciarAlarme, pararAlarme } from '../utils/somAlarme.js';
+import { listarRemedios, alternarDose, doseTomada, obterRegistros, obterIdDispositivo } from '../utils/storage.js';
 
-export default function TelaAlarme({ titulo, corpo, aoFechar }) {
+export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoFechar }) {
   useEffect(() => {
     iniciarAlarme();
     if (navigator.vibrate) {
@@ -11,8 +12,35 @@ export default function TelaAlarme({ titulo, corpo, aoFechar }) {
     return () => pararAlarme();
   }, []);
 
-  function pararEFechar() {
+  async function confirmarETomei() {
     pararAlarme();
+
+    // marca a dose como tomada de verdade (se tivermos os dados pra isso)
+    if (remedioId && dia && horario) {
+      try {
+        const remedios = await listarRemedios();
+        const remedio = remedios.find((r) => r.id === remedioId);
+        const registros = await obterRegistros();
+        const jaMarcado = remedio && doseTomada(registros, remedioId, dia, horario);
+        if (remedio && !jaMarcado) {
+          await alternarDose(remedio, dia, horario);
+        }
+      } catch (e) {
+        console.error('Erro ao marcar dose como tomada', e);
+      }
+
+      // avisa o servidor pra parar de reenviar essa notificação
+      try {
+        await fetch('/api/reconhecer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deviceId: obterIdDispositivo(), remedioId, dia, horario }),
+        });
+      } catch (e) {
+        console.error('Erro ao confirmar com o servidor', e);
+      }
+    }
+
     aoFechar();
   }
 
@@ -22,7 +50,7 @@ export default function TelaAlarme({ titulo, corpo, aoFechar }) {
       <div style={estilos.titulo}>{titulo}</div>
       {corpo && <div style={estilos.corpo}>{corpo}</div>}
 
-      <button onClick={pararEFechar} style={estilos.botaoParar}>
+      <button onClick={confirmarETomei} style={estilos.botaoParar}>
         Já tomei — Parar alarme
       </button>
     </div>

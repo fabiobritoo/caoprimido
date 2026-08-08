@@ -19,6 +19,9 @@ export default function App() {
       setAlarmeAtivo({
         titulo: parametros.get('titulo') || 'Hora do remédio',
         corpo: parametros.get('corpo') || '',
+        remedioId: parametros.get('remedioId') || null,
+        dia: parametros.get('dia') || null,
+        horario: parametros.get('horario') || null,
       });
       // limpa a URL pra não reabrir o alarme se recarregar a página
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
@@ -54,7 +57,13 @@ export default function App() {
 
           jaAvisados.current.add(chave);
           mostrarNotificacao(`Hora de tomar: ${remedio.nome}`, remedio.dosagem || '');
-          setAlarmeAtivo({ titulo: `Hora de tomar: ${remedio.nome}`, corpo: remedio.dosagem || '' });
+          setAlarmeAtivo({
+            titulo: `Hora de tomar: ${remedio.nome}`,
+            corpo: remedio.dosagem || '',
+            remedioId: remedio.id,
+            dia: hoje,
+            horario,
+          });
         }
       }
     };
@@ -70,6 +79,9 @@ export default function App() {
         <TelaAlarme
           titulo={alarmeAtivo.titulo}
           corpo={alarmeAtivo.corpo}
+          remedioId={alarmeAtivo.remedioId}
+          dia={alarmeAtivo.dia}
+          horario={alarmeAtivo.horario}
           aoFechar={() => setAlarmeAtivo(null)}
         />
       )}

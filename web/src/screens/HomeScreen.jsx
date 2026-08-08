@@ -5,6 +5,7 @@ import {
   obterRegistros,
   doseTomada,
   alternarDose,
+  obterIdDispositivo,
 } from '../utils/storage.js';
 import {
   rotuloUnidade,
@@ -63,6 +64,20 @@ export default function HomeScreen() {
     const resultado = await alternarDose(item.remedio, diaSelecionado, item.horario);
     setRemedios(resultado.remedios);
     setRegistros(resultado.registros);
+
+    // se acabou de marcar como tomado, avisa o servidor pra parar de reenviar alarme
+    if (resultado.tomadoAgora) {
+      fetch('/api/reconhecer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deviceId: obterIdDispositivo(),
+          remedioId: item.remedio.id,
+          dia: diaSelecionado,
+          horario: item.horario,
+        }),
+      }).catch(() => {});
+    }
   }
 
   return (

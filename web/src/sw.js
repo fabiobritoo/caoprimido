@@ -17,30 +17,41 @@ self.addEventListener('push', (evento) => {
       badge: '/icon-192.png',
       vibrate: [300, 150, 300, 150, 300, 150, 300],
       requireInteraction: true,
-      data: dados, // guarda pra usar quando o usuário tocar
+      tag: `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}`,
+      data: dados, // guarda pra usar quando o usuário tocar ou limpar
     })
   );
 });
 
-self.addEventListener('notificationclick', (evento) => {
-  evento.notification.close();
-
-  const dados = evento.notification.data || {};
+function abrirTelaAlarme(dados) {
   const parametros = new URLSearchParams({
     alarme: '1',
     titulo: dados.titulo || 'Hora do remédio',
     corpo: dados.corpo || '',
+    remedioId: dados.remedioId || '',
+    dia: dados.dia || '',
+    horario: dados.horario || '',
   });
   const urlAlvo = `/?${parametros.toString()}`;
 
-  evento.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
-      for (const cliente of listaClientes) {
-        // já tem uma janela aberta: navega ela pra tela de alarme e foca
-        cliente.navigate(urlAlvo);
-        return cliente.focus();
-      }
-      return self.clients.openWindow(urlAlvo);
-    })
-  );
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
+    for (const cliente of listaClientes) {
+      cliente.navigate(urlAlvo);
+      return cliente.focus();
+    }
+    return self.clients.openWindow(urlAlvo);
+  });
+}
+
+// Usuário tocou na notificação
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  evento.waitUntil(abrirTelaAlarme(evento.notification.data || {}));
+});
+
+// Usuário limpou/dispensou a notificação sem tocar (ex: "limpar tudo")
+// Em alguns navegadores/sistemas isso pode não conseguir abrir a tela
+// automaticamente por restrição de segurança, mas tentamos mesmo assim.
+self.addEventListener('notificationclose', (evento) => {
+  evento.waitUntil(abrirTelaAlarme(evento.notification.data || {}));
 });
