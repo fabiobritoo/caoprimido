@@ -7,6 +7,7 @@ import HomeScreen from './src/screens/HomeScreen';
 import AddMedicineScreen from './src/screens/AddMedicineScreen';
 import ManageMedicinesScreen from './src/screens/ManageMedicinesScreen';
 import { pedirPermissoes } from './src/utils/notifications';
+import { CORES } from './src/utils/tema';
 
 const Stack = createNativeStackNavigator();
 
@@ -17,8 +18,14 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      <StatusBar style="auto" />
-      <Stack.Navigator>
+      <StatusBar style="light" />
+      <Stack.Navigator
+        screenOptions={{
+          headerStyle: { backgroundColor: CORES.primaria },
+          headerTintColor: '#fff',
+          headerTitleStyle: { fontWeight: '700' },
+        }}
+      >
         <Stack.Screen
           name="Home"
           component={HomeScreen}

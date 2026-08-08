@@ -11,6 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { listarRemedios, removerRemedio } from '../utils/storage';
 import { cancelarAlarmes } from '../utils/notifications';
 import { rotuloUnidade, descreverFrequencia } from '../utils/constantes';
+import { CORES } from '../utils/tema';
 
 export default function ManageMedicinesScreen({ navigation }) {
   const [remedios, setRemedios] = useState([]);
@@ -83,7 +84,7 @@ export default function ManageMedicinesScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA' },
+  container: { flex: 1, backgroundColor: CORES.fundo },
   card: {
     backgroundColor: '#fff',
     borderRadius: 12,
@@ -99,14 +100,14 @@ const styles = StyleSheet.create({
   nome: { fontSize: 18, fontWeight: '600' },
   detalhe: { color: '#666', marginTop: 2, fontSize: 13 },
   acoes: { alignItems: 'flex-end' },
-  editar: { color: '#4A90D9', fontSize: 13, fontWeight: '600', marginBottom: 10 },
-  excluir: { color: '#D9534F', fontSize: 13 },
+  editar: { color: CORES.primaria, fontSize: 13, fontWeight: '600', marginBottom: 10 },
+  excluir: { color: CORES.perigo, fontSize: 13 },
   vazio: { textAlign: 'center', marginTop: 40, color: '#999' },
   botaoAdicionar: {
     position: 'absolute',
     right: 20,
     bottom: 30,
-    backgroundColor: '#4A90D9',
+    backgroundColor: CORES.primaria,
     width: 56,
     height: 56,
     borderRadius: 28,

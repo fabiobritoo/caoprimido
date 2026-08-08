@@ -13,6 +13,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { adicionarRemedio, atualizarRemedio, listarRemedios } from '../utils/storage';
 import { agendarAlarmesRemedio, cancelarAlarmes, pedirPermissoes } from '../utils/notifications';
 import { UNIDADES, DIAS_SEMANA, formatarData } from '../utils/constantes';
+import { CORES } from '../utils/tema';
 
 const FREQUENCIAS = [
   { valor: 'diaria', rotulo: 'Todos os dias' },
@@ -359,12 +360,12 @@ const styles = StyleSheet.create({
   },
   botaoSecundario: {
     borderWidth: 1,
-    borderColor: '#4A90D9',
+    borderColor: CORES.primaria,
     borderRadius: 8,
     padding: 10,
     alignItems: 'center',
   },
-  botaoSecundarioTexto: { color: '#4A90D9', fontWeight: '600' },
+  botaoSecundarioTexto: { color: CORES.primaria, fontWeight: '600' },
   listaHorarios: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
   chip: {
     backgroundColor: '#EAF2FB',
@@ -374,7 +375,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  chipTexto: { color: '#4A90D9', fontWeight: '600' },
+  chipTexto: { color: CORES.primaria, fontWeight: '600' },
   opcoesLinha: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 4 },
   opcaoChip: {
     borderWidth: 1,
@@ -385,7 +386,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  opcaoChipSelecionada: { backgroundColor: '#4A90D9', borderColor: '#4A90D9' },
+  opcaoChipSelecionada: { backgroundColor: CORES.primaria, borderColor: CORES.primaria },
   opcaoChipTexto: { color: '#444' },
   opcaoChipTextoSelecionado: { color: '#fff', fontWeight: '600' },
   opcaoLinhaRadio: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
@@ -397,7 +398,7 @@ const styles = StyleSheet.create({
     borderColor: '#AAA',
     marginRight: 10,
   },
-  radioCirculoSelecionado: { borderColor: '#4A90D9', backgroundColor: '#4A90D9' },
+  radioCirculoSelecionado: { borderColor: CORES.primaria, backgroundColor: CORES.primaria },
   radioTexto: { fontSize: 15 },
   diaCirculo: {
     width: 40,
@@ -410,11 +411,11 @@ const styles = StyleSheet.create({
     marginRight: 8,
     marginBottom: 8,
   },
-  diaCirculoSelecionado: { backgroundColor: '#4A90D9', borderColor: '#4A90D9' },
+  diaCirculoSelecionado: { backgroundColor: CORES.primaria, borderColor: CORES.primaria },
   diaCirculoTexto: { color: '#444', fontWeight: '600' },
   diaCirculoTextoSelecionado: { color: '#fff' },
   botaoSalvar: {
-    backgroundColor: '#4A90D9',
+    backgroundColor: CORES.primaria,
     borderRadius: 10,
     padding: 16,
     alignItems: 'center',

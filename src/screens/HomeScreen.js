@@ -2,6 +2,7 @@ import React, { useState, useCallback, useLayoutEffect } from 'react';
 import {
   View,
   Text,
+  Image,
   FlatList,
   TouchableOpacity,
   StyleSheet,
@@ -22,8 +23,14 @@ import {
   remedioAplicavelNoDia,
   formatarData,
 } from '../utils/constantes';
+import { CORES } from '../utils/tema';
 
 const HOJE = formatarData(new Date());
+
+const MASCOTE_HORA_REMEDIO = require('../../assets/nina/mascote-hora-remedio.png');
+const MASCOTE_DORMINDO = require('../../assets/nina/mascote-dormindo.png');
+const MASCOTE_PARABENS = require('../../assets/nina/mascote-parabens.png');
+const NINA_LAMBENDO_GIF = require('../../assets/nina/nina-lambendo.gif');
 
 export default function HomeScreen({ navigation }) {
   const [remedios, setRemedios] = useState([]);
@@ -34,12 +41,14 @@ export default function HomeScreen({ navigation }) {
 
   useLayoutEffect(() => {
     navigation.setOptions({
+      headerStyle: { backgroundColor: CORES.primaria },
+      headerTintColor: '#fff',
       headerRight: () => (
         <TouchableOpacity
           onPress={() => navigation.navigate('GerenciarRemedios')}
           style={{ marginRight: 12 }}
         >
-          <Text style={{ color: '#4A90D9', fontWeight: '600' }}>Meus remédios</Text>
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Meus remédios</Text>
         </TouchableOpacity>
       ),
     });
@@ -74,6 +83,7 @@ export default function HomeScreen({ navigation }) {
   dosesDoDia.sort((a, b) => a.horario.localeCompare(b.horario));
 
   const diaEhFuturo = diaSelecionado > HOJE;
+  const todasTomadas = dosesDoDia.length > 0 && dosesDoDia.every((d) => d.tomado);
 
   async function alternarDoseItem(item) {
     if (diaEhFuturo) return;
@@ -169,15 +179,39 @@ export default function HomeScreen({ navigation }) {
         keyExtractor={(item) => `${item.remedio.id}-${item.horario}`}
         renderItem={renderDoseItem}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        ListHeaderComponent={
+          dosesDoDia.length > 0 ? (
+            <View style={styles.cabecalhoLista}>
+              <Image
+                source={todasTomadas ? MASCOTE_PARABENS : MASCOTE_HORA_REMEDIO}
+                style={styles.mascoteCabecalho}
+                resizeMode="contain"
+              />
+              {todasTomadas && (
+                <Text style={styles.textoParabens}>Tudo em dia por hoje! 🎉</Text>
+              )}
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.vazioContainer}>
-            <Text style={styles.vazioEmoji}>💊</Text>
+            <Image
+              source={MASCOTE_DORMINDO}
+              style={styles.mascoteVazio}
+              resizeMode="contain"
+            />
             <Text style={styles.vazioTexto}>
               Nenhum remédio agendado para esse dia.
             </Text>
           </View>
         }
       />
+
+      {todasTomadas && (
+        <View style={styles.gifCantoContainer} pointerEvents="none">
+          <Image source={NINA_LAMBENDO_GIF} style={styles.gifCanto} />
+        </View>
+      )}
 
       <TouchableOpacity
         style={styles.botaoAdicionar}
@@ -190,18 +224,18 @@ export default function HomeScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F5F7FA' },
+  container: { flex: 1, backgroundColor: CORES.fundo },
   faixaSemana: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: CORES.fundoCard,
     paddingVertical: 14,
     paddingHorizontal: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#EEE',
+    borderBottomColor: CORES.borda,
   },
   diaColuna: { alignItems: 'center', width: 40 },
-  diaAbrev: { fontSize: 11, color: '#888', marginBottom: 6 },
+  diaAbrev: { fontSize: 11, color: CORES.textoSecundario, marginBottom: 6 },
   diaCirculo: {
     width: 34,
     height: 34,
@@ -209,12 +243,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  diaCirculoSelecionado: { backgroundColor: '#4A90D9' },
-  diaCirculoHoje: { borderWidth: 2, borderColor: '#4A90D9' },
-  diaNumero: { fontSize: 15, fontWeight: '600', color: '#333' },
+  diaCirculoSelecionado: { backgroundColor: CORES.primaria },
+  diaCirculoHoje: { borderWidth: 2, borderColor: CORES.primaria },
+  diaNumero: { fontSize: 15, fontWeight: '600', color: CORES.textoPrincipal },
   diaNumeroSelecionado: { color: '#fff' },
+  cabecalhoLista: { alignItems: 'center', marginBottom: 12 },
+  mascoteCabecalho: { width: 130, height: 130 },
+  textoParabens: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: CORES.primariaEscura,
+    marginTop: -6,
+  },
   doseCard: {
-    backgroundColor: '#fff',
+    backgroundColor: CORES.fundoCard,
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
@@ -225,19 +267,19 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  doseCardTomado: { backgroundColor: '#EAF7EC' },
-  doseCardAtrasado: { backgroundColor: '#FDECEC' },
+  doseCardTomado: { backgroundColor: '#EDF7EE' },
+  doseCardAtrasado: { backgroundColor: '#FBEAEA' },
   doseHorarioBloco: {
     width: 56,
     alignItems: 'center',
     marginRight: 12,
     borderRightWidth: 1,
-    borderRightColor: '#EEE',
+    borderRightColor: CORES.borda,
     paddingRight: 12,
   },
-  doseHorario: { fontSize: 15, fontWeight: '700', color: '#4A90D9' },
-  doseNome: { fontSize: 16, fontWeight: '600' },
-  doseDetalhe: { color: '#777', fontSize: 13, marginTop: 2 },
+  doseHorario: { fontSize: 15, fontWeight: '700', color: CORES.primaria },
+  doseNome: { fontSize: 16, fontWeight: '600', color: CORES.textoPrincipal },
+  doseDetalhe: { color: CORES.textoSecundario, fontSize: 13, marginTop: 2 },
   doseStatus: {
     width: 28,
     height: 28,
@@ -247,17 +289,30 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  doseStatusTomado: { backgroundColor: '#4CAF50', borderColor: '#4CAF50' },
-  doseStatusAtrasado: { borderColor: '#D9534F' },
+  doseStatusTomado: { backgroundColor: CORES.sucesso, borderColor: CORES.sucesso },
+  doseStatusAtrasado: { borderColor: CORES.perigo },
   doseStatusTexto: { color: '#fff', fontWeight: '700' },
-  vazioContainer: { alignItems: 'center', marginTop: 60 },
-  vazioEmoji: { fontSize: 40, marginBottom: 12 },
-  vazioTexto: { color: '#999', textAlign: 'center' },
+  vazioContainer: { alignItems: 'center', marginTop: 30 },
+  mascoteVazio: { width: 220, height: 220, marginBottom: 12 },
+  vazioTexto: { color: CORES.textoSecundario, textAlign: 'center' },
+  gifCantoContainer: {
+    position: 'absolute',
+    left: 16,
+    bottom: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#fff',
+    elevation: 4,
+  },
+  gifCanto: { width: '100%', height: '100%' },
   botaoAdicionar: {
     position: 'absolute',
     right: 20,
     bottom: 30,
-    backgroundColor: '#4A90D9',
+    backgroundColor: CORES.primaria,
     width: 56,
     height: 56,
     borderRadius: 28,
