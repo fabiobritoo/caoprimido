@@ -1,36 +1,77 @@
 let audioContext = null;
-let intervaloBeep = null;
+let intervaloLatido = null;
 
-function tocarBeep() {
-  if (!audioContext) return;
+// Gera um buffer de ruído branco curto (textura "áspera" do latido)
+function criarRuidoBuffer(duracaoSegundos) {
+  const tamanho = Math.floor(audioContext.sampleRate * duracaoSegundos);
+  const buffer = audioContext.createBuffer(1, tamanho, audioContext.sampleRate);
+  const dados = buffer.getChannelData(0);
+  for (let i = 0; i < tamanho; i++) {
+    dados[i] = Math.random() * 2 - 1;
+  }
+  return buffer;
+}
+
+// Um único "au": tom grave descendente (a "voz") + ruído filtrado (a "aspereza")
+function tocarUmLatido(atrasoSegundos) {
+  const inicio = audioContext.currentTime + atrasoSegundos;
+
+  // tom principal — começa agudo e cai rápido, como um latido de verdade
   const oscilador = audioContext.createOscillator();
-  const ganho = audioContext.createGain();
+  oscilador.type = 'sawtooth';
+  oscilador.frequency.setValueAtTime(750, inicio);
+  oscilador.frequency.exponentialRampToValueAtTime(140, inicio + 0.13);
 
-  oscilador.type = 'square';
-  oscilador.frequency.setValueAtTime(880, audioContext.currentTime);
+  const ganhoTom = audioContext.createGain();
+  ganhoTom.gain.setValueAtTime(0.0001, inicio);
+  ganhoTom.gain.exponentialRampToValueAtTime(0.5, inicio + 0.02);
+  ganhoTom.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.2);
 
-  ganho.gain.setValueAtTime(0.35, audioContext.currentTime);
-  ganho.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.35);
+  oscilador.connect(ganhoTom);
+  ganhoTom.connect(audioContext.destination);
+  oscilador.start(inicio);
+  oscilador.stop(inicio + 0.22);
 
-  oscilador.connect(ganho);
-  ganho.connect(audioContext.destination);
+  // ruído filtrado — dá a textura "rouca" que faz soar mais com latido e menos com apito
+  const fonteRuido = audioContext.createBufferSource();
+  fonteRuido.buffer = criarRuidoBuffer(0.16);
 
-  oscilador.start();
-  oscilador.stop(audioContext.currentTime + 0.35);
+  const filtro = audioContext.createBiquadFilter();
+  filtro.type = 'bandpass';
+  filtro.frequency.setValueAtTime(500, inicio);
+  filtro.Q.value = 0.6;
+
+  const ganhoRuido = audioContext.createGain();
+  ganhoRuido.gain.setValueAtTime(0.0001, inicio);
+  ganhoRuido.gain.exponentialRampToValueAtTime(0.3, inicio + 0.015);
+  ganhoRuido.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.15);
+
+  fonteRuido.connect(filtro);
+  filtro.connect(ganhoRuido);
+  ganhoRuido.connect(audioContext.destination);
+  fonteRuido.start(inicio);
+  fonteRuido.stop(inicio + 0.16);
+}
+
+// Dois latidos rápidos em sequência — "au au!" — como um cachorro alertando
+function tocarLatidoDuplo() {
+  if (!audioContext) return;
+  tocarUmLatido(0);
+  tocarUmLatido(0.16);
 }
 
 export function iniciarAlarme() {
-  if (intervaloBeep) return; // já está tocando
+  if (intervaloLatido) return; // já está tocando
 
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  tocarBeep();
-  intervaloBeep = setInterval(tocarBeep, 700);
+  tocarLatidoDuplo();
+  intervaloLatido = setInterval(tocarLatidoDuplo, 900);
 }
 
 export function pararAlarme() {
-  if (intervaloBeep) {
-    clearInterval(intervaloBeep);
-    intervaloBeep = null;
+  if (intervaloLatido) {
+    clearInterval(intervaloLatido);
+    intervaloLatido = null;
   }
   if (audioContext) {
     audioContext.close();
