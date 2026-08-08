@@ -22,8 +22,11 @@ export async function pedirPermissoes() {
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('remedios', {
       name: 'Lembretes de remédio',
-      importance: Notifications.AndroidImportance.HIGH,
+      importance: Notifications.AndroidImportance.MAX,
       sound: 'default',
+      vibrationPattern: [0, 500, 250, 500],
+      bypassDnd: false,
+      lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
     });
   }
 
