@@ -1,6 +1,6 @@
-const { kv } = require('@vercel/kv');
+import { kv } from '@vercel/kv';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ erro: 'Método não permitido' });
   }
@@ -18,7 +18,6 @@ module.exports = async function handler(req, res) {
       atualizadoEm: Date.now(),
     });
 
-    // mantém um índice de todos os dispositivos cadastrados
     await kv.sadd('dispositivos', deviceId);
 
     res.status(200).json({ ok: true });
@@ -26,4 +25,4 @@ module.exports = async function handler(req, res) {
     console.error('Erro em /api/subscribe:', erro);
     res.status(500).json({ erro: 'Erro ao salvar inscrição', detalhe: erro.message });
   }
-};
+}

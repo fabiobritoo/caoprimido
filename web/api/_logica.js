@@ -1,4 +1,4 @@
-function formatarData(date) {
+export function formatarData(date) {
   const y = date.getFullYear();
   const m = String(date.getMonth() + 1).padStart(2, '0');
   const d = String(date.getDate()).padStart(2, '0');
@@ -11,7 +11,7 @@ function diferencaEmDias(dataInicioStr, dataFimStr) {
   return Math.round((b - a) / 86400000);
 }
 
-function remedioAplicavelNoDia(frequencia, dataStr) {
+export function remedioAplicavelNoDia(frequencia, dataStr) {
   if (!frequencia || frequencia.tipo === 'diaria') return true;
 
   if (frequencia.tipo === 'dias_semana') {
@@ -28,5 +28,3 @@ function remedioAplicavelNoDia(frequencia, dataStr) {
 
   return false;
 }
-
-module.exports = { formatarData, remedioAplicavelNoDia };

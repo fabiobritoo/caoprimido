@@ -1,10 +1,9 @@
-const { kv } = require('@vercel/kv');
-const webpush = require('web-push');
-const { formatarData, remedioAplicavelNoDia } = require('./_logica');
+import { kv } from '@vercel/kv';
+import webpush from 'web-push';
+import { formatarData, remedioAplicavelNoDia } from './_logica.js';
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   try {
-    // protege o endpoint com uma chave simples, pra ninguém além do cron-job.org chamar
     const chaveEnviada = req.headers['x-chave-cron'] || req.query.chave;
     if (chaveEnviada !== process.env.CRON_SECRET) {
       return res.status(401).json({ erro: 'Não autorizado' });
@@ -78,4 +77,4 @@ module.exports = async function handler(req, res) {
     console.error('Erro geral no /api/check:', erroGeral);
     res.status(500).json({ erro: 'Falha interna', detalhe: erroGeral.message });
   }
-};
+}
