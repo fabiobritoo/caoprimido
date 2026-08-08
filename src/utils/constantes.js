@@ -96,3 +96,27 @@ export function diasDaSemanaAtual() {
   }
   return dias;
 }
+
+const ABREV_DIAS = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+
+// Igual à função acima, mas começando na segunda-feira (pra bater com a UI de agenda)
+export function diasDaSemanaAtualSegunda() {
+  const hoje = new Date();
+  const diaSemanaHoje = hoje.getDay(); // 0=domingo
+  const offsetSegunda = diaSemanaHoje === 0 ? -6 : 1 - diaSemanaHoje;
+  const segunda = new Date(hoje);
+  segunda.setDate(hoje.getDate() + offsetSegunda);
+
+  const dias = [];
+  for (let i = 0; i < 7; i++) {
+    const data = new Date(segunda);
+    data.setDate(segunda.getDate() + i);
+    dias.push({
+      data: formatarData(data),
+      diaSemana: data.getDay(),
+      numero: data.getDate(),
+      abrev: ABREV_DIAS[data.getDay()],
+    });
+  }
+  return dias;
+}

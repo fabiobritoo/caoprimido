@@ -75,22 +75,22 @@ async function salvarRegistros(registros) {
   await AsyncStorage.setItem(CHAVE_REGISTROS, JSON.stringify(registros));
 }
 
-function chaveRegistro(remedioId, data) {
-  return `${remedioId}|${data}`;
+function chaveRegistro(remedioId, data, horario) {
+  return `${remedioId}|${data}|${horario}`;
 }
 
-export function doseTomadaNoDia(registros, remedioId, data) {
-  return !!registros[chaveRegistro(remedioId, data)];
+export function doseTomada(registros, remedioId, data, horario) {
+  return !!registros[chaveRegistro(remedioId, data, horario)];
 }
 
 /**
- * Alterna o status de "tomado" de um remédio num dia específico.
+ * Alterna o status de "tomado" de UM horário específico de um remédio num dia.
  * Ajusta o estoque automaticamente (desconta ao marcar, devolve ao desmarcar).
- * Retorna { remedios, registros } atualizados.
+ * Retorna { remedios, registros, tomadoAgora } atualizados.
  */
-export async function alternarDoseDoDia(remedio, data) {
+export async function alternarDose(remedio, data, horario) {
   const registros = await obterRegistros();
-  const chave = chaveRegistro(remedio.id, data);
+  const chave = chaveRegistro(remedio.id, data, horario);
   const estavaTomado = !!registros[chave];
   const porDose = remedio.quantidadePorDose || 1;
 

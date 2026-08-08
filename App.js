@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 
 import HomeScreen from './src/screens/HomeScreen';
 import AddMedicineScreen from './src/screens/AddMedicineScreen';
+import ManageMedicinesScreen from './src/screens/ManageMedicinesScreen';
 import { pedirPermissoes } from './src/utils/notifications';
 
 const Stack = createNativeStackNavigator();
@@ -27,6 +28,11 @@ export default function App() {
           name="AdicionarRemedio"
           component={AddMedicineScreen}
           options={{ title: 'Novo Remédio' }}
+        />
+        <Stack.Screen
+          name="GerenciarRemedios"
+          component={ManageMedicinesScreen}
+          options={{ title: 'Meus Remédios' }}
         />
       </Stack.Navigator>
     </NavigationContainer>
