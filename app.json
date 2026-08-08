@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Meus Remédios",
+    "slug": "remedios-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.seunome.remediosapp"
+    },
+    "android": {
+      "package": "com.seunome.remediosapp",
+      "permissions": ["SCHEDULE_EXACT_ALARM", "POST_NOTIFICATIONS"]
+    },
+    "plugins": [
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#4A90D9"
+        }
+      ]
+    ]
+  }
+}
