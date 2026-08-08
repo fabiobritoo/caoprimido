@@ -40,6 +40,16 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
       } catch (e) {
         console.error('Erro ao confirmar com o servidor', e);
       }
+
+      // fecha as notificações acumuladas desse remédio, se houver
+      if (navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          tipo: 'FECHAR_NOTIFICACOES',
+          remedioId,
+          dia,
+          horario,
+        });
+      }
     }
 
     aoFechar();

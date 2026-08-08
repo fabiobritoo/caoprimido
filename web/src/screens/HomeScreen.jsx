@@ -84,6 +84,15 @@ export default function HomeScreen() {
           horario: item.horario,
         }),
       }).catch(() => {});
+
+      if (navigator.serviceWorker?.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          tipo: 'FECHAR_NOTIFICACOES',
+          remedioId: item.remedio.id,
+          dia: diaSelecionado,
+          horario: item.horario,
+        });
+      }
     }
   }
 

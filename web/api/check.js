@@ -119,6 +119,8 @@ export default async function handler(req, res) {
 
         try {
           const { titulo, corpo } = montarMensagemEscalonada(remedio.nome, remedio.dosagem, atrasoMs);
+          const novaTentativa = (estado?.tentativas || 0) + 1;
+
           await webpush.sendNotification(
             subscription,
             JSON.stringify({
@@ -129,12 +131,13 @@ export default async function handler(req, res) {
               horario,
               deviceId,
               badge: contadorPendente,
+              tentativa: novaTentativa,
             })
           );
           notificacoesEnviadas++;
           await kv.set(
             `estado:${chaveBase}`,
-            { ultimoEnvio: agoraMs, tentativas: (estado?.tentativas || 0) + 1 },
+            { ultimoEnvio: agoraMs, tentativas: novaTentativa },
             { ex: 3600 }
           );
         } catch (erroEnvio) {

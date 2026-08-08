@@ -18,7 +18,7 @@ self.addEventListener('push', (evento) => {
         badge: '/icon-192.png',
         vibrate: [300, 150, 300, 150, 300, 150, 300],
         requireInteraction: true,
-        tag: `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}`,
+        tag: `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}-${dados.tentativa || Date.now()}`,
         data: dados,
         // Em navegadores que suportam, aparecem como botões direto na notificação
         // (sem precisar abrir o app). Onde não suportar, o toque normal continua funcionando.
@@ -78,6 +78,15 @@ async function confirmarTomeiViaNotificacao(dados) {
     // sem sinal agora; o próximo /api/check vai reenviar e o usuário confirma depois
   }
 
+  // fecha as outras notificações acumuladas desse mesmo remédio/horário
+  const prefixoTag = `remedio-${remedioId}-${dia}-${horario}-`;
+  const notificacoesAbertas = await self.registration.getNotifications();
+  for (const notificacao of notificacoesAbertas) {
+    if (notificacao.tag && notificacao.tag.startsWith(prefixoTag)) {
+      notificacao.close();
+    }
+  }
+
   // se o app estiver aberto em alguma aba, avisa ela também pra marcar localmente
   const listaClientes = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
   for (const cliente of listaClientes) {
@@ -121,4 +130,22 @@ self.addEventListener('notificationclose', (evento) => {
   if (!evento.action) {
     evento.waitUntil(abrirTelaAlarme(evento.notification.data || {}));
   }
+});
+
+// Permite que a página (app aberto) peça pro Service Worker fechar
+// as notificações acumuladas de um remédio, quando confirmado direto pelo app
+self.addEventListener('message', (evento) => {
+  if (evento.data?.tipo !== 'FECHAR_NOTIFICACOES') return;
+  const { remedioId, dia, horario } = evento.data;
+  const prefixoTag = `remedio-${remedioId}-${dia}-${horario}-`;
+
+  evento.waitUntil(
+    self.registration.getNotifications().then((notificacoesAbertas) => {
+      for (const notificacao of notificacoesAbertas) {
+        if (notificacao.tag && notificacao.tag.startsWith(prefixoTag)) {
+          notificacao.close();
+        }
+      }
+    })
+  );
 });
