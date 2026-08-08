@@ -84,7 +84,7 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
 
       <button onClick={adiar} style={estilos.botaoAdiar}>
         <Clock3 size={16} strokeWidth={2.3} />
-        Adiar 10 min
+        Adiar 10 min (não vai tocar até lá)
       </button>
     </div>
   );
