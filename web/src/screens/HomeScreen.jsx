@@ -14,6 +14,7 @@ import {
 } from '../utils/constantes.js';
 import { CORES } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
+import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 
 const HOJE = formatarData(new Date());
 
@@ -165,6 +166,10 @@ export default function HomeScreen() {
       <button onClick={() => navigate('/novo')} style={estilos.botaoAdicionar}>
         +
       </button>
+
+      <div style={estilos.rodapeVersao}>
+        v{VERSAO} · {VERSAO_DESCRICAO}
+      </div>
     </div>
   );
 }
@@ -266,5 +271,12 @@ const estilos = {
     border: 'none',
     fontSize: 30,
     boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+  },
+  rodapeVersao: {
+    textAlign: 'center',
+    fontSize: 11,
+    color: CORES.textoSecundario,
+    opacity: 0.6,
+    padding: '20px 0 10px',
   },
 };
