@@ -21,7 +21,7 @@ export default function App() {
         <Stack.Screen
           name="Home"
           component={HomeScreen}
-          options={{ title: 'Meus Remédios' }}
+          options={{ title: 'Cãoprimido' }}
         />
         <Stack.Screen
           name="AdicionarRemedio"
