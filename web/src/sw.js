@@ -20,9 +20,14 @@ self.addEventListener('push', (evento) => {
         requireInteraction: true,
         tag: `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}`,
         data: dados,
+        // Em navegadores que suportam, aparecem como botões direto na notificação
+        // (sem precisar abrir o app). Onde não suportar, o toque normal continua funcionando.
+        actions: [
+          { action: 'tomei', title: '✅ Já tomei' },
+          { action: 'adiar', title: '⏰ Adiar 5 min' },
+        ],
       });
 
-      // atualiza o selo/contador no ícone do app, se o navegador suportar
       if ('setAppBadge' in self.registration && typeof dados.badge === 'number') {
         try {
           if (dados.badge > 0) {
@@ -58,15 +63,62 @@ function abrirTelaAlarme(dados) {
   });
 }
 
-// Usuário tocou na notificação
+// Confirma "já tomei" direto pelo botão da notificação, sem precisar abrir o app
+async function confirmarTomeiViaNotificacao(dados) {
+  const { deviceId, remedioId, dia, horario } = dados;
+  if (!deviceId || !remedioId || !dia || !horario) return;
+
+  try {
+    await fetch('/api/reconhecer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, remedioId, dia, horario }),
+    });
+  } catch (e) {
+    // sem sinal agora; o próximo /api/check vai reenviar e o usuário confirma depois
+  }
+
+  // se o app estiver aberto em alguma aba, avisa ela também pra marcar localmente
+  const listaClientes = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+  for (const cliente of listaClientes) {
+    cliente.postMessage({ tipo: 'DOSE_CONFIRMADA', remedioId, dia, horario });
+  }
+}
+
+// Adia direto pelo botão da notificação, sem precisar abrir o app
+async function adiarViaNotificacao(dados) {
+  const { deviceId, remedioId, dia, horario } = dados;
+  if (!deviceId || !remedioId || !dia || !horario) return;
+
+  try {
+    await fetch('/api/soneca', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, remedioId, dia, horario, minutos: 5 }),
+    });
+  } catch (e) {
+    // sem sinal agora; o próximo /api/check tenta de novo no intervalo normal
+  }
+}
+
 self.addEventListener('notificationclick', (evento) => {
   evento.notification.close();
-  evento.waitUntil(abrirTelaAlarme(evento.notification.data || {}));
+  const dados = evento.notification.data || {};
+
+  if (evento.action === 'tomei') {
+    evento.waitUntil(confirmarTomeiViaNotificacao(dados));
+  } else if (evento.action === 'adiar') {
+    evento.waitUntil(adiarViaNotificacao(dados));
+  } else {
+    // tocou no corpo da notificação (não num botão): abre a tela de alarme cheia
+    evento.waitUntil(abrirTelaAlarme(dados));
+  }
 });
 
 // Usuário limpou/dispensou a notificação sem tocar (ex: "limpar tudo")
-// Em alguns navegadores/sistemas isso pode não conseguir abrir a tela
-// automaticamente por restrição de segurança, mas tentamos mesmo assim.
 self.addEventListener('notificationclose', (evento) => {
-  evento.waitUntil(abrirTelaAlarme(evento.notification.data || {}));
+  // só tenta abrir a tela se não foi um botão de ação que já resolveu o problema
+  if (!evento.action) {
+    evento.waitUntil(abrirTelaAlarme(evento.notification.data || {}));
+  }
 });

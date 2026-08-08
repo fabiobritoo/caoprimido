@@ -7,7 +7,7 @@ import DiagnosticoScreen from './screens/DiagnosticoScreen.jsx';
 import ConfiguracoesScreen from './screens/ConfiguracoesScreen.jsx';
 import TelaAlarme from './components/TelaAlarme.jsx';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
-import { listarRemedios, obterRegistros, doseTomada, obterIdDispositivo } from './utils/storage.js';
+import { listarRemedios, obterRegistros, doseTomada, alternarDose, obterIdDispositivo } from './utils/storage.js';
 import { remedioAplicavelNoDia, formatarData } from './utils/constantes.js';
 
 export default function App() {
@@ -28,6 +28,34 @@ export default function App() {
       // limpa a URL pra não reabrir o alarme se recarregar a página
       window.history.replaceState({}, '', window.location.pathname + window.location.hash);
     }
+  }, []);
+
+  useEffect(() => {
+    // Escuta confirmações feitas direto pelo botão "Já tomei" da notificação
+    // (o Service Worker avisa o app aberto, se houver algum, pra manter tudo sincronizado)
+    if (!('serviceWorker' in navigator)) return;
+
+    async function aoReceberMensagem(evento) {
+      if (evento.data?.tipo !== 'DOSE_CONFIRMADA') return;
+      const { remedioId, dia, horario } = evento.data;
+
+      const remedios = await listarRemedios();
+      const remedio = remedios.find((r) => r.id === remedioId);
+      const registros = await obterRegistros();
+      if (remedio && !doseTomada(registros, remedioId, dia, horario)) {
+        await alternarDose(remedio, dia, horario);
+      }
+
+      // se o alarme dessa dose estiver na tela, fecha ele também
+      setAlarmeAtivo((atual) =>
+        atual && atual.remedioId === remedioId && atual.dia === dia && atual.horario === horario
+          ? null
+          : atual
+      );
+    }
+
+    navigator.serviceWorker.addEventListener('message', aoReceberMensagem);
+    return () => navigator.serviceWorker.removeEventListener('message', aoReceberMensagem);
   }, []);
 
   useEffect(() => {

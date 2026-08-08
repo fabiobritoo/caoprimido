@@ -1,7 +1,7 @@
 let audioContext = null;
 let intervaloLatido = null;
 
-// Gera um buffer de ruído branco curto (textura "áspera" do latido)
+// Gera um buffer de ruído branco curto (textura "áspera")
 function criarRuidoBuffer(duracaoSegundos) {
   const tamanho = Math.floor(audioContext.sampleRate * duracaoSegundos);
   const buffer = audioContext.createBuffer(1, tamanho, audioContext.sampleRate);
@@ -12,48 +12,53 @@ function criarRuidoBuffer(duracaoSegundos) {
   return buffer;
 }
 
-// Um único "au": tom grave descendente (a "voz") + ruído filtrado (a "aspereza")
+// Um único "au": três osciladores levemente desafinados (dá o "grosso" da voz),
+// passando por um filtro que fecha rápido (imita a boca fechando), mais um
+// estalo de ruído bem no início (o "clique" do latido começando).
 function tocarUmLatido(atrasoSegundos) {
   const inicio = audioContext.currentTime + atrasoSegundos;
+  const duracao = 0.15;
 
-  // tom principal — começa agudo e cai rápido, como um latido de verdade
-  const oscilador = audioContext.createOscillator();
-  oscilador.type = 'sawtooth';
-  oscilador.frequency.setValueAtTime(750, inicio);
-  oscilador.frequency.exponentialRampToValueAtTime(140, inicio + 0.13);
-
-  const ganhoTom = audioContext.createGain();
-  ganhoTom.gain.setValueAtTime(0.0001, inicio);
-  ganhoTom.gain.exponentialRampToValueAtTime(0.5, inicio + 0.02);
-  ganhoTom.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.2);
-
-  oscilador.connect(ganhoTom);
-  ganhoTom.connect(audioContext.destination);
-  oscilador.start(inicio);
-  oscilador.stop(inicio + 0.22);
-
-  // ruído filtrado — dá a textura "rouca" que faz soar mais com latido e menos com apito
-  const fonteRuido = audioContext.createBufferSource();
-  fonteRuido.buffer = criarRuidoBuffer(0.16);
+  const ganhoGeral = audioContext.createGain();
+  ganhoGeral.gain.setValueAtTime(0.0001, inicio);
+  ganhoGeral.gain.exponentialRampToValueAtTime(0.55, inicio + 0.008); // ataque bem rápido, tipo estalo
+  ganhoGeral.gain.exponentialRampToValueAtTime(0.0001, inicio + duracao);
 
   const filtro = audioContext.createBiquadFilter();
-  filtro.type = 'bandpass';
-  filtro.frequency.setValueAtTime(500, inicio);
-  filtro.Q.value = 0.6;
+  filtro.type = 'lowpass';
+  filtro.frequency.setValueAtTime(4500, inicio);
+  filtro.frequency.exponentialRampToValueAtTime(280, inicio + duracao); // "fecha" rápido
+  filtro.Q.value = 1.3;
 
+  filtro.connect(ganhoGeral);
+  ganhoGeral.connect(audioContext.destination);
+
+  // três osciladores desafinados entre si = textura "rouca", não um apito limpo
+  const desafinacoes = [0, -6, 7];
+  desafinacoes.forEach((desafinacaoCents) => {
+    const osc = audioContext.createOscillator();
+    osc.type = 'sawtooth';
+    const fator = Math.pow(2, desafinacaoCents / 1200);
+    osc.frequency.setValueAtTime(750 * fator, inicio);
+    osc.frequency.exponentialRampToValueAtTime(140 * fator, inicio + 0.13);
+    osc.connect(filtro);
+    osc.start(inicio);
+    osc.stop(inicio + duracao + 0.02);
+  });
+
+  // estalo de ruído no ataque — simula a "explosão" de ar do latido começando
+  const fonteRuido = audioContext.createBufferSource();
+  fonteRuido.buffer = criarRuidoBuffer(0.04);
   const ganhoRuido = audioContext.createGain();
-  ganhoRuido.gain.setValueAtTime(0.0001, inicio);
-  ganhoRuido.gain.exponentialRampToValueAtTime(0.3, inicio + 0.015);
-  ganhoRuido.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.15);
-
-  fonteRuido.connect(filtro);
-  filtro.connect(ganhoRuido);
+  ganhoRuido.gain.setValueAtTime(0.35, inicio);
+  ganhoRuido.gain.exponentialRampToValueAtTime(0.0001, inicio + 0.04);
+  fonteRuido.connect(ganhoRuido);
   ganhoRuido.connect(audioContext.destination);
   fonteRuido.start(inicio);
-  fonteRuido.stop(inicio + 0.16);
+  fonteRuido.stop(inicio + 0.04);
 }
 
-// Dois latidos rápidos em sequência — "au au!" — como um cachorro alertando
+// Dois latidos rápidos em sequência — "au au!"
 function tocarLatidoDuplo() {
   if (!audioContext) return;
   tocarUmLatido(0);
@@ -61,7 +66,7 @@ function tocarLatidoDuplo() {
 }
 
 export function iniciarAlarme() {
-  if (intervaloLatido) return; // já está tocando
+  if (intervaloLatido) return;
 
   audioContext = new (window.AudioContext || window.webkitAudioContext)();
   tocarLatidoDuplo();

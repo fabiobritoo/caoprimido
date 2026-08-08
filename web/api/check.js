@@ -101,6 +101,7 @@ export default async function handler(req, res) {
               remedioId: remedio.id,
               dia: hoje,
               horario,
+              deviceId,
               badge: contadorPendente,
             })
           );
