@@ -1,14 +1,29 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 import HomeScreen from './screens/HomeScreen.jsx';
 import AddMedicineScreen from './screens/AddMedicineScreen.jsx';
 import ManageMedicinesScreen from './screens/ManageMedicinesScreen.jsx';
+import TelaAlarme from './components/TelaAlarme.jsx';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
 import { listarRemedios, obterRegistros, doseTomada, obterIdDispositivo } from './utils/storage.js';
 import { remedioAplicavelNoDia, formatarData } from './utils/constantes.js';
 
 export default function App() {
   const jaAvisados = useRef(new Set());
+  const [alarmeAtivo, setAlarmeAtivo] = useState(null);
+
+  useEffect(() => {
+    // Se o app foi aberto a partir do toque numa notificação, mostra a tela de alarme
+    const parametros = new URLSearchParams(window.location.search);
+    if (parametros.get('alarme') === '1') {
+      setAlarmeAtivo({
+        titulo: parametros.get('titulo') || 'Hora do remédio',
+        corpo: parametros.get('corpo') || '',
+      });
+      // limpa a URL pra não reabrir o alarme se recarregar a página
+      window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+    }
+  }, []);
 
   useEffect(() => {
     pedirPermissaoNotificacao();
@@ -39,6 +54,7 @@ export default function App() {
 
           jaAvisados.current.add(chave);
           mostrarNotificacao(`Hora de tomar: ${remedio.nome}`, remedio.dosagem || '');
+          setAlarmeAtivo({ titulo: `Hora de tomar: ${remedio.nome}`, corpo: remedio.dosagem || '' });
         }
       }
     };
@@ -49,13 +65,22 @@ export default function App() {
   }, []);
 
   return (
-    <HashRouter>
-      <Routes>
-        <Route path="/" element={<HomeScreen />} />
-        <Route path="/novo" element={<AddMedicineScreen />} />
-        <Route path="/editar/:id" element={<AddMedicineScreen />} />
-        <Route path="/meus-remedios" element={<ManageMedicinesScreen />} />
-      </Routes>
-    </HashRouter>
+    <>
+      {alarmeAtivo && (
+        <TelaAlarme
+          titulo={alarmeAtivo.titulo}
+          corpo={alarmeAtivo.corpo}
+          aoFechar={() => setAlarmeAtivo(null)}
+        />
+      )}
+      <HashRouter>
+        <Routes>
+          <Route path="/" element={<HomeScreen />} />
+          <Route path="/novo" element={<AddMedicineScreen />} />
+          <Route path="/editar/:id" element={<AddMedicineScreen />} />
+          <Route path="/meus-remedios" element={<ManageMedicinesScreen />} />
+        </Routes>
+      </HashRouter>
+    </>
   );
 }

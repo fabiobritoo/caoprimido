@@ -15,20 +15,32 @@ self.addEventListener('push', (evento) => {
       body: dados.corpo,
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      vibrate: [200, 100, 200, 100, 200],
+      vibrate: [300, 150, 300, 150, 300, 150, 300],
       requireInteraction: true,
+      data: dados, // guarda pra usar quando o usuário tocar
     })
   );
 });
 
 self.addEventListener('notificationclick', (evento) => {
   evento.notification.close();
+
+  const dados = evento.notification.data || {};
+  const parametros = new URLSearchParams({
+    alarme: '1',
+    titulo: dados.titulo || 'Hora do remédio',
+    corpo: dados.corpo || '',
+  });
+  const urlAlvo = `/?${parametros.toString()}`;
+
   evento.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((listaClientes) => {
-      if (listaClientes.length > 0) {
-        return listaClientes[0].focus();
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
+      for (const cliente of listaClientes) {
+        // já tem uma janela aberta: navega ela pra tela de alarme e foca
+        cliente.navigate(urlAlvo);
+        return cliente.focus();
       }
-      return self.clients.openWindow('/');
+      return self.clients.openWindow(urlAlvo);
     })
   );
 });
