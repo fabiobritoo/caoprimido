@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { CORES } from '../utils/tema.js';
+import { RefreshCw } from 'lucide-react';
+import { CORES, RAIO, botaoSecundario } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import { obterIdDispositivo } from '../utils/storage.js';
 
@@ -33,7 +34,8 @@ export default function DiagnosticoScreen() {
 
       <div style={{ padding: 16 }}>
         <button onClick={carregar} style={estilos.botaoAtualizar}>
-          🔄 Atualizar
+          <RefreshCw size={15} strokeWidth={2.3} />
+          Atualizar
         </button>
 
         {carregando && <div style={estilos.texto}>Carregando...</div>}
@@ -67,11 +69,7 @@ export default function DiagnosticoScreen() {
 
 const estilos = {
   botaoAtualizar: {
-    border: `1px solid ${CORES.primaria}`,
-    color: CORES.primaria,
-    background: '#fff',
-    borderRadius: 8,
-    padding: '8px 16px',
+    ...botaoSecundario,
     marginBottom: 16,
   },
   texto: { color: CORES.textoSecundario, marginTop: 10 },

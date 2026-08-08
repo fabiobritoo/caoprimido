@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Pencil, Trash2, Pill, Clock, Package } from 'lucide-react';
 import { listarRemedios, removerRemedio, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { rotuloUnidade, descreverFrequencia } from '../utils/constantes.js';
-import { CORES } from '../utils/tema.js';
+import { CORES, RAIO, SOMBRA } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
 export default function ManageMedicinesScreen() {
@@ -26,37 +27,59 @@ export default function ManageMedicinesScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 90 }}>
+    <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 96 }}>
       <CabecalhoTopo titulo="Meus Remédios" mostrarVoltar />
 
       <div style={{ padding: 16 }}>
         {remedios.length === 0 && (
-          <div style={estilos.vazio}>Nenhum remédio cadastrado ainda.</div>
+          <div style={estilos.vazioContainer}>
+            <Pill size={48} color={CORES.borda} strokeWidth={1.5} />
+            <div style={estilos.vazio}>Nenhum remédio cadastrado ainda.</div>
+          </div>
         )}
 
         {remedios.map((item) => {
           const unidadeTexto = rotuloUnidade(item.unidade).toLowerCase();
           return (
             <div key={item.id} style={estilos.card}>
+              <div style={estilos.iconeRemedio}>
+                <Pill size={20} color={CORES.primaria} strokeWidth={2} />
+              </div>
+
               <div style={{ flex: 1 }}>
                 <div style={estilos.nome}>{item.nome}</div>
-                <div style={estilos.detalhe}>
-                  {item.quantidadePorDose} {unidadeTexto} · {(item.horarios || []).join(', ')}
+
+                <div style={estilos.linhaDetalhe}>
+                  <Clock size={13} color={CORES.textoSecundario} />
+                  <span style={estilos.detalhe}>
+                    {(item.horarios || []).join(', ')} · {item.quantidadePorDose} {unidadeTexto}
+                  </span>
                 </div>
+
                 <div style={estilos.detalhe}>{descreverFrequencia(item.frequencia)}</div>
-                <div style={estilos.detalhe}>
-                  Estoque: {item.quantidadeAtual} {unidadeTexto}
+
+                <div style={estilos.linhaDetalhe}>
+                  <Package size={13} color={CORES.textoSecundario} />
+                  <span style={estilos.detalhe}>
+                    Estoque: {item.quantidadeAtual} {unidadeTexto}
+                  </span>
                 </div>
               </div>
+
               <div style={estilos.acoes}>
                 <button
                   onClick={() => navigate(`/editar/${item.id}`)}
-                  style={estilos.botaoEditar}
+                  style={estilos.botaoIconeEditar}
+                  aria-label="Editar"
                 >
-                  Editar
+                  <Pencil size={16} strokeWidth={2.2} />
                 </button>
-                <button onClick={() => excluir(item)} style={estilos.botaoExcluir}>
-                  Excluir
+                <button
+                  onClick={() => excluir(item)}
+                  style={estilos.botaoIconeExcluir}
+                  aria-label="Excluir"
+                >
+                  <Trash2 size={16} strokeWidth={2.2} />
                 </button>
               </div>
             </div>
@@ -65,7 +88,7 @@ export default function ManageMedicinesScreen() {
       </div>
 
       <button onClick={() => navigate('/novo')} style={estilos.botaoAdicionar}>
-        +
+        <Plus size={28} strokeWidth={2.5} color="#fff" />
       </button>
     </div>
   );
@@ -74,36 +97,70 @@ export default function ManageMedicinesScreen() {
 const estilos = {
   card: {
     backgroundColor: CORES.fundoCard,
-    borderRadius: 12,
+    borderRadius: RAIO.medio,
     padding: 16,
     marginBottom: 12,
     display: 'flex',
     alignItems: 'flex-start',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    gap: 12,
+    boxShadow: SOMBRA.card,
   },
-  nome: { fontSize: 18, fontWeight: 600 },
-  detalhe: { color: CORES.textoSecundario, marginTop: 2, fontSize: 13 },
-  acoes: { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 10 },
-  botaoEditar: {
-    background: 'none',
+  iconeRemedio: {
+    width: 40,
+    height: 40,
+    borderRadius: RAIO.pequeno,
+    backgroundColor: CORES.primariaClara,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  nome: { fontSize: 17, fontWeight: 700, color: CORES.textoPrincipal, marginBottom: 4 },
+  linhaDetalhe: { display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 },
+  detalhe: { color: CORES.textoSecundario, fontSize: 13 },
+  acoes: { display: 'flex', flexDirection: 'column', gap: 8 },
+  botaoIconeEditar: {
+    width: 34,
+    height: 34,
+    borderRadius: RAIO.pill,
     border: 'none',
-    color: CORES.primaria,
-    fontSize: 13,
-    fontWeight: 600,
+    backgroundColor: CORES.primariaClara,
+    color: CORES.primariaEscura,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  botaoExcluir: { background: 'none', border: 'none', color: CORES.perigo, fontSize: 13 },
-  vazio: { textAlign: 'center', marginTop: 40, color: CORES.textoSecundario },
+  botaoIconeExcluir: {
+    width: 34,
+    height: 34,
+    borderRadius: RAIO.pill,
+    border: 'none',
+    backgroundColor: '#FBEAEA',
+    color: CORES.perigo,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vazioContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 60,
+  },
+  vazio: { textAlign: 'center', color: CORES.textoSecundario },
   botaoAdicionar: {
     position: 'fixed',
     right: 20,
     bottom: 30,
     backgroundColor: CORES.primaria,
-    color: '#fff',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 58,
+    height: 58,
+    borderRadius: RAIO.pill,
     border: 'none',
-    fontSize: 30,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+    boxShadow: SOMBRA.botao,
   },
 };

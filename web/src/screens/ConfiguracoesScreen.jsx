@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { CORES } from '../utils/tema.js';
+import { HeartHandshake, Save, RefreshCw } from 'lucide-react';
+import { CORES, RAIO, botaoPrimario } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.js';
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
@@ -40,7 +41,10 @@ export default function ConfiguracoesScreen() {
       <CabecalhoTopo titulo="Configurações" mostrarVoltar />
 
       <div style={{ padding: 20 }}>
-        <div style={estilos.secaoTitulo}>Avisar um cuidador/familiar</div>
+        <div style={estilos.secaoTitulo}>
+          <HeartHandshake size={20} color={CORES.primaria} />
+          Avisar um cuidador/familiar
+        </div>
         <div style={estilos.explicacao}>
           Se você não confirmar uma dose em 15 minutos, o app pode mandar um
           aviso automático por WhatsApp pra outra pessoa.
@@ -102,6 +106,7 @@ export default function ConfiguracoesScreen() {
         )}
 
         <button onClick={salvar} disabled={salvando} style={estilos.botaoSalvar}>
+          <Save size={18} strokeWidth={2.3} />
           {salvando ? 'Salvando...' : salvo ? '✓ Salvo!' : 'Salvar configurações'}
         </button>
       </div>
@@ -110,7 +115,15 @@ export default function ConfiguracoesScreen() {
 }
 
 const estilos = {
-  secaoTitulo: { fontSize: 18, fontWeight: 700, color: CORES.textoPrincipal, marginBottom: 6 },
+  secaoTitulo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+    fontSize: 18,
+    fontWeight: 700,
+    color: CORES.textoPrincipal,
+    marginBottom: 6,
+  },
   explicacao: { color: CORES.textoSecundario, fontSize: 14, marginBottom: 20 },
   linhaToggle: {
     display: 'flex',
@@ -152,14 +165,8 @@ const estilos = {
     lineHeight: 1.5,
   },
   botaoSalvar: {
+    ...botaoPrimario,
     width: '100%',
-    backgroundColor: CORES.primaria,
-    color: '#fff',
-    border: 'none',
-    borderRadius: 10,
-    padding: 16,
-    fontWeight: 700,
-    fontSize: 16,
     marginTop: 30,
   },
 };

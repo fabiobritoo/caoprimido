@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Plus, Check, Clock, ListChecks, Flame, Activity, Settings2 } from 'lucide-react';
 import {
   listarRemedios,
   obterRegistros,
@@ -13,7 +14,7 @@ import {
   remedioAplicavelNoDia,
   formatarData,
 } from '../utils/constantes.js';
-import { CORES } from '../utils/tema.js';
+import { CORES, RAIO, SOMBRA } from '../utils/tema.js';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
@@ -72,7 +73,6 @@ export default function HomeScreen() {
     setSequenciaDias(calcularSequenciaDias(resultado.remedios, resultado.registros));
     atualizarSeloLocal(resultado.remedios, resultado.registros);
 
-    // se acabou de marcar como tomado, avisa o servidor pra parar de reenviar alarme
     if (resultado.tomadoAgora) {
       fetch('/api/reconhecer', {
         method: 'POST',
@@ -88,12 +88,13 @@ export default function HomeScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 90 }}>
+    <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 96 }}>
       <CabecalhoTopo
         titulo="Cãoprimido"
         botaoDireita={
           <button onClick={() => navigate('/meus-remedios')} style={estilos.botaoTexto}>
-            Meus remédios
+            <ListChecks size={16} strokeWidth={2.5} />
+            Remédios
           </button>
         }
       />
@@ -125,7 +126,8 @@ export default function HomeScreen() {
 
       {sequenciaDias > 0 && (
         <div style={estilos.faixaStreak}>
-          🔥 {sequenciaDias} {sequenciaDias === 1 ? 'dia seguido' : 'dias seguidos'} em dia!
+          <Flame size={16} strokeWidth={2.5} fill={CORES.primariaEscura} />
+          {sequenciaDias} {sequenciaDias === 1 ? 'dia seguido' : 'dias seguidos'} em dia!
         </div>
       )}
 
@@ -163,6 +165,7 @@ export default function HomeScreen() {
               }}
             >
               <div style={estilos.doseHorarioBloco}>
+                <Clock size={15} color={CORES.primaria} strokeWidth={2.5} />
                 <span style={estilos.doseHorario}>{item.horario}</span>
               </div>
               <div style={{ flex: 1, textAlign: 'left' }}>
@@ -178,7 +181,7 @@ export default function HomeScreen() {
                   ...(atrasado ? estilos.doseStatusAtrasado : {}),
                 }}
               >
-                {item.tomado ? '✓' : ''}
+                {item.tomado && <Check size={16} strokeWidth={3} color="#fff" />}
               </div>
             </button>
           );
@@ -192,26 +195,39 @@ export default function HomeScreen() {
       )}
 
       <button onClick={() => navigate('/novo')} style={estilos.botaoAdicionar}>
-        +
+        <Plus size={28} strokeWidth={2.5} color="#fff" />
       </button>
 
       <div style={estilos.rodapeVersao}>
-        v{VERSAO} · {VERSAO_DESCRICAO}
-        {' · '}
-        <span onClick={() => navigate('/diagnostico')} style={estilos.linkDiagnostico}>
-          diagnóstico
+        <span>
+          v{VERSAO} · {VERSAO_DESCRICAO}
         </span>
-        {' · '}
-        <span onClick={() => navigate('/configuracoes')} style={estilos.linkDiagnostico}>
-          config
-        </span>
+        <div style={estilos.rodapeLinks}>
+          <span onClick={() => navigate('/diagnostico')} style={estilos.linkDiagnostico}>
+            <Activity size={12} /> diagnóstico
+          </span>
+          <span onClick={() => navigate('/configuracoes')} style={estilos.linkDiagnostico}>
+            <Settings2 size={12} /> config
+          </span>
+        </div>
       </div>
     </div>
   );
 }
 
 const estilos = {
-  botaoTexto: { background: 'none', border: 'none', color: '#fff', fontWeight: 600, fontSize: 13 },
+  botaoTexto: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 6,
+    background: 'rgba(255,255,255,0.15)',
+    border: 'none',
+    borderRadius: RAIO.pill,
+    color: '#fff',
+    fontWeight: 600,
+    fontSize: 13,
+    padding: '8px 14px',
+  },
   faixaSemana: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -232,17 +248,22 @@ const estilos = {
   diaCirculo: {
     width: 34,
     height: 34,
-    borderRadius: 17,
+    borderRadius: RAIO.pill,
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     fontSize: 15,
     fontWeight: 600,
     color: CORES.textoPrincipal,
+    transition: 'all 0.15s',
   },
-  diaCirculoSelecionado: { backgroundColor: CORES.primaria, color: '#fff' },
+  diaCirculoSelecionado: { backgroundColor: CORES.primaria, color: '#fff', boxShadow: SOMBRA.botao },
   diaCirculoHoje: { border: `2px solid ${CORES.primaria}` },
   faixaStreak: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
     textAlign: 'center',
     backgroundColor: CORES.primariaClara,
     color: CORES.primariaEscura,
@@ -260,35 +281,37 @@ const estilos = {
     width: '100%',
     backgroundColor: CORES.fundoCard,
     border: 'none',
-    borderRadius: 12,
+    borderRadius: RAIO.medio,
     padding: 14,
     marginBottom: 10,
     display: 'flex',
     alignItems: 'center',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.06)',
+    boxShadow: SOMBRA.card,
   },
   doseCardTomado: { backgroundColor: '#EDF7EE' },
   doseCardAtrasado: { backgroundColor: '#FBEAEA' },
   doseHorarioBloco: {
-    width: 56,
-    textAlign: 'center',
+    width: 60,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 3,
     marginRight: 12,
     borderRight: `1px solid ${CORES.borda}`,
     paddingRight: 12,
   },
-  doseHorario: { fontSize: 15, fontWeight: 700, color: CORES.primaria },
+  doseHorario: { fontSize: 14, fontWeight: 700, color: CORES.primaria },
   doseNome: { fontSize: 16, fontWeight: 600, color: CORES.textoPrincipal },
   doseDetalhe: { color: CORES.textoSecundario, fontSize: 13, marginTop: 2 },
   doseStatus: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 30,
+    height: 30,
+    borderRadius: RAIO.pill,
     border: '2px solid #DDD',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    color: '#fff',
-    fontWeight: 700,
+    flexShrink: 0,
   },
   doseStatusTomado: { backgroundColor: CORES.sucesso, borderColor: CORES.sucesso },
   doseStatusAtrasado: { borderColor: CORES.perigo },
@@ -298,30 +321,38 @@ const estilos = {
     bottom: 24,
     width: 64,
     height: 64,
-    borderRadius: 32,
+    borderRadius: RAIO.pill,
     overflow: 'hidden',
     border: '2px solid #fff',
-    boxShadow: '0 2px 6px rgba(0,0,0,0.2)',
+    boxShadow: SOMBRA.flutuante,
   },
   botaoAdicionar: {
     position: 'fixed',
     right: 20,
     bottom: 30,
     backgroundColor: CORES.primaria,
-    color: '#fff',
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 58,
+    height: 58,
+    borderRadius: RAIO.pill,
     border: 'none',
-    fontSize: 30,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.25)',
+    boxShadow: SOMBRA.botao,
   },
   rodapeVersao: {
     textAlign: 'center',
     fontSize: 11,
     color: CORES.textoSecundario,
-    opacity: 0.6,
+    opacity: 0.65,
     padding: '20px 0 10px',
   },
-  linkDiagnostico: { textDecoration: 'underline', cursor: 'pointer' },
+  rodapeLinks: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 6 },
+  linkDiagnostico: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 4,
+    textDecoration: 'underline',
+    cursor: 'pointer',
+  },
 };

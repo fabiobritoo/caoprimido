@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { CORES } from '../utils/tema.js';
+import { AlarmClock, Check, Clock3 } from 'lucide-react';
+import { CORES, RAIO } from '../utils/tema.js';
 import { iniciarAlarme, pararAlarme } from '../utils/somAlarme.js';
 import { listarRemedios, alternarDose, doseTomada, obterRegistros, obterIdDispositivo } from '../utils/storage.js';
 
@@ -70,15 +71,19 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
 
   return (
     <div style={estilos.container}>
-      <div style={estilos.iconeAlarme}>⏰</div>
+      <div style={estilos.iconeAlarme}>
+        <AlarmClock size={64} strokeWidth={1.8} color="#fff" />
+      </div>
       <div style={estilos.titulo}>{titulo}</div>
       {corpo && <div style={estilos.corpo}>{corpo}</div>}
 
       <button onClick={confirmarETomei} style={estilos.botaoParar}>
+        <Check size={20} strokeWidth={3} />
         Já tomei — Parar alarme
       </button>
 
       <button onClick={adiar} style={estilos.botaoAdiar}>
+        <Clock3 size={16} strokeWidth={2.3} />
         Adiar 10 min
       </button>
     </div>
@@ -98,24 +103,40 @@ const estilos = {
     zIndex: 1000,
     textAlign: 'center',
   },
-  iconeAlarme: { fontSize: 72, marginBottom: 20, animation: 'pulsar 1s infinite' },
+  iconeAlarme: {
+    marginBottom: 20,
+    animation: 'pulsar 1s infinite',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: 110,
+    height: 110,
+    borderRadius: RAIO.pill,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   titulo: { color: '#fff', fontSize: 24, fontWeight: 700, marginBottom: 10 },
   corpo: { color: '#fff', fontSize: 16, opacity: 0.9, marginBottom: 40 },
   botaoParar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: '#fff',
     color: CORES.primaria,
     border: 'none',
-    borderRadius: 14,
+    borderRadius: RAIO.medio,
     padding: '18px 32px',
     fontSize: 18,
     fontWeight: 700,
     boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
   },
   botaoAdiar: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
     backgroundColor: 'transparent',
     color: '#fff',
     border: '2px solid rgba(255,255,255,0.6)',
-    borderRadius: 14,
+    borderRadius: RAIO.medio,
     padding: '14px 28px',
     fontSize: 15,
     fontWeight: 600,
