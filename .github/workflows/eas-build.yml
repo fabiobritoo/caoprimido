@@ -1,0 +1,45 @@
+name: Build Android (EAS)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+
+      - name: Configura Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Instala dependências
+        run: npm install
+
+      - name: Instala EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Faz login na Expo com o token
+        run: echo "EXPO_TOKEN=${{ secrets.EXPO_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Compila o APK (Android) na nuvem da Expo
+        run: eas build --platform android --profile preview --non-interactive --wait
+
+      - name: Baixa o APK gerado
+        run: |
+          BUILD_ID=$(eas build:list --platform android --limit 1 --json --non-interactive | node -e "let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.parse(d)[0].id))")
+          eas build:download --id "$BUILD_ID" --output ./caoprimido.apk
+
+      - name: Cria uma Release no GitHub com o APK anexado
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: "Cãoprimido - build ${{ github.run_number }}"
+          body: "Build automática gerada a partir do commit ${{ github.sha }}."
+          files: ./caoprimido.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

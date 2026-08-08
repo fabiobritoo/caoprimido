@@ -16,10 +16,11 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.seunome.remediosapp"
+      "bundleIdentifier": "com.fabiobrito.caoprimido"
     },
     "android": {
-      "package": "com.seunome.remediosapp",
+      "package": "com.fabiobrito.caoprimido",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
