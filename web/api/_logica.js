@@ -24,6 +24,18 @@ export function obterDataHoraBrasil(data = new Date()) {
   return { hoje, horaAtual };
 }
 
+// Converte "HH:MM" em minutos desde a meia-noite (evita qualquer ambiguidade de fuso)
+export function paraMinutos(horaMinuto) {
+  const [h, m] = horaMinuto.split(':').map(Number);
+  return h * 60 + m;
+}
+
+// Quantos minutos já se passaram desde um horário "HH:MM" até agora,
+// comparando sempre no fuso do Brasil (sem criar objetos Date "às cegas")
+export function minutosDeAtraso(horario, horaAtualBrasil) {
+  return paraMinutos(horaAtualBrasil) - paraMinutos(horario);
+}
+
 function diferencaEmDias(dataInicioStr, dataFimStr) {
   const a = new Date(dataInicioStr + 'T00:00:00');
   const b = new Date(dataFimStr + 'T00:00:00');

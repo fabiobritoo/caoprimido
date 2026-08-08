@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import webpush from 'web-push';
-import { obterDataHoraBrasil, remedioAplicavelNoDia } from './_logica.js';
+import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000; // reenvia a cada 3 minutos
 const JANELA_MAXIMA_MS = 30 * 60 * 1000; // desiste depois de 30 minutos sem confirmação
@@ -50,11 +50,8 @@ export default async function handler(req, res) {
           const reconhecido = await kv.get(`reconhecido:${chaveBase}`);
           if (reconhecido) continue;
 
-          // calcula quanto tempo já passou desde o horário agendado
-          const [h, m] = horario.split(':').map(Number);
-          const dataAgendada = new Date(agora);
-          dataAgendada.setHours(h, m, 0, 0);
-          const atrasoMs = agoraMs - dataAgendada.getTime();
+          // calcula quanto tempo já passou desde o horário agendado (sempre no fuso do Brasil)
+          const atrasoMs = minutosDeAtraso(horario, horaAtual) * 60000;
           if (atrasoMs > JANELA_MAXIMA_MS) continue; // desiste, passou muito tempo
 
           const estado = await kv.get(`estado:${chaveBase}`);

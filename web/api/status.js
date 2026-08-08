@@ -1,5 +1,5 @@
 import { kv } from '@vercel/kv';
-import { obterDataHoraBrasil, remedioAplicavelNoDia } from './_logica.js';
+import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
 const JANELA_MAXIMA_MS = 30 * 60 * 1000;
@@ -38,10 +38,7 @@ export default async function handler(req, res) {
         } else if (reconhecido) {
           status = 'confirmado (tomado)';
         } else {
-          const [h, m] = horario.split(':').map(Number);
-          const dataAgendada = new Date(agora);
-          dataAgendada.setHours(h, m, 0, 0);
-          const atrasoMs = agoraMs - dataAgendada.getTime();
+          const atrasoMs = minutosDeAtraso(horario, horaAtual) * 60000;
 
           if (atrasoMs > JANELA_MAXIMA_MS) {
             status = 'desistiu (passou 30min sem confirmação)';
