@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -10,9 +10,9 @@ import {
   Alert,
 } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { adicionarRemedio } from '../utils/storage';
-import { agendarAlarmesRemedio, pedirPermissoes, somarDias } from '../utils/notifications';
-import { UNIDADES, DIAS_SEMANA } from '../utils/constantes';
+import { adicionarRemedio, atualizarRemedio, listarRemedios } from '../utils/storage';
+import { agendarAlarmesRemedio, cancelarAlarmes, pedirPermissoes } from '../utils/notifications';
+import { UNIDADES, DIAS_SEMANA, formatarData } from '../utils/constantes';
 
 const FREQUENCIAS = [
   { valor: 'diaria', rotulo: 'Todos os dias' },
@@ -20,7 +20,13 @@ const FREQUENCIAS = [
   { valor: 'intervalo', rotulo: 'A cada X dias (ex: dias alternados)' },
 ];
 
-export default function AddMedicineScreen({ navigation }) {
+export default function AddMedicineScreen({ navigation, route }) {
+  const remedioIdEdicao = route?.params?.remedioId || null;
+  const modoEdicao = !!remedioIdEdicao;
+
+  const [carregando, setCarregando] = useState(modoEdicao);
+  const [remedioOriginal, setRemedioOriginal] = useState(null);
+
   const [nome, setNome] = useState('');
   const [unidade, setUnidade] = useState('comprimido');
   const [quantidadePorDose, setQuantidadePorDose] = useState('1');
@@ -35,6 +41,34 @@ export default function AddMedicineScreen({ navigation }) {
   const [intervaloDias, setIntervaloDias] = useState('2');
 
   const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    navigation.setOptions({
+      title: modoEdicao ? 'Editar Remédio' : 'Novo Remédio',
+    });
+
+    if (modoEdicao) {
+      (async () => {
+        const lista = await listarRemedios();
+        const encontrado = lista.find((r) => r.id === remedioIdEdicao);
+        if (encontrado) {
+          setRemedioOriginal(encontrado);
+          setNome(encontrado.nome);
+          setUnidade(encontrado.unidade || 'comprimido');
+          setQuantidadePorDose(String(encontrado.quantidadePorDose || 1));
+          setQuantidadeAtual(String(encontrado.quantidadeAtual ?? ''));
+          setQuantidadeMinima(String(encontrado.quantidadeMinima ?? ''));
+          setHorarios(encontrado.horarios || []);
+
+          const freq = encontrado.frequencia || { tipo: 'diaria' };
+          setTipoFrequencia(freq.tipo);
+          if (freq.tipo === 'dias_semana') setDiasSemanaSelecionados(freq.dias || []);
+          if (freq.tipo === 'intervalo') setIntervaloDias(String(freq.intervaloDias || 2));
+        }
+        setCarregando(false);
+      })();
+    }
+  }, []);
 
   function onChangeHorario(event, dataSelecionada) {
     setMostrarPicker(Platform.OS === 'ios');
@@ -61,6 +95,8 @@ export default function AddMedicineScreen({ navigation }) {
   }
 
   function montarFrequencia() {
+    const hoje = formatarData(new Date());
+
     if (tipoFrequencia === 'diaria') {
       return { tipo: 'diaria' };
     }
@@ -68,11 +104,16 @@ export default function AddMedicineScreen({ navigation }) {
       return { tipo: 'dias_semana', dias: diasSemanaSelecionados };
     }
     if (tipoFrequencia === 'intervalo') {
-      const hoje = new Date().toISOString().split('T')[0];
+      // Se já era "intervalo" antes da edição, preserva a data de início original
+      // (senão o histórico de dias passados fica incorreto). Só usa hoje se for novo.
+      const dataInicioExistente =
+        remedioOriginal?.frequencia?.tipo === 'intervalo'
+          ? remedioOriginal.frequencia.dataInicio
+          : null;
       return {
         tipo: 'intervalo',
         intervaloDias: Number(intervaloDias) || 2,
-        // primeira dose já é hoje; a partir da próxima, respeita o intervalo
+        dataInicio: dataInicioExistente || hoje,
         proximaData: hoje,
       };
     }
@@ -101,16 +142,12 @@ export default function AddMedicineScreen({ navigation }) {
 
     const permitido = await pedirPermissoes();
     if (!permitido) {
-      Alert.alert(
-        'Permissão necessária',
-        'Ative as notificações para receber os alarmes.'
-      );
+      Alert.alert('Permissão necessária', 'Ative as notificações para receber os alarmes.');
     }
 
     const frequencia = montarFrequencia();
 
-    const novoRemedio = {
-      id: Date.now().toString(),
+    const dadosRemedio = {
       nome: nome.trim(),
       unidade,
       quantidadePorDose: Number(quantidadePorDose) || 1,
@@ -119,15 +156,34 @@ export default function AddMedicineScreen({ navigation }) {
       frequencia,
       quantidadeAtual: Number(quantidadeAtual),
       quantidadeMinima: Number(quantidadeMinima) || 5,
-      notificationIds: [],
     };
 
-    const notificationIds = await agendarAlarmesRemedio(novoRemedio);
-    novoRemedio.notificationIds = notificationIds;
+    if (modoEdicao) {
+      // Cancela os alarmes antigos e cria novos com os dados atualizados
+      await cancelarAlarmes(remedioOriginal.notificationIds || []);
+      const novosIds = await agendarAlarmesRemedio({ ...dadosRemedio, id: remedioIdEdicao });
+      await atualizarRemedio(remedioIdEdicao, { ...dadosRemedio, notificationIds: novosIds });
+    } else {
+      const novoRemedio = {
+        id: Date.now().toString(),
+        ...dadosRemedio,
+        notificationIds: [],
+      };
+      const notificationIds = await agendarAlarmesRemedio(novoRemedio);
+      novoRemedio.notificationIds = notificationIds;
+      await adicionarRemedio(novoRemedio);
+    }
 
-    await adicionarRemedio(novoRemedio);
     setSalvando(false);
     navigation.goBack();
+  }
+
+  if (carregando) {
+    return (
+      <View style={styles.carregandoContainer}>
+        <Text>Carregando...</Text>
+      </View>
+    );
   }
 
   return (
@@ -282,7 +338,7 @@ export default function AddMedicineScreen({ navigation }) {
         disabled={salvando}
       >
         <Text style={styles.botaoSalvarTexto}>
-          {salvando ? 'Salvando...' : 'Salvar remédio'}
+          {salvando ? 'Salvando...' : modoEdicao ? 'Salvar alterações' : 'Salvar remédio'}
         </Text>
       </TouchableOpacity>
     </ScrollView>
@@ -291,6 +347,7 @@ export default function AddMedicineScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#fff' },
+  carregandoContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   label: { fontWeight: '600', marginTop: 16, marginBottom: 6 },
   subLabel: { fontSize: 13, color: '#666', marginBottom: 6 },
   input: {

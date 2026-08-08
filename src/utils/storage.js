@@ -1,13 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const CHAVE_REMEDIOS = '@remedios_app:lista';
+const CHAVE_REGISTROS = '@remedios_app:registros';
 
 // Estrutura de um remédio:
 // {
 //   id: string,
 //   nome: string,
+//   unidade: string,
+//   quantidadePorDose: number,
 //   dosagem: string,          // ex: "1 comprimido"
 //   horarios: ['08:00', '20:00'],
+//   frequencia: { tipo: 'diaria' } | { tipo: 'dias_semana', dias: [...] } | { tipo: 'intervalo', intervaloDias, dataInicio, proximaData },
 //   quantidadeAtual: number,  // quantas unidades restam
 //   quantidadeMinima: number, // avisa quando chegar nesse valor
 //   notificationIds: []       // ids das notificações agendadas
@@ -52,6 +56,62 @@ export async function removerRemedio(id) {
   const novaLista = lista.filter((r) => r.id !== id);
   await salvarRemedios(novaLista);
   return novaLista;
+}
+
+// ---- Registros de doses tomadas por dia (para o histórico semanal) ----
+// Guardado como objeto: { "remedioId|2026-08-08": true }
+
+export async function obterRegistros() {
+  try {
+    const json = await AsyncStorage.getItem(CHAVE_REGISTROS);
+    return json ? JSON.parse(json) : {};
+  } catch (e) {
+    console.error('Erro ao ler registros', e);
+    return {};
+  }
+}
+
+async function salvarRegistros(registros) {
+  await AsyncStorage.setItem(CHAVE_REGISTROS, JSON.stringify(registros));
+}
+
+function chaveRegistro(remedioId, data) {
+  return `${remedioId}|${data}`;
+}
+
+export function doseTomadaNoDia(registros, remedioId, data) {
+  return !!registros[chaveRegistro(remedioId, data)];
+}
+
+/**
+ * Alterna o status de "tomado" de um remédio num dia específico.
+ * Ajusta o estoque automaticamente (desconta ao marcar, devolve ao desmarcar).
+ * Retorna { remedios, registros } atualizados.
+ */
+export async function alternarDoseDoDia(remedio, data) {
+  const registros = await obterRegistros();
+  const chave = chaveRegistro(remedio.id, data);
+  const estavaTomado = !!registros[chave];
+  const porDose = remedio.quantidadePorDose || 1;
+
+  const novosRegistros = { ...registros };
+  if (estavaTomado) {
+    delete novosRegistros[chave];
+  } else {
+    novosRegistros[chave] = true;
+  }
+  await salvarRegistros(novosRegistros);
+
+  const delta = estavaTomado ? porDose : -porDose; // desmarcar devolve estoque
+  const listaRemedios = await listarRemedios();
+  const novaLista = listaRemedios.map((r) =>
+    r.id === remedio.id
+      ? { ...r, quantidadeAtual: Math.max(0, r.quantidadeAtual + delta) }
+      : r
+  );
+  await salvarRemedios(novaLista);
+
+  return { remedios: novaLista, registros: novosRegistros, tomadoAgora: !estavaTomado };
 }
 
 // Registra que uma dose foi tomada: desconta a quantidade da dose do estoque
