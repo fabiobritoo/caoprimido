@@ -184,6 +184,10 @@ export default function HomeScreen() {
 
       <div style={estilos.rodapeVersao}>
         v{VERSAO} · {VERSAO_DESCRICAO}
+        {' · '}
+        <span onClick={() => navigate('/diagnostico')} style={estilos.linkDiagnostico}>
+          diagnóstico
+        </span>
       </div>
     </div>
   );
@@ -294,4 +298,5 @@ const estilos = {
     opacity: 0.6,
     padding: '20px 0 10px',
   },
+  linkDiagnostico: { textDecoration: 'underline', cursor: 'pointer' },
 };
