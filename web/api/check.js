@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import webpush from 'web-push';
-import { formatarData, remedioAplicavelNoDia } from './_logica.js';
+import { obterDataHoraBrasil, remedioAplicavelNoDia } from './_logica.js';
 
 export default async function handler(req, res) {
   try {
@@ -22,10 +22,7 @@ export default async function handler(req, res) {
     );
 
     const agora = new Date();
-    const hoje = formatarData(agora);
-    const horaAtual = `${String(agora.getHours()).padStart(2, '0')}:${String(
-      agora.getMinutes()
-    ).padStart(2, '0')}`;
+    const { hoje, horaAtual } = obterDataHoraBrasil(agora);
 
     const idsDispositivos = (await kv.smembers('dispositivos')) || [];
     let notificacoesEnviadas = 0;

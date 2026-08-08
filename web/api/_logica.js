@@ -5,6 +5,25 @@ export function formatarData(date) {
   return `${y}-${m}-${d}`;
 }
 
+// Pega a data e hora atuais SEMPRE no fuso do Brasil (America/Sao_Paulo),
+// não importa em qual fuso o servidor da Vercel esteja rodando.
+export function obterDataHoraBrasil(data = new Date()) {
+  const formatador = new Intl.DateTimeFormat('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+  const partes = formatador.formatToParts(data);
+  const obter = (tipo) => partes.find((p) => p.type === tipo).value;
+  const hoje = `${obter('year')}-${obter('month')}-${obter('day')}`;
+  const horaAtual = `${obter('hour')}:${obter('minute')}`;
+  return { hoje, horaAtual };
+}
+
 function diferencaEmDias(dataInicioStr, dataFimStr) {
   const a = new Date(dataInicioStr + 'T00:00:00');
   const b = new Date(dataFimStr + 'T00:00:00');
