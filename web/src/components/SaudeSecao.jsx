@@ -199,10 +199,16 @@ export default function SaudeSecao({ CORES }) {
   );
 }
 
+function formatarDataCurta(dataStr) {
+  const [, mes, dia] = dataStr.split('-');
+  return `${dia}/${mes}`;
+}
+
 function GraficoPeso({ pontos, CORES }) {
   const largura = 320;
-  const altura = 120;
+  const altura = 150;
   const padding = 24;
+  const alturaLinha = altura - 34; // reserva espaço embaixo pras datas
 
   const pesos = pontos.map((p) => p.peso);
   const min = Math.min(...pesos);
@@ -210,9 +216,17 @@ function GraficoPeso({ pontos, CORES }) {
   const faixa = max - min || 1;
 
   const coordX = (i) => padding + (i * (largura - padding * 2)) / Math.max(1, pontos.length - 1);
-  const coordY = (peso) => altura - padding - ((peso - min) / faixa) * (altura - padding * 2);
+  const coordY = (peso) => alturaLinha - padding / 2 - ((peso - min) / faixa) * (alturaLinha - padding);
 
   const linha = pontos.map((p, i) => `${coordX(i)},${coordY(p.peso)}`).join(' ');
+
+  // pra não poluir quando tem muitos pontos, mostra no máximo ~5 datas espaçadas
+  // (sempre incluindo a primeira e a última)
+  const maximoRotulos = 5;
+  const passo = Math.max(1, Math.ceil(pontos.length / maximoRotulos));
+  const indicesComRotulo = new Set();
+  for (let i = 0; i < pontos.length; i += passo) indicesComRotulo.add(i);
+  indicesComRotulo.add(pontos.length - 1);
 
   return (
     <div
@@ -239,6 +253,21 @@ function GraficoPeso({ pontos, CORES }) {
         {pontos.map((p, i) => (
           <circle key={i} cx={coordX(i)} cy={coordY(p.peso)} r="3.5" fill={CORES.primaria} />
         ))}
+        {pontos.map(
+          (p, i) =>
+            indicesComRotulo.has(i) && (
+              <text
+                key={`data-${i}`}
+                x={coordX(i)}
+                y={alturaLinha + 16}
+                fontSize="9"
+                fill={CORES.textoSecundario}
+                textAnchor="middle"
+              >
+                {formatarDataCurta(p.data)}
+              </text>
+            )
+        )}
       </svg>
     </div>
   );
