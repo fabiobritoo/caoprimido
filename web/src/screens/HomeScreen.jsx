@@ -47,13 +47,17 @@ export default function HomeScreen() {
   const [sequenciaDias, setSequenciaDias] = useState(0);
   const [doseSelecionada, setDoseSelecionada] = useState(null);
   const [calendarioAberto, setCalendarioAberto] = useState(false);
-  const [direcaoAnimacao, setDirecaoAnimacao] = useState('');
   const [deltaXArrasto, setDeltaXArrasto] = useState(0);
   const [arrastando, setArrastando] = useState(false);
+  const [transicaoAtiva, setTransicaoAtiva] = useState(true);
 
   const toqueInicioX = useRef(null);
+  const larguraViewportRef = useRef(0);
+  const viewportRef = useRef(null);
 
+  const diasSemanaAnterior = diasDaSemanaContendo(somarDias(semanaAncora, -7));
   const diasDaSemana = diasDaSemanaContendo(semanaAncora);
+  const diasSemanaProxima = diasDaSemanaContendo(somarDias(semanaAncora, 7));
 
   const carregar = useCallback(async () => {
     const lista = await listarRemedios();
@@ -94,6 +98,8 @@ export default function HomeScreen() {
 
   function aoTocarInicio(e) {
     toqueInicioX.current = e.touches[0].clientX;
+    if (viewportRef.current) larguraViewportRef.current = viewportRef.current.offsetWidth;
+    setTransicaoAtiva(false);
     setArrastando(true);
   }
   function aoTocarMover(e) {
@@ -105,15 +111,25 @@ export default function HomeScreen() {
     const deltaFinal = deltaXArrasto;
     toqueInicioX.current = null;
     setArrastando(false);
+    setTransicaoAtiva(true);
+
+    const largura = larguraViewportRef.current || 300;
 
     if (deltaFinal > LIMIAR_SWIPE) {
-      setDirecaoAnimacao('direita');
-      setSemanaAncora((atual) => somarDias(atual, -7));
-      setDeltaXArrasto(0); // a semana nova monta do zero (via key), sem salto visual
+      // arrastou pra direita -> termina de revelar a semana ANTERIOR
+      setDeltaXArrasto(largura);
+      setTimeout(() => {
+        setTransicaoAtiva(false);
+        setSemanaAncora((atual) => somarDias(atual, -7));
+        setDeltaXArrasto(0);
+      }, 220);
     } else if (deltaFinal < -LIMIAR_SWIPE) {
-      setDirecaoAnimacao('esquerda');
-      setSemanaAncora((atual) => somarDias(atual, 7));
-      setDeltaXArrasto(0);
+      setDeltaXArrasto(-largura);
+      setTimeout(() => {
+        setTransicaoAtiva(false);
+        setSemanaAncora((atual) => somarDias(atual, 7));
+        setDeltaXArrasto(0);
+      }, 220);
     } else {
       setDeltaXArrasto(0); // não passou do limite: volta suavemente pro lugar
     }
@@ -121,14 +137,17 @@ export default function HomeScreen() {
   function aoTocarCancelar() {
     toqueInicioX.current = null;
     setArrastando(false);
+    setTransicaoAtiva(true);
     setDeltaXArrasto(0);
   }
 
   function aoEscolherDiaNoCalendario(dataStr) {
-    setDirecaoAnimacao(dataStr < semanaAncora ? 'direita' : 'esquerda');
+    setTransicaoAtiva(false);
     setDiaSelecionado(dataStr);
     setSemanaAncora(dataStr);
+    setDeltaXArrasto(0);
     setCalendarioAberto(false);
+    setTimeout(() => setTransicaoAtiva(true), 50);
   }
 
   const dosesDoDia = [];
@@ -212,6 +231,38 @@ export default function HomeScreen() {
     }
   }
 
+  function renderizarPainelSemana(dias) {
+    return (
+      <div style={estilos.painelSemana}>
+        {dias.map((dia) => {
+          const selecionado = dia.data === diaSelecionado;
+          const hoje = dia.data === HOJE;
+          const status = obterStatusDoDia(dia.data);
+          const corStatus = corDoCirculo(status);
+          return (
+            <button
+              key={dia.data}
+              onClick={() => setDiaSelecionado(dia.data)}
+              style={estilos.diaColuna}
+            >
+              <span style={estilos.diaAbrev}>{dia.abrev}</span>
+              <span
+                style={{
+                  ...estilos.diaCirculo,
+                  ...(corStatus ? { backgroundColor: corStatus, color: '#fff' } : {}),
+                  ...(selecionado ? estilos.diaCirculoSelecionado : {}),
+                  ...(!selecionado && hoje ? estilos.diaCirculoHoje : {}),
+                }}
+              >
+                {dia.numero}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 96 }}>
       <CabecalhoTopo titulo="Cãoprimido" />
@@ -242,40 +293,18 @@ export default function HomeScreen() {
         onTouchEnd={aoTocarFim}
         onTouchCancel={aoTocarCancelar}
       >
-        <div
-          key={semanaAncora}
-          className={direcaoAnimacao === 'esquerda' ? 'semana-entra-esquerda' : direcaoAnimacao === 'direita' ? 'semana-entra-direita' : ''}
-          style={{
-            ...estilos.diasContainer,
-            transform: `translateX(${deltaXArrasto}px)`,
-            transition: arrastando ? 'none' : 'transform 0.25s ease-out',
-          }}
-        >
-          {diasDaSemana.map((dia) => {
-            const selecionado = dia.data === diaSelecionado;
-            const hoje = dia.data === HOJE;
-            const status = obterStatusDoDia(dia.data);
-            const corStatus = corDoCirculo(status);
-            return (
-              <button
-                key={dia.data}
-                onClick={() => setDiaSelecionado(dia.data)}
-                style={estilos.diaColuna}
-              >
-                <span style={estilos.diaAbrev}>{dia.abrev}</span>
-                <span
-                  style={{
-                    ...estilos.diaCirculo,
-                    ...(corStatus ? { backgroundColor: corStatus, color: '#fff' } : {}),
-                    ...(selecionado ? estilos.diaCirculoSelecionado : {}),
-                    ...(!selecionado && hoje ? estilos.diaCirculoHoje : {}),
-                  }}
-                >
-                  {dia.numero}
-                </span>
-              </button>
-            );
-          })}
+        <div ref={viewportRef} style={estilos.janelaSemana}>
+          <div
+            style={{
+              ...estilos.trilhoSemanas,
+              transform: `translateX(calc(-100% + ${deltaXArrasto}px))`,
+              transition: transicaoAtiva ? 'transform 0.22s ease-out' : 'none',
+            }}
+          >
+            {renderizarPainelSemana(diasSemanaAnterior)}
+            {renderizarPainelSemana(diasDaSemana)}
+            {renderizarPainelSemana(diasSemanaProxima)}
+          </div>
         </div>
         <button onClick={() => setCalendarioAberto(true)} style={estilos.botaoCalendario}>
           <CalendarDays size={20} color={CORES.primaria} strokeWidth={2.2} />
@@ -456,10 +485,19 @@ function criarEstilos(CORES) {
       borderBottom: `1px solid ${CORES.borda}`,
       touchAction: 'pan-y',
     },
-    diasContainer: {
+    janelaSemana: {
+      flex: 1,
+      overflow: 'hidden',
+    },
+    trilhoSemanas: {
+      display: 'flex',
+      width: '300%',
+    },
+    painelSemana: {
       display: 'flex',
       justifyContent: 'space-between',
-      flex: 1,
+      width: '33.3333%',
+      flexShrink: 0,
     },
     botaoCalendario: {
       background: 'none',
