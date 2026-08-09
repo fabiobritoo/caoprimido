@@ -1,5 +1,23 @@
 import { kv } from '@vercel/kv';
 
+async function avisarCuidadorQueTomou(config, nomeRemedio, horario) {
+  if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
+  if (!process.env.TELEGRAM_BOT_TOKEN) return;
+
+  const texto = `✅ Cãoprimido: a dose de "${nomeRemedio}" das ${horario} (que estava atrasada) acabou de ser confirmada. Tudo certo agora!`;
+  const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+
+  try {
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: config.cuidadorChatId, text: texto }),
+    });
+  } catch (e) {
+    console.error('Falha ao avisar cuidador (confirmacao tardia):', e.message);
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ erro: 'Método não permitido' });
@@ -11,8 +29,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ erro: 'Faltam dados obrigatórios' });
     }
 
-    const chave = `reconhecido:${deviceId}:${remedioId}:${dia}:${horario}`;
-    await kv.set(chave, true, { ex: 172800 }); // vale por 2 dias, depois some sozinho
+    const chaveBase = `${deviceId}:${remedioId}:${dia}:${horario}`;
+    await kv.set(`reconhecido:${chaveBase}`, true, { ex: 172800 }); // vale por 2 dias, depois some sozinho
+
+    // se o cuidador tinha sido avisado (dose ficou atrasada), manda uma
+    // segunda mensagem tranquilizando que foi tomada agora
+    const jaAvisouCuidador = await kv.get(`avisouCuidador:${chaveBase}`);
+    if (jaAvisouCuidador) {
+      const dispositivo = await kv.get(`dispositivo:${deviceId}`);
+      const remedio = dispositivo?.remedios?.find((r) => r.id === remedioId);
+      if (dispositivo?.configuracoes && remedio) {
+        await avisarCuidadorQueTomou(dispositivo.configuracoes, remedio.nome, horario);
+      }
+    }
 
     res.status(200).json({ ok: true });
   } catch (erro) {
