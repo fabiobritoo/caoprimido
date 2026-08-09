@@ -3,18 +3,47 @@ import autoTable from 'jspdf-autotable';
 import { listarRemedios, obterRegistros } from './storage.js';
 import { listarRegistrosSaude } from './saude.js';
 import { calcularAdesaoPorRemedio, calcularAdesaoGeral } from './evolucao.js';
+import { calcularSequenciaDias } from './streak.js';
 import { rotuloUnidade, descreverFrequencia } from './constantes.js';
+
+// Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
+const ROSA = [217, 82, 122];
+const ROSA_ESCURO = [179, 61, 99];
+const DOURADO = [224, 169, 76];
+const CREME = [250, 243, 231];
+const TEXTO_PRINCIPAL = [74, 46, 30];
+const TEXTO_SECUNDARIO = [138, 111, 92];
+const BRANCO = [255, 255, 255];
 
 function formatarDataExtenso(dataStr) {
   const [ano, mes, dia] = dataStr.split('-');
   return `${dia}/${mes}/${ano}`;
 }
 
-function formatarData(date) {
+function formatarNomeArquivo(date) {
   const ano = date.getFullYear();
   const mes = String(date.getMonth() + 1).padStart(2, '0');
   const dia = String(date.getDate()).padStart(2, '0');
   return `${ano}-${mes}-${dia}`;
+}
+
+// Carrega uma imagem do /public e devolve como data URL base64,
+// pro jsPDF conseguir desenhar ela na página
+function carregarImagemComoBase64(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = reject;
+    img.src = url;
+  });
 }
 
 export async function gerarRelatorioPdf() {
@@ -24,37 +53,80 @@ export async function gerarRelatorioPdf() {
 
   const adesaoGeral = calcularAdesaoGeral(remedios, registros, 84);
   const adesaoPorRemedio = calcularAdesaoPorRemedio(remedios, registros, 84);
+  const sequenciaAtual = calcularSequenciaDias(remedios, registros);
+
+  const [logoBase64, mascoteBase64] = await Promise.all([
+    carregarImagemComoBase64('/logo-caoprimido.png').catch(() => null),
+    carregarImagemComoBase64('/nina/mascote-parabens.png').catch(() => null),
+  ]);
 
   const doc = new jsPDF();
   const larguraPagina = doc.internal.pageSize.getWidth();
-  let y = 20;
+  const alturaPagina = doc.internal.pageSize.getHeight();
 
-  doc.setFontSize(18);
-  doc.setTextColor(217, 82, 122);
-  doc.text('Relatório Cãoprimido', larguraPagina / 2, y, { align: 'center' });
-  y += 8;
+  // ---------- Cabeçalho colorido ----------
+  const alturaCabecalho = 38;
+  doc.setFillColor(...ROSA);
+  doc.rect(0, 0, larguraPagina, alturaCabecalho, 'F');
+  // uma faixa dourada fininha embaixo do cabeçalho, como um "sublinhado" de marca
+  doc.setFillColor(...DOURADO);
+  doc.rect(0, alturaCabecalho, larguraPagina, 1.5, 'F');
+
+  if (logoBase64) {
+    doc.addImage(logoBase64, 'PNG', 14, 6, 26, 26);
+  }
+
+  doc.setFontSize(20);
+  doc.setTextColor(...BRANCO);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Cãoprimido', logoBase64 ? 46 : 14, 20);
 
   doc.setFontSize(10);
-  doc.setTextColor(120, 120, 120);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(255, 255, 255);
   const agora = new Date();
   doc.text(
-    `Gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
-    larguraPagina / 2,
-    y,
-    { align: 'center' }
+    `Relatório gerado em ${agora.toLocaleDateString('pt-BR')} às ${agora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+    logoBase64 ? 46 : 14,
+    28
   );
-  y += 12;
 
-  doc.setFontSize(13);
-  doc.setTextColor(40, 40, 40);
-  doc.text('Resumo de adesão (últimos 84 dias)', 14, y);
-  y += 6;
+  let y = alturaCabecalho + 14;
 
-  doc.setFontSize(11);
-  doc.setTextColor(80, 80, 80);
-  const textoAdesao = adesaoGeral === null ? 'Sem dados suficientes ainda' : `${adesaoGeral}% de adesão geral`;
-  doc.text(textoAdesao, 14, y);
-  y += 8;
+  // ---------- Cartões de resumo ----------
+  const cartoes = [
+    { rotulo: 'Adesão geral', valor: adesaoGeral === null ? '—' : `${adesaoGeral}%` },
+    { rotulo: 'Sequência atual', valor: `${sequenciaAtual} ${sequenciaAtual === 1 ? 'dia' : 'dias'}` },
+    { rotulo: 'Remédios ativos', valor: `${remedios.length}` },
+  ];
+  const larguraCartao = (larguraPagina - 28 - 12) / 3; // 14mm de margem cada lado, 6mm de gap entre os 3
+  cartoes.forEach((c, i) => {
+    const x = 14 + i * (larguraCartao + 6);
+    doc.setFillColor(...CREME);
+    doc.roundedRect(x, y, larguraCartao, 22, 3, 3, 'F');
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...ROSA_ESCURO);
+    doc.text(c.valor, x + larguraCartao / 2, y + 11, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...TEXTO_SECUNDARIO);
+    doc.text(c.rotulo, x + larguraCartao / 2, y + 17, { align: 'center' });
+  });
+  y += 22 + 14;
+
+  // ---------- Seção: Remédios ----------
+  function tituloSecao(texto, yAtual) {
+    doc.setFillColor(...ROSA);
+    doc.rect(14, yAtual - 4.5, 3, 5, 'F'); // barrinha vertical de destaque
+    doc.setFontSize(13);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...TEXTO_PRINCIPAL);
+    doc.text(texto, 20, yAtual);
+    return yAtual + 6;
+  }
+
+  y = tituloSecao('Remédios cadastrados', y);
 
   if (remedios.length > 0) {
     autoTable(doc, {
@@ -68,29 +140,36 @@ export async function gerarRelatorioPdf() {
           `${r.quantidadePorDose} ${unidadeTexto}`,
           descreverFrequencia(r.frequencia),
           (r.horarios || []).join(', '),
-          adesao ? `${adesao.percentual}% (${adesao.tomadas}/${adesao.agendadas})` : '—',
+          adesao ? `${adesao.percentual}%` : '—',
         ];
       }),
-      theme: 'striped',
-      headStyles: { fillColor: [217, 82, 122] },
-      styles: { fontSize: 9 },
+      theme: 'plain',
+      headStyles: {
+        fillColor: ROSA,
+        textColor: BRANCO,
+        fontStyle: 'bold',
+        fontSize: 9.5,
+      },
+      bodyStyles: { fontSize: 9, textColor: TEXTO_PRINCIPAL },
+      alternateRowStyles: { fillColor: CREME },
       margin: { left: 14, right: 14 },
+      styles: { cellPadding: 4 },
     });
     y = doc.lastAutoTable.finalY + 14;
   } else {
+    doc.setFontSize(10);
+    doc.setTextColor(...TEXTO_SECUNDARIO);
     doc.text('Nenhum remédio cadastrado.', 14, y);
     y += 14;
   }
 
-  if (y > 250) {
+  // ---------- Seção: Saúde ----------
+  if (y > alturaPagina - 60) {
     doc.addPage();
     y = 20;
   }
 
-  doc.setFontSize(13);
-  doc.setTextColor(40, 40, 40);
-  doc.text('Registros de saúde', 14, y);
-  y += 6;
+  y = tituloSecao('Registros de saúde', y);
 
   if (registrosSaude.length > 0) {
     const ordenados = [...registrosSaude].sort((a, b) => a.data.localeCompare(b.data));
@@ -104,29 +183,49 @@ export async function gerarRelatorioPdf() {
         r.frequenciaCardiaca != null ? `${r.frequenciaCardiaca} bpm` : '—',
         r.anotacoes || '—',
       ]),
-      theme: 'striped',
-      headStyles: { fillColor: [217, 82, 122] },
-      styles: { fontSize: 9 },
+      theme: 'plain',
+      headStyles: {
+        fillColor: ROSA,
+        textColor: BRANCO,
+        fontStyle: 'bold',
+        fontSize: 9.5,
+      },
+      bodyStyles: { fontSize: 9, textColor: TEXTO_PRINCIPAL },
+      alternateRowStyles: { fillColor: CREME },
       margin: { left: 14, right: 14 },
+      styles: { cellPadding: 4 },
     });
+    y = doc.lastAutoTable.finalY + 10;
   } else {
-    doc.setFontSize(11);
-    doc.setTextColor(80, 80, 80);
+    doc.setFontSize(10);
+    doc.setTextColor(...TEXTO_SECUNDARIO);
     doc.text('Nenhum registro de saúde ainda.', 14, y);
   }
 
+  // ---------- Rodapé em todas as páginas ----------
   const totalPaginas = doc.internal.getNumberOfPages();
   for (let i = 1; i <= totalPaginas; i++) {
     doc.setPage(i);
+
+    // linha dourada fininha separando o rodapé
+    doc.setDrawColor(...DOURADO);
+    doc.setLineWidth(0.5);
+    doc.line(14, alturaPagina - 18, larguraPagina - 14, alturaPagina - 18);
+
+    if (mascoteBase64 && i === totalPaginas) {
+      doc.addImage(mascoteBase64, 'PNG', larguraPagina - 26, alturaPagina - 16, 12, 12);
+    }
+
     doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(...TEXTO_SECUNDARIO);
     doc.text(
       'Gerado pelo app Cãoprimido — não substitui orientação médica profissional.',
-      larguraPagina / 2,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: 'center' }
+      14,
+      alturaPagina - 11
     );
+    doc.text(`Página ${i} de ${totalPaginas}`, 14, alturaPagina - 6);
   }
 
-  doc.save(`caoprimido-relatorio-${formatarData(agora)}.pdf`);
+  doc.save(`caoprimido-relatorio-${formatarNomeArquivo(agora)}.pdf`);
 }
