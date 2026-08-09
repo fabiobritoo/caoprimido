@@ -61,6 +61,11 @@ export function aplicarBackup(pacote) {
   for (const chave of CHAVES_BACKUP) {
     if (pacote.dados[chave] !== undefined) {
       localStorage.setItem(chave, pacote.dados[chave]);
+    } else {
+      // essa chave não existia no momento do backup (ex: nenhuma consulta
+      // cadastrada ainda) — restaurar precisa voltar pro estado vazio também,
+      // não deixar dados mais novos sobrevivendo por engano
+      localStorage.removeItem(chave);
     }
   }
 }
