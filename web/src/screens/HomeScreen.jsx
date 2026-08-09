@@ -286,7 +286,7 @@ function criarEstilos(CORES) {
     },
     cabecalhoLista: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 },
     mascoteCabecalho: { width: 130, height: 130, objectFit: 'contain' },
-    textoParabens: { fontSize: 16, fontWeight: 700, color: CORES.primariaEscura, marginTop: -6 },
+    textoParabens: { fontSize: 16, fontWeight: 700, color: CORES.primariaEscura, marginTop: 8 },
     vazioContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 30 },
     mascoteVazio: { width: 220, height: 220, objectFit: 'contain', marginBottom: 12 },
     vazioTexto: { color: CORES.textoSecundario, textAlign: 'center' },
