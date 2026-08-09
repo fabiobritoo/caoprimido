@@ -11,12 +11,14 @@ import { calcularSequenciaDias } from '../utils/streak.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
+import SaudeSecao from '../components/SaudeSecao.jsx';
 
 const DIAS_HISTORICO = 84; // 12 semanas
 
 export default function EvolucaoScreen() {
   const { CORES } = useTema();
   const estilos = criarEstilos(CORES);
+  const [aba, setAba] = useState('remedios');
   const [carregando, setCarregando] = useState(true);
   const [mapaCalor, setMapaCalor] = useState([]);
   const [adesaoGeral, setAdesaoGeral] = useState(null);
@@ -67,7 +69,26 @@ export default function EvolucaoScreen() {
     <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 40 }}>
       <CabecalhoTopo titulo="Evolução" mostrarVoltar />
 
-      {carregando ? (
+      <div style={estilos.seletorAbas}>
+        <button
+          onClick={() => setAba('remedios')}
+          style={{ ...estilos.aba, ...(aba === 'remedios' ? estilos.abaAtiva : {}) }}
+        >
+          Remédios
+        </button>
+        <button
+          onClick={() => setAba('saude')}
+          style={{ ...estilos.aba, ...(aba === 'saude' ? estilos.abaAtiva : {}) }}
+        >
+          Saúde
+        </button>
+      </div>
+
+      {aba === 'saude' ? (
+        <div style={{ padding: 16 }}>
+          <SaudeSecao CORES={CORES} />
+        </div>
+      ) : carregando ? (
         <div style={{ padding: 40, textAlign: 'center', color: CORES.textoSecundario }}>
           Carregando...
         </div>
@@ -176,6 +197,26 @@ export default function EvolucaoScreen() {
 
 function criarEstilos(CORES) {
   return {
+    seletorAbas: {
+      display: 'flex',
+      backgroundColor: CORES.fundoCard,
+      borderBottom: `1px solid ${CORES.borda}`,
+      padding: '0 16px',
+    },
+    aba: {
+      flex: 1,
+      background: 'none',
+      border: 'none',
+      padding: '14px 0',
+      fontSize: 15,
+      fontWeight: 600,
+      color: CORES.textoSecundario,
+      borderBottom: '3px solid transparent',
+    },
+    abaAtiva: {
+      color: CORES.primaria,
+      borderBottom: `3px solid ${CORES.primaria}`,
+    },
     cartoesResumo: { display: 'flex', gap: 10, marginBottom: 24 },
     cartaoResumo: {
       flex: 1,
