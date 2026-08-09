@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2 } from 'lucide-react';
+import { HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud } from 'lucide-react';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.js';
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
+import { verificarAtualizacao } from '../utils/atualizacao.js';
+import { VERSAO } from '../utils/versao.js';
 
 function gerarCodigo() {
   const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // sem letras/numeros ambiguos
@@ -30,6 +32,8 @@ export default function ConfiguracoesScreen() {
   const [salvo, setSalvo] = useState(false);
   const [enviandoTeste, setEnviandoTeste] = useState(false);
   const [resultadoTeste, setResultadoTeste] = useState('');
+  const [verificandoAtualizacao, setVerificandoAtualizacao] = useState(false);
+  const [statusAtualizacao, setStatusAtualizacao] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -44,6 +48,22 @@ export default function ConfiguracoesScreen() {
       .then((d) => setBotUsername(d.username))
       .catch(() => {});
   }, []);
+
+  async function checarAtualizacao() {
+    setVerificandoAtualizacao(true);
+    setStatusAtualizacao('Verificando...');
+    const resultado = await verificarAtualizacao();
+    if (resultado === 'atualizando') {
+      setStatusAtualizacao('Nova versão encontrada! Atualizando...');
+      // a página recarrega sozinha quando a troca terminar
+    } else if (resultado === 'ja_atualizado') {
+      setStatusAtualizacao(`Você já está na versão mais recente (v${VERSAO}).`);
+      setVerificandoAtualizacao(false);
+    } else {
+      setStatusAtualizacao('Não consegui verificar agora. Tente de novo em instantes.');
+      setVerificandoAtualizacao(false);
+    }
+  }
 
   async function verificarCodigo() {
     setVerificando(true);
@@ -136,6 +156,26 @@ export default function ConfiguracoesScreen() {
             />
           </button>
         </div>
+
+        <div style={estilos.divisor} />
+
+        <div style={estilos.secaoTitulo}>
+          <DownloadCloud size={20} color={CORES.primaria} />
+          Atualizações
+        </div>
+        <div style={estilos.explicacao}>
+          Versão instalada: v{VERSAO}. Se o app parecer desatualizado, verifique
+          aqui em vez de ficar fechando e abrindo várias vezes.
+        </div>
+        <button
+          onClick={checarAtualizacao}
+          disabled={verificandoAtualizacao}
+          style={estilos.botaoVerificarAtualizacao}
+        >
+          <RefreshCw size={16} strokeWidth={2.3} className={verificandoAtualizacao ? 'girando' : ''} />
+          {verificandoAtualizacao ? 'Verificando...' : 'Verificar atualização'}
+        </button>
+        {statusAtualizacao && <div style={estilos.statusAtualizacaoTexto}>{statusAtualizacao}</div>}
 
         <div style={estilos.divisor} />
 
@@ -245,6 +285,16 @@ function criarEstilos(CORES) {
     },
     explicacao: { color: CORES.textoSecundario, fontSize: 14, marginBottom: 20 },
     divisor: { height: 1, backgroundColor: CORES.borda, margin: '20px 0' },
+  botaoVerificarAtualizacao: {
+    ...criarBotaoSecundario(CORES),
+    width: '100%',
+  },
+  statusAtualizacaoTexto: {
+    fontSize: 13,
+    color: CORES.textoSecundario,
+    marginTop: 10,
+    textAlign: 'center',
+  },
     linhaToggle: {
       display: 'flex',
       justifyContent: 'space-between',

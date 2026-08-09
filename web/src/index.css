@@ -33,3 +33,12 @@ body {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.15); }
 }
+
+@keyframes girando {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.girando {
+  animation: girando 1s linear infinite;
+}

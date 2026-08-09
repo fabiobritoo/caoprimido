@@ -135,6 +135,13 @@ self.addEventListener('notificationclose', (evento) => {
 // Permite que a página (app aberto) peça pro Service Worker fechar
 // as notificações acumuladas de um remédio, quando confirmado direto pelo app
 self.addEventListener('message', (evento) => {
+  if (evento.data?.tipo === 'PULAR_ESPERA') {
+    // usado pelo botao "Verificar atualizacao": ativa a nova versao na hora,
+    // em vez de esperar todas as abas fecharem sozinhas
+    self.skipWaiting();
+    return;
+  }
+
   if (evento.data?.tipo !== 'FECHAR_NOTIFICACOES') return;
   const { remedioId, dia, horario } = evento.data;
   const prefixoTag = `remedio-${remedioId}-${dia}-${horario}-`;
