@@ -4,6 +4,7 @@ import { listarRemedios, obterRegistros } from './storage.js';
 import { listarRegistrosSaude } from './saude.js';
 import { calcularAdesaoPorRemedio, calcularAdesaoGeral } from './evolucao.js';
 import { calcularSequenciaDias } from './streak.js';
+import { obterPerfil } from './perfil.js';
 import { rotuloUnidade, descreverFrequencia } from './constantes.js';
 
 // Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
@@ -50,10 +51,15 @@ export async function gerarRelatorioPdf() {
   const remedios = await listarRemedios();
   const registros = await obterRegistros();
   const registrosSaude = await listarRegistrosSaude();
+  const perfil = await obterPerfil();
 
   const adesaoGeral = calcularAdesaoGeral(remedios, registros, 84);
   const adesaoPorRemedio = calcularAdesaoPorRemedio(remedios, registros, 84);
   const sequenciaAtual = calcularSequenciaDias(remedios, registros);
+
+  const pesoMaisRecente = [...registrosSaude]
+    .filter((r) => r.peso != null)
+    .sort((a, b) => b.data.localeCompare(a.data))[0] || null;
 
   const [logoBase64, mascoteBase64] = await Promise.all([
     carregarImagemComoBase64('/logo-caoprimido.png').catch(() => null),
@@ -92,6 +98,31 @@ export async function gerarRelatorioPdf() {
   );
 
   let y = alturaCabecalho + 14;
+
+  // ---------- Dados do paciente ----------
+  const temDadosPessoais = perfil.nome || perfil.idade || perfil.altura || pesoMaisRecente;
+  if (temDadosPessoais) {
+    const partes = [];
+    if (perfil.nome) partes.push(`Nome: ${perfil.nome}`);
+    if (perfil.idade) partes.push(`Idade: ${perfil.idade} anos`);
+    if (perfil.altura) partes.push(`Altura: ${perfil.altura} cm`);
+    if (pesoMaisRecente) {
+      partes.push(`Peso mais recente: ${pesoMaisRecente.peso} kg (${formatarDataExtenso(pesoMaisRecente.data)})`);
+    }
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal');
+    const textoCompleto = partes.join('   ·   ');
+    const larguraTexto = larguraPagina - 28 - 10;
+    const linhas = doc.splitTextToSize(textoCompleto, larguraTexto);
+    const alturaCaixa = linhas.length * 5 + 6;
+
+    doc.setFillColor(...CREME);
+    doc.roundedRect(14, y, larguraPagina - 28, alturaCaixa, 2, 2, 'F');
+    doc.setTextColor(...TEXTO_PRINCIPAL);
+    doc.text(linhas, larguraPagina / 2, y + 6.5, { align: 'center' });
+    y += alturaCaixa + 10;
+  }
 
   // ---------- Cartões de resumo ----------
   const cartoes = [

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud,
-  Database, Upload, CalendarClock,
+  Database, Upload, CalendarClock, User,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
@@ -12,6 +12,7 @@ import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { verificarAtualizacao } from '../utils/atualizacao.js';
 import { exportarBackup, lerArquivoBackup, aplicarBackup } from '../utils/backup.js';
+import { obterPerfil, salvarPerfil } from '../utils/perfil.js';
 import { VERSAO } from '../utils/versao.js';
 
 function gerarCodigo() {
@@ -29,6 +30,11 @@ export default function ConfiguracoesScreen() {
   const estilos = criarEstilos(CORES);
   const inputArquivoRef = useRef(null);
   const [statusBackup, setStatusBackup] = useState('');
+  const [nomePerfil, setNomePerfil] = useState('');
+  const [idadePerfil, setIdadePerfil] = useState('');
+  const [alturaPerfil, setAlturaPerfil] = useState('');
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [perfilSalvo, setPerfilSalvo] = useState(false);
   const [cuidadorAtivo, setCuidadorAtivo] = useState(false);
   const [cuidadorChatId, setCuidadorChatId] = useState('');
   const [cuidadorNome, setCuidadorNome] = useState('');
@@ -51,11 +57,26 @@ export default function ConfiguracoesScreen() {
       setCuidadorNome(config.cuidadorNome || '');
     })();
 
+    (async () => {
+      const perfil = await obterPerfil();
+      setNomePerfil(perfil.nome || '');
+      setIdadePerfil(perfil.idade || '');
+      setAlturaPerfil(perfil.altura || '');
+    })();
+
     fetch('/api/telegram-bot-info')
       .then((r) => r.json())
       .then((d) => setBotUsername(d.username))
       .catch(() => {});
   }, []);
+
+  async function salvarPerfilAgora() {
+    setSalvandoPerfil(true);
+    await salvarPerfil({ nome: nomePerfil.trim(), idade: idadePerfil, altura: alturaPerfil });
+    setSalvandoPerfil(false);
+    setPerfilSalvo(true);
+    setTimeout(() => setPerfilSalvo(false), 2500);
+  }
 
   function baixarBackup() {
     exportarBackup();
@@ -165,6 +186,53 @@ export default function ConfiguracoesScreen() {
       <CabecalhoTopo titulo="Configurações" mostrarVoltar />
 
       <div style={{ padding: 20 }}>
+        <div style={estilos.secaoTitulo}>
+          <User size={20} color={CORES.primaria} />
+          Dados pessoais
+        </div>
+        <div style={estilos.explicacao}>
+          Usados no relatório em PDF, pra dar mais contexto ao médico.
+        </div>
+
+        <label style={estilos.labelCampo}>Nome</label>
+        <input
+          type="text"
+          placeholder="Seu nome"
+          value={nomePerfil}
+          onChange={(e) => setNomePerfil(e.target.value)}
+          style={estilos.inputPerfil}
+        />
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ flex: 1 }}>
+            <label style={estilos.labelCampo}>Idade</label>
+            <input
+              type="number"
+              placeholder="Ex: 34"
+              value={idadePerfil}
+              onChange={(e) => setIdadePerfil(e.target.value)}
+              style={estilos.inputPerfil}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={estilos.labelCampo}>Altura (cm)</label>
+            <input
+              type="number"
+              placeholder="Ex: 172"
+              value={alturaPerfil}
+              onChange={(e) => setAlturaPerfil(e.target.value)}
+              style={estilos.inputPerfil}
+            />
+          </div>
+        </div>
+
+        <button onClick={salvarPerfilAgora} disabled={salvandoPerfil} style={estilos.botaoVerificarAtualizacao}>
+          <Save size={16} strokeWidth={2.3} />
+          {salvandoPerfil ? 'Salvando...' : perfilSalvo ? '✓ Salvo!' : 'Salvar dados pessoais'}
+        </button>
+
+        <div style={estilos.divisor} />
+
         <div style={estilos.secaoTitulo}>
           {modoEscuro ? <Moon size={20} color={CORES.primaria} /> : <Sun size={20} color={CORES.primaria} />}
           Aparência
@@ -359,6 +427,24 @@ function criarEstilos(CORES) {
       marginBottom: 6,
     },
     explicacao: { color: CORES.textoSecundario, fontSize: 14, marginBottom: 20 },
+    labelCampo: {
+      display: 'block',
+      fontWeight: 600,
+      fontSize: 13,
+      color: CORES.textoPrincipal,
+      marginBottom: 6,
+    },
+    inputPerfil: {
+      width: '100%',
+      border: `1.5px solid ${CORES.borda}`,
+      borderRadius: RAIO.pequeno,
+      padding: 10,
+      fontSize: 15,
+      backgroundColor: CORES.fundo,
+      color: CORES.textoPrincipal,
+      boxSizing: 'border-box',
+      marginBottom: 14,
+    },
     divisor: { height: 1, backgroundColor: CORES.borda, margin: '20px 0' },
   botaoVerificarAtualizacao: {
     ...criarBotaoSecundario(CORES),
