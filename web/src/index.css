@@ -42,3 +42,18 @@ body {
 .girando {
   animation: girando 1s linear infinite;
 }
+
+@keyframes deslizarEntradaDaDireita {
+  from { transform: translateX(24px); opacity: 0.3; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes deslizarEntradaDaEsquerda {
+  from { transform: translateX(-24px); opacity: 0.3; }
+  to { transform: translateX(0); opacity: 1; }
+}
+.semana-entra-direita {
+  animation: deslizarEntradaDaDireita 0.24s ease-out;
+}
+.semana-entra-esquerda {
+  animation: deslizarEntradaDaEsquerda 0.24s ease-out;
+}

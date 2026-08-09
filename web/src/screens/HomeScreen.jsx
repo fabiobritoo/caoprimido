@@ -47,6 +47,7 @@ export default function HomeScreen() {
   const [sequenciaDias, setSequenciaDias] = useState(0);
   const [doseSelecionada, setDoseSelecionada] = useState(null);
   const [calendarioAberto, setCalendarioAberto] = useState(false);
+  const [direcaoAnimacao, setDirecaoAnimacao] = useState('');
 
   const toqueInicioX = useRef(null);
 
@@ -89,9 +90,11 @@ export default function HomeScreen() {
   );
 
   function irParaSemanaAnterior() {
+    setDirecaoAnimacao('direita');
     setSemanaAncora((atual) => somarDias(atual, -7));
   }
   function irParaProximaSemana() {
+    setDirecaoAnimacao('esquerda');
     setSemanaAncora((atual) => somarDias(atual, 7));
   }
 
@@ -107,6 +110,7 @@ export default function HomeScreen() {
   }
 
   function aoEscolherDiaNoCalendario(dataStr) {
+    setDirecaoAnimacao(dataStr < semanaAncora ? 'direita' : 'esquerda');
     setDiaSelecionado(dataStr);
     setSemanaAncora(dataStr);
     setCalendarioAberto(false);
@@ -217,7 +221,11 @@ export default function HomeScreen() {
       </div>
 
       <div style={estilos.faixaSemana} onTouchStart={aoTocarInicio} onTouchEnd={aoTocarFim}>
-        <div style={estilos.diasContainer}>
+        <div
+          key={semanaAncora}
+          className={direcaoAnimacao === 'esquerda' ? 'semana-entra-esquerda' : direcaoAnimacao === 'direita' ? 'semana-entra-direita' : ''}
+          style={estilos.diasContainer}
+        >
           {diasDaSemana.map((dia) => {
             const selecionado = dia.data === diaSelecionado;
             const hoje = dia.data === HOJE;
