@@ -1,5 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud,
+  Database, Upload, CalendarClock,
+} from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -7,6 +11,7 @@ import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { verificarAtualizacao } from '../utils/atualizacao.js';
+import { exportarBackup, lerArquivoBackup, aplicarBackup } from '../utils/backup.js';
 import { VERSAO } from '../utils/versao.js';
 
 function gerarCodigo() {
@@ -19,8 +24,11 @@ function gerarCodigo() {
 }
 
 export default function ConfiguracoesScreen() {
+  const navigate = useNavigate();
   const { CORES, modoEscuro, setModoEscuro } = useTema();
   const estilos = criarEstilos(CORES);
+  const inputArquivoRef = useRef(null);
+  const [statusBackup, setStatusBackup] = useState('');
   const [cuidadorAtivo, setCuidadorAtivo] = useState(false);
   const [cuidadorChatId, setCuidadorChatId] = useState('');
   const [cuidadorNome, setCuidadorNome] = useState('');
@@ -48,6 +56,29 @@ export default function ConfiguracoesScreen() {
       .then((d) => setBotUsername(d.username))
       .catch(() => {});
   }, []);
+
+  function baixarBackup() {
+    exportarBackup();
+    setStatusBackup('✓ Backup baixado! Guarde esse arquivo em local seguro.');
+    setTimeout(() => setStatusBackup(''), 4000);
+  }
+
+  async function aoEscolherArquivoBackup(e) {
+    const arquivo = e.target.files?.[0];
+    e.target.value = ''; // permite escolher o mesmo arquivo de novo depois, se precisar
+    if (!arquivo) return;
+
+    if (!confirm('Isso vai SUBSTITUIR os dados atuais do app pelos do backup. Continuar?')) return;
+
+    try {
+      const pacote = await lerArquivoBackup(arquivo);
+      aplicarBackup(pacote);
+      alert('Backup restaurado! O app vai recarregar agora.');
+      window.location.reload();
+    } catch (erro) {
+      alert(erro.message);
+    }
+  }
 
   async function checarAtualizacao() {
     setVerificandoAtualizacao(true);
@@ -176,6 +207,50 @@ export default function ConfiguracoesScreen() {
           {verificandoAtualizacao ? 'Verificando...' : 'Verificar atualização'}
         </button>
         {statusAtualizacao && <div style={estilos.statusAtualizacaoTexto}>{statusAtualizacao}</div>}
+
+        <div style={estilos.divisor} />
+
+        <div style={estilos.secaoTitulo}>
+          <Database size={20} color={CORES.primaria} />
+          Backup dos dados
+        </div>
+        <div style={estilos.explicacao}>
+          Hoje seus dados ficam salvos só nesse navegador. Se trocar de celular ou
+          limpar os dados do app, você perde tudo — faça backups de vez em quando.
+        </div>
+        <button onClick={baixarBackup} style={estilos.botaoVerificarAtualizacao}>
+          <DownloadCloud size={16} strokeWidth={2.3} />
+          Baixar backup
+        </button>
+        <input
+          ref={inputArquivoRef}
+          type="file"
+          accept="application/json"
+          onChange={aoEscolherArquivoBackup}
+          style={{ display: 'none' }}
+        />
+        <button
+          onClick={() => inputArquivoRef.current?.click()}
+          style={{ ...estilos.botaoVerificarAtualizacao, marginTop: 10 }}
+        >
+          <Upload size={16} strokeWidth={2.3} />
+          Restaurar backup
+        </button>
+        {statusBackup && <div style={estilos.statusAtualizacaoTexto}>{statusBackup}</div>}
+
+        <div style={estilos.divisor} />
+
+        <div style={estilos.secaoTitulo}>
+          <CalendarClock size={20} color={CORES.primaria} />
+          Consultas médicas
+        </div>
+        <div style={estilos.explicacao}>
+          Guarde a data da próxima consulta, separado dos horários de remédio.
+        </div>
+        <button onClick={() => navigate('/consultas')} style={estilos.botaoVerificarAtualizacao}>
+          <CalendarClock size={16} strokeWidth={2.3} />
+          Ver/adicionar consultas
+        </button>
 
         <div style={estilos.divisor} />
 

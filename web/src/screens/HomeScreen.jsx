@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp, CalendarDays,
+  Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock,
 } from 'lucide-react';
 import {
   listarRemedios,
@@ -25,6 +25,7 @@ import DoseDetalheModal from '../components/DoseDetalheModal.jsx';
 import CalendarioModal from '../components/CalendarioModal.jsx';
 import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
+import { obterProximaConsulta } from '../utils/consultas.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
 
 const HOJE = formatarData(new Date());
@@ -36,12 +37,18 @@ function formatarHora(timestamp) {
   return `${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`;
 }
 
+function formatarDataCurtaBR(dataStr) {
+  const [, mes, dia] = dataStr.split('-');
+  return `${dia}/${mes}`;
+}
+
 export default function HomeScreen() {
   const navigate = useNavigate();
   const { CORES } = useTema();
   const estilos = criarEstilos(CORES);
   const [remedios, setRemedios] = useState([]);
   const [registros, setRegistros] = useState({});
+  const [proximaConsulta, setProximaConsulta] = useState(null);
   const [diaSelecionado, setDiaSelecionado] = useState(HOJE);
   const [semanaAncora, setSemanaAncora] = useState(HOJE);
   const [sequenciaDias, setSequenciaDias] = useState(0);
@@ -66,6 +73,7 @@ export default function HomeScreen() {
     setRegistros(regs);
     setSequenciaDias(calcularSequenciaDias(lista, regs));
     atualizarSeloLocal(lista, regs);
+    setProximaConsulta(await obterProximaConsulta());
   }, []);
 
   useEffect(() => {
@@ -328,6 +336,14 @@ export default function HomeScreen() {
         )}
       </div>
 
+      {proximaConsulta && (
+        <button onClick={() => navigate('/consultas')} style={estilos.faixaConsulta}>
+          <CalendarClock size={15} strokeWidth={2.3} />
+          Próxima consulta: {formatarDataCurtaBR(proximaConsulta.data)}
+          {proximaConsulta.hora && ` às ${proximaConsulta.hora}`} — {proximaConsulta.medico}
+        </button>
+      )}
+
       <div style={{ padding: 16 }}>
         {dosesDoDia.length > 0 && (
           <div style={estilos.cabecalhoLista}>
@@ -562,6 +578,22 @@ function criarEstilos(CORES) {
       padding: '10px 0',
       minHeight: 40,
       boxSizing: 'border-box',
+    },
+    faixaConsulta: {
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      textAlign: 'center',
+      backgroundColor: CORES.fundoCard,
+      borderBottom: `1px solid ${CORES.borda}`,
+      color: CORES.textoSecundario,
+      fontWeight: 600,
+      fontSize: 12,
+      padding: '9px 10px',
+      border: 'none',
+      borderRadius: 0,
     },
     cabecalhoLista: {
       display: 'flex',
