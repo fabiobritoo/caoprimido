@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp } from 'lucide-react';
+import {
+  Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp, CalendarDays,
+} from 'lucide-react';
 import {
   listarRemedios,
   obterRegistros,
@@ -11,19 +13,22 @@ import {
 } from '../utils/storage.js';
 import {
   rotuloUnidade,
-  diasDaSemanaAtualSegunda,
+  diasDaSemanaContendo,
   remedioAplicavelNoDia,
   formatarData,
+  somarDias,
 } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import DoseDetalheModal from '../components/DoseDetalheModal.jsx';
+import CalendarioModal from '../components/CalendarioModal.jsx';
 import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
 
 const HOJE = formatarData(new Date());
+const LIMIAR_SWIPE = 45; // pixels mínimos de arrasto pra contar como swipe
 
 function formatarHora(timestamp) {
   if (!timestamp) return '--:--';
@@ -38,10 +43,14 @@ export default function HomeScreen() {
   const [remedios, setRemedios] = useState([]);
   const [registros, setRegistros] = useState({});
   const [diaSelecionado, setDiaSelecionado] = useState(HOJE);
+  const [semanaAncora, setSemanaAncora] = useState(HOJE);
   const [sequenciaDias, setSequenciaDias] = useState(0);
   const [doseSelecionada, setDoseSelecionada] = useState(null);
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
 
-  const diasDaSemana = diasDaSemanaAtualSegunda();
+  const toqueInicioX = useRef(null);
+
+  const diasDaSemana = diasDaSemanaContendo(semanaAncora);
 
   const carregar = useCallback(async () => {
     const lista = await listarRemedios();
@@ -60,6 +69,48 @@ export default function HomeScreen() {
     document.addEventListener('visibilitychange', aoVoltarParaAba);
     return () => document.removeEventListener('visibilitychange', aoVoltarParaAba);
   }, [carregar]);
+
+  const obterStatusDoDia = useCallback(
+    (dataStr) => {
+      const doses = [];
+      for (const remedio of remedios) {
+        if (!remedioAplicavelNoDia(remedio.frequencia, dataStr)) continue;
+        for (const horario of remedio.horarios || []) {
+          doses.push({ remedioId: remedio.id, horario });
+        }
+      }
+      if (doses.length === 0) return null;
+      const tomadas = doses.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario));
+      if (tomadas.length === doses.length) return 'completo';
+      if (tomadas.length === 0) return 'nenhum';
+      return 'parcial';
+    },
+    [remedios, registros]
+  );
+
+  function irParaSemanaAnterior() {
+    setSemanaAncora((atual) => somarDias(atual, -7));
+  }
+  function irParaProximaSemana() {
+    setSemanaAncora((atual) => somarDias(atual, 7));
+  }
+
+  function aoTocarInicio(e) {
+    toqueInicioX.current = e.touches[0].clientX;
+  }
+  function aoTocarFim(e) {
+    if (toqueInicioX.current === null) return;
+    const deltaX = e.changedTouches[0].clientX - toqueInicioX.current;
+    if (deltaX > LIMIAR_SWIPE) irParaSemanaAnterior();
+    else if (deltaX < -LIMIAR_SWIPE) irParaProximaSemana();
+    toqueInicioX.current = null;
+  }
+
+  function aoEscolherDiaNoCalendario(dataStr) {
+    setDiaSelecionado(dataStr);
+    setSemanaAncora(dataStr);
+    setCalendarioAberto(false);
+  }
 
   const dosesDoDia = [];
   for (const remedio of remedios) {
@@ -133,6 +184,15 @@ export default function HomeScreen() {
     setDoseSelecionada(null);
   }
 
+  function corDoCirculo(status) {
+    switch (status) {
+      case 'completo': return CORES.sucesso;
+      case 'parcial': return CORES.atencao;
+      case 'nenhum': return CORES.perigo;
+      default: return null;
+    }
+  }
+
   return (
     <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 96 }}>
       <CabecalhoTopo titulo="Cãoprimido" />
@@ -156,29 +216,37 @@ export default function HomeScreen() {
         </button>
       </div>
 
-      <div style={estilos.faixaSemana}>
-        {diasDaSemana.map((dia) => {
-          const selecionado = dia.data === diaSelecionado;
-          const hoje = dia.data === HOJE;
-          return (
-            <button
-              key={dia.data}
-              onClick={() => setDiaSelecionado(dia.data)}
-              style={estilos.diaColuna}
-            >
-              <span style={estilos.diaAbrev}>{dia.abrev}</span>
-              <span
-                style={{
-                  ...estilos.diaCirculo,
-                  ...(selecionado ? estilos.diaCirculoSelecionado : {}),
-                  ...(!selecionado && hoje ? estilos.diaCirculoHoje : {}),
-                }}
+      <div style={estilos.faixaSemana} onTouchStart={aoTocarInicio} onTouchEnd={aoTocarFim}>
+        <div style={estilos.diasContainer}>
+          {diasDaSemana.map((dia) => {
+            const selecionado = dia.data === diaSelecionado;
+            const hoje = dia.data === HOJE;
+            const status = obterStatusDoDia(dia.data);
+            const corStatus = corDoCirculo(status);
+            return (
+              <button
+                key={dia.data}
+                onClick={() => setDiaSelecionado(dia.data)}
+                style={estilos.diaColuna}
               >
-                {dia.numero}
-              </span>
-            </button>
-          );
-        })}
+                <span style={estilos.diaAbrev}>{dia.abrev}</span>
+                <span
+                  style={{
+                    ...estilos.diaCirculo,
+                    ...(corStatus ? { backgroundColor: corStatus, color: '#fff' } : {}),
+                    ...(selecionado ? estilos.diaCirculoSelecionado : {}),
+                    ...(!selecionado && hoje ? estilos.diaCirculoHoje : {}),
+                  }}
+                >
+                  {dia.numero}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <button onClick={() => setCalendarioAberto(true)} style={estilos.botaoCalendario}>
+          <CalendarDays size={20} color={CORES.primaria} strokeWidth={2.2} />
+        </button>
       </div>
 
       <div
@@ -311,6 +379,16 @@ export default function HomeScreen() {
         aoFechar={() => setDoseSelecionada(null)}
         aoDesfazer={desfazerDose}
       />
+
+      {calendarioAberto && (
+        <CalendarioModal
+          CORES={CORES}
+          dataInicial={diaSelecionado}
+          obterStatusDoDia={obterStatusDoDia}
+          aoFechar={() => setCalendarioAberto(false)}
+          aoEscolherDia={aoEscolherDiaNoCalendario}
+        />
+      )}
     </div>
   );
 }
@@ -339,10 +417,22 @@ function criarEstilos(CORES) {
     },
     faixaSemana: {
       display: 'flex',
-      justifyContent: 'space-between',
+      alignItems: 'center',
       backgroundColor: CORES.fundoCard,
-      padding: '14px 10px',
+      padding: '14px 8px 14px 10px',
       borderBottom: `1px solid ${CORES.borda}`,
+      touchAction: 'pan-y',
+    },
+    diasContainer: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      flex: 1,
+    },
+    botaoCalendario: {
+      background: 'none',
+      border: 'none',
+      padding: '0 4px 0 10px',
+      flexShrink: 0,
     },
     diaColuna: {
       display: 'flex',
@@ -350,7 +440,7 @@ function criarEstilos(CORES) {
       alignItems: 'center',
       background: 'none',
       border: 'none',
-      width: 40,
+      width: 36,
       gap: 6,
     },
     diaAbrev: { fontSize: 11, color: CORES.textoSecundario },
@@ -366,7 +456,11 @@ function criarEstilos(CORES) {
       color: CORES.textoPrincipal,
       transition: 'all 0.15s',
     },
-    diaCirculoSelecionado: { backgroundColor: CORES.primaria, color: '#fff', boxShadow: SOMBRA.botao },
+    diaCirculoSelecionado: {
+      boxShadow: `0 0 0 2.5px ${CORES.primaria}`,
+      backgroundColor: CORES.primaria,
+      color: '#fff',
+    },
     diaCirculoHoje: { border: `2px solid ${CORES.primaria}` },
     faixaStreak: {
       display: 'flex',
