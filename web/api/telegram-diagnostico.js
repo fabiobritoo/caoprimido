@@ -6,19 +6,37 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getMe`;
-    const resposta = await fetch(url, { cache: 'no-store' });
-    const dados = await resposta.json();
+    const base = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}`;
 
-    if (!dados.ok) {
-      return res.status(500).json({ erro: 'Token inválido ou de bot inexistente', detalhe: dados.description });
+    const respostaMe = await fetch(`${base}/getMe`, { cache: 'no-store' });
+    const dadosMe = await respostaMe.json();
+    if (!dadosMe.ok) {
+      return res.status(500).json({ erro: 'Token inválido ou de bot inexistente', detalhe: dadosMe.description });
+    }
+
+    const respostaWebhook = await fetch(`${base}/getWebhookInfo`, { cache: 'no-store' });
+    const dadosWebhook = await respostaWebhook.json();
+
+    let webhookRemovido = false;
+    if (dadosWebhook.ok && dadosWebhook.result?.url) {
+      // um webhook configurado impede o getUpdates de funcionar — remove automaticamente
+      const respostaRemover = await fetch(`${base}/deleteWebhook`, { cache: 'no-store' });
+      const dadosRemover = await respostaRemover.json();
+      webhookRemovido = dadosRemover.ok;
     }
 
     res.status(200).json({
       ok: true,
-      bot_username: dados.result.username,
-      bot_nome: dados.result.first_name,
-      mensagem: `O token configurado pertence ao bot @${dados.result.username}`,
+      bot_username: dadosMe.result.username,
+      bot_nome: dadosMe.result.first_name,
+      webhook_estava_configurado: !!dadosWebhook.result?.url,
+      webhook_url_anterior: dadosWebhook.result?.url || null,
+      webhook_removido_agora: webhookRemovido,
+      mensagem: dadosWebhook.result?.url
+        ? webhookRemovido
+          ? 'Havia um webhook configurado (por isso as mensagens não apareciam) — já removi. Tente verificar de novo no app.'
+          : 'Havia um webhook configurado, mas não consegui remover automaticamente.'
+        : 'Nenhum webhook configurado — não era esse o problema.',
     });
   } catch (erro) {
     res.status(500).json({ erro: 'Falha ao consultar', detalhe: erro.message });
