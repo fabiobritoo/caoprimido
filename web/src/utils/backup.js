@@ -26,11 +26,12 @@ export function exportarBackup() {
 // não suportar compartilhar arquivos, pra tela poder cair de volta pro download.
 export async function compartilharBackup() {
   const { blob, nomeArquivo } = montarPacoteBackup();
-  const arquivo = new File([blob], nomeArquivo, { type: 'application/json' });
+  // 'application/octet-stream' é aceito por mais apps no menu de compartilhar
+  // do que 'application/json' (alguns recusam json especificamente)
+  const arquivo = new File([blob], nomeArquivo, { type: 'application/octet-stream' });
 
-  if (!navigator.canShare || !navigator.canShare({ files: [arquivo] })) {
-    return false;
-  }
+  if (!navigator.share) return 'sem_suporte';
+  if (!navigator.canShare || !navigator.canShare({ files: [arquivo] })) return 'sem_suporte_arquivo';
 
   try {
     await navigator.share({
@@ -38,10 +39,10 @@ export async function compartilharBackup() {
       title: 'Backup do Cãoprimido',
       text: 'Backup dos meus dados do Cãoprimido.',
     });
-    return true;
+    return 'compartilhado';
   } catch (erro) {
-    if (erro.name === 'AbortError') return true; // usuário só cancelou o menu, sem problema
-    return false;
+    if (erro.name === 'AbortError') return 'cancelado'; // usuário só fechou o menu, sem problema
+    return 'erro';
   }
 }
 

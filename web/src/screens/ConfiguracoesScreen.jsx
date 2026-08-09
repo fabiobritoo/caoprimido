@@ -64,11 +64,14 @@ export default function ConfiguracoesScreen() {
   }
 
   async function compartilharBackupAgora() {
-    const funcionou = await compartilharBackup();
-    if (!funcionou) {
-      // aparelho/navegador não suporta compartilhar arquivo — cai pro download normal
-      baixarBackup();
-    }
+    const resultado = await compartilharBackup();
+    if (resultado === 'compartilhado' || resultado === 'cancelado') return;
+
+    // não deu pra compartilhar por esse menu — cai pro download, mas avisa o motivo
+    baixarBackup();
+    setStatusBackup(
+      'Esse navegador/aparelho não permite compartilhar arquivo direto por aqui — baixei o backup, agora é só anexar ele manualmente no WhatsApp.'
+    );
   }
 
   async function aoEscolherArquivoBackup(e) {
