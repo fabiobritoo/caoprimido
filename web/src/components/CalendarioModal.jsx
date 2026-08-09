@@ -42,6 +42,12 @@ export default function CalendarioModal({ CORES, dataInicial, obterStatusDoDia, 
   return (
     <div style={estilos.fundo} onClick={aoFechar}>
       <div style={estilos.folha} onClick={(e) => e.stopPropagation()}>
+        <div style={estilos.linhaFechar}>
+          <button onClick={aoFechar} style={estilos.botaoFechar}>
+            <X size={18} />
+          </button>
+        </div>
+
         <div style={estilos.cabecalho}>
           <button
             onClick={() => setMesVisivel(new Date(ano, mes - 1, 1))}
@@ -57,9 +63,6 @@ export default function CalendarioModal({ CORES, dataInicial, obterStatusDoDia, 
             style={estilos.botaoNav}
           >
             <ChevronRight size={20} />
-          </button>
-          <button onClick={aoFechar} style={estilos.botaoFechar}>
-            <X size={18} />
           </button>
         </div>
 
@@ -116,28 +119,39 @@ function criarEstilos(CORES) {
       padding: 18,
       boxShadow: SOMBRA.flutuante,
     },
+    linhaFechar: {
+      display: 'flex',
+      justifyContent: 'flex-end',
+      marginBottom: 2,
+    },
     cabecalho: {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
       marginBottom: 14,
-      position: 'relative',
     },
     botaoNav: {
-      background: 'none',
+      background: CORES.fundo,
       border: 'none',
+      borderRadius: RAIO.pill,
+      width: 34,
+      height: 34,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       color: CORES.primaria,
-      padding: 4,
     },
     tituloMes: { fontWeight: 700, fontSize: 16, color: CORES.textoPrincipal },
     botaoFechar: {
-      position: 'absolute',
-      right: -6,
-      top: -10,
-      background: 'none',
+      background: CORES.fundo,
       border: 'none',
+      borderRadius: RAIO.pill,
+      width: 30,
+      height: 30,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       color: CORES.textoSecundario,
-      padding: 6,
     },
     linhaAbrev: { display: 'flex', marginBottom: 6 },
     abrevDia: {

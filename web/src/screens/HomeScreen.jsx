@@ -306,8 +306,9 @@ export default function HomeScreen() {
             {renderizarPainelSemana(diasSemanaProxima)}
           </div>
         </div>
+        <div style={estilos.divisorCalendario} />
         <button onClick={() => setCalendarioAberto(true)} style={estilos.botaoCalendario}>
-          <CalendarDays size={20} color={CORES.primaria} strokeWidth={2.2} />
+          <CalendarDays size={19} color={CORES.primaria} strokeWidth={2.2} />
         </button>
       </div>
 
@@ -501,10 +502,21 @@ function criarEstilos(CORES) {
       padding: '0 5px',
       boxSizing: 'border-box',
     },
+    divisorCalendario: {
+      width: 1,
+      alignSelf: 'stretch',
+      backgroundColor: CORES.borda,
+      margin: '4px 8px',
+    },
     botaoCalendario: {
-      background: 'none',
+      background: CORES.primariaClara,
       border: 'none',
-      padding: '0 4px 0 10px',
+      borderRadius: RAIO.pill,
+      width: 38,
+      height: 38,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
       flexShrink: 0,
     },
     diaColuna: {
