@@ -59,6 +59,17 @@ export default function ConfiguracoesScreen() {
       } else {
         setCuidadorChatId(String(dados.chatId));
         setCuidadorNome(dados.nome);
+        setCuidadorAtivo(true);
+
+        // salva na hora, pra não depender de um segundo clique em "Salvar"
+        const configAtualizada = {
+          cuidadorAtivo: true,
+          cuidadorChatId: String(dados.chatId),
+          cuidadorNome: dados.nome,
+        };
+        await salvarConfiguracoes(configAtualizada);
+        const remedios = await listarRemedios();
+        await sincronizarNotificacoesServidor(obterIdDispositivo(), remedios, configAtualizada);
       }
     } catch (e) {
       setErroVerificacao('Falha ao verificar. Tente de novo.');
