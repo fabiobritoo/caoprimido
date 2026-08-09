@@ -151,7 +151,9 @@ export default function HomeScreen() {
               alt=""
               style={estilos.mascoteCabecalho}
             />
-            {todasTomadas && <div style={estilos.textoParabens}>Tudo em dia por hoje! 🎉</div>}
+            <div style={estilos.textoParabens}>
+              {todasTomadas ? 'Tudo em dia por hoje! 🎉' : '\u00A0'}
+            </div>
           </div>
         )}
 
@@ -286,7 +288,7 @@ function criarEstilos(CORES) {
     },
     cabecalhoLista: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: 12 },
     mascoteCabecalho: { width: 130, height: 130, objectFit: 'contain' },
-    textoParabens: { fontSize: 16, fontWeight: 700, color: CORES.primariaEscura, marginTop: 8 },
+    textoParabens: { fontSize: 16, fontWeight: 700, color: CORES.primariaEscura, marginTop: 8, minHeight: 22 },
     vazioContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 30 },
     mascoteVazio: { width: 220, height: 220, objectFit: 'contain', marginBottom: 12 },
     vazioTexto: { color: CORES.textoSecundario, textAlign: 'center' },
