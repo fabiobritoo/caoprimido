@@ -7,13 +7,18 @@ const JANELA_MAXIMA_MS = 30 * 60 * 1000;
 const LIMIAR_AVISO_CUIDADOR_MS = 15 * 60 * 1000;
 
 async function avisarCuidador(config, nomeRemedio, horario) {
-  if (!config?.cuidadorAtivo || !config.cuidadorTelefone || !config.cuidadorApiKey) return;
-  const texto = encodeURIComponent(
-    `⚠️ Cãoprimido: a dose de "${nomeRemedio}" das ${horario} ainda não foi confirmada.`
-  );
-  const url = `https://api.callmebot.com/whatsapp.php?phone=${config.cuidadorTelefone}&text=${texto}&apikey=${config.cuidadorApiKey}`;
+  if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
+  if (!process.env.TELEGRAM_BOT_TOKEN) return;
+
+  const texto = `⚠️ Cãoprimido: a dose de "${nomeRemedio}" das ${horario} ainda não foi confirmada.`;
+  const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+
   try {
-    await fetch(url);
+    await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: config.cuidadorChatId, text: texto }),
+    });
   } catch (e) {
     console.error('Falha ao avisar cuidador:', e.message);
   }
