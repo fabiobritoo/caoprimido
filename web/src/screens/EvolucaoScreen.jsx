@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Flame, Award, Percent } from 'lucide-react';
+import { TrendingUp, Flame, Award, Percent, FileDown } from 'lucide-react';
 import { listarRemedios, obterRegistros } from '../utils/storage.js';
 import {
   calcularMapaCalor,
@@ -8,7 +8,7 @@ import {
   calcularAdesaoPorRemedio,
 } from '../utils/evolucao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
-import { RAIO, SOMBRA } from '../utils/tema.js';
+import { RAIO, SOMBRA, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import SaudeSecao from '../components/SaudeSecao.jsx';
@@ -18,6 +18,7 @@ const DIAS_HISTORICO = 84; // 12 semanas
 export default function EvolucaoScreen() {
   const { CORES } = useTema();
   const estilos = criarEstilos(CORES);
+  const [gerandoPdf, setGerandoPdf] = useState(false);
   const [aba, setAba] = useState('remedios');
   const [carregando, setCarregando] = useState(true);
   const [mapaCalor, setMapaCalor] = useState([]);
@@ -65,6 +66,18 @@ export default function EvolucaoScreen() {
     }
   }
 
+  async function baixarRelatorio() {
+    setGerandoPdf(true);
+    try {
+      const { gerarRelatorioPdf } = await import('../utils/relatorioPdf.js');
+      await gerarRelatorioPdf();
+    } catch (e) {
+      console.error('Erro ao gerar PDF', e);
+      alert('Não consegui gerar o PDF agora. Tente de novo.');
+    }
+    setGerandoPdf(false);
+  }
+
   return (
     <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 40 }}>
       <CabecalhoTopo titulo="Evolução" mostrarVoltar />
@@ -81,6 +94,13 @@ export default function EvolucaoScreen() {
           style={{ ...estilos.aba, ...(aba === 'saude' ? estilos.abaAtiva : {}) }}
         >
           Saúde
+        </button>
+      </div>
+
+      <div style={{ padding: '14px 16px 0' }}>
+        <button onClick={baixarRelatorio} disabled={gerandoPdf} style={estilos.botaoPdf}>
+          <FileDown size={16} strokeWidth={2.3} />
+          {gerandoPdf ? 'Gerando PDF...' : 'Exportar relatório em PDF'}
         </button>
       </div>
 
@@ -197,6 +217,10 @@ export default function EvolucaoScreen() {
 
 function criarEstilos(CORES) {
   return {
+    botaoPdf: {
+      ...criarBotaoSecundario(CORES),
+      width: '100%',
+    },
     seletorAbas: {
       display: 'flex',
       backgroundColor: CORES.fundoCard,
