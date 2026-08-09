@@ -177,12 +177,21 @@ export default function HomeScreen() {
         })}
       </div>
 
-      {sequenciaDias > 0 && (
-        <div style={estilos.faixaStreak}>
-          <Flame size={16} strokeWidth={2.5} fill={CORES.primariaEscura} />
-          {sequenciaDias} {sequenciaDias === 1 ? 'dia seguido' : 'dias seguidos'} em dia!
-        </div>
-      )}
+      <div
+        style={{
+          ...estilos.faixaStreak,
+          backgroundColor: sequenciaDias > 0 ? CORES.primariaClara : 'transparent',
+        }}
+      >
+        {sequenciaDias > 0 ? (
+          <>
+            <Flame size={16} strokeWidth={2.5} fill={CORES.primariaEscura} />
+            {sequenciaDias} {sequenciaDias === 1 ? 'dia seguido' : 'dias seguidos'} em dia!
+          </>
+        ) : (
+          '\u00A0'
+        )}
+      </div>
 
       <div style={{ padding: 16 }}>
         {dosesDoDia.length > 0 && (
@@ -366,6 +375,8 @@ function criarEstilos(CORES) {
       fontWeight: 600,
       fontSize: 14,
       padding: '10px 0',
+      minHeight: 40,
+      boxSizing: 'border-box',
     },
     cabecalhoLista: {
       display: 'flex',
