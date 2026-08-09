@@ -48,6 +48,8 @@ export default function HomeScreen() {
   const [doseSelecionada, setDoseSelecionada] = useState(null);
   const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [direcaoAnimacao, setDirecaoAnimacao] = useState('');
+  const [deltaXArrasto, setDeltaXArrasto] = useState(0);
+  const [arrastando, setArrastando] = useState(false);
 
   const toqueInicioX = useRef(null);
 
@@ -89,24 +91,37 @@ export default function HomeScreen() {
     [remedios, registros]
   );
 
-  function irParaSemanaAnterior() {
-    setDirecaoAnimacao('direita');
-    setSemanaAncora((atual) => somarDias(atual, -7));
-  }
-  function irParaProximaSemana() {
-    setDirecaoAnimacao('esquerda');
-    setSemanaAncora((atual) => somarDias(atual, 7));
-  }
 
   function aoTocarInicio(e) {
     toqueInicioX.current = e.touches[0].clientX;
+    setArrastando(true);
   }
-  function aoTocarFim(e) {
+  function aoTocarMover(e) {
     if (toqueInicioX.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - toqueInicioX.current;
-    if (deltaX > LIMIAR_SWIPE) irParaSemanaAnterior();
-    else if (deltaX < -LIMIAR_SWIPE) irParaProximaSemana();
+    setDeltaXArrasto(e.touches[0].clientX - toqueInicioX.current);
+  }
+  function aoTocarFim() {
+    if (toqueInicioX.current === null) return;
+    const deltaFinal = deltaXArrasto;
     toqueInicioX.current = null;
+    setArrastando(false);
+
+    if (deltaFinal > LIMIAR_SWIPE) {
+      setDirecaoAnimacao('direita');
+      setSemanaAncora((atual) => somarDias(atual, -7));
+      setDeltaXArrasto(0); // a semana nova monta do zero (via key), sem salto visual
+    } else if (deltaFinal < -LIMIAR_SWIPE) {
+      setDirecaoAnimacao('esquerda');
+      setSemanaAncora((atual) => somarDias(atual, 7));
+      setDeltaXArrasto(0);
+    } else {
+      setDeltaXArrasto(0); // não passou do limite: volta suavemente pro lugar
+    }
+  }
+  function aoTocarCancelar() {
+    toqueInicioX.current = null;
+    setArrastando(false);
+    setDeltaXArrasto(0);
   }
 
   function aoEscolherDiaNoCalendario(dataStr) {
@@ -220,11 +235,21 @@ export default function HomeScreen() {
         </button>
       </div>
 
-      <div style={estilos.faixaSemana} onTouchStart={aoTocarInicio} onTouchEnd={aoTocarFim}>
+      <div
+        style={estilos.faixaSemana}
+        onTouchStart={aoTocarInicio}
+        onTouchMove={aoTocarMover}
+        onTouchEnd={aoTocarFim}
+        onTouchCancel={aoTocarCancelar}
+      >
         <div
           key={semanaAncora}
           className={direcaoAnimacao === 'esquerda' ? 'semana-entra-esquerda' : direcaoAnimacao === 'direita' ? 'semana-entra-direita' : ''}
-          style={estilos.diasContainer}
+          style={{
+            ...estilos.diasContainer,
+            transform: `translateX(${deltaXArrasto}px)`,
+            transition: arrastando ? 'none' : 'transform 0.25s ease-out',
+          }}
         >
           {diasDaSemana.map((dia) => {
             const selecionado = dia.data === diaSelecionado;
