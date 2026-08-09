@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check } from 'lucide-react';
+import { HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2 } from 'lucide-react';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -28,6 +28,8 @@ export default function ConfiguracoesScreen() {
   const [erroVerificacao, setErroVerificacao] = useState('');
   const [salvando, setSalvando] = useState(false);
   const [salvo, setSalvo] = useState(false);
+  const [enviandoTeste, setEnviandoTeste] = useState(false);
+  const [resultadoTeste, setResultadoTeste] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -62,6 +64,25 @@ export default function ConfiguracoesScreen() {
       setErroVerificacao('Falha ao verificar. Tente de novo.');
     }
     setVerificando(false);
+  }
+
+  async function enviarTeste() {
+    setEnviandoTeste(true);
+    setResultadoTeste('');
+    try {
+      const resposta = await fetch('/api/telegram-teste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: obterIdDispositivo(), chatId: cuidadorChatId }),
+      });
+      const dados = await resposta.json();
+      setResultadoTeste(
+        resposta.ok ? '✓ Mensagem de teste enviada! Confira o Telegram.' : `Erro: ${dados.erro}`
+      );
+    } catch (e) {
+      setResultadoTeste('Falha ao enviar. Tente de novo.');
+    }
+    setEnviandoTeste(false);
   }
 
   async function salvar() {
@@ -137,21 +158,29 @@ export default function ConfiguracoesScreen() {
         {cuidadorAtivo && (
           <>
             {cuidadorChatId ? (
-              <div style={estilos.conectadoBox}>
-                <Check size={18} color={CORES.sucesso} strokeWidth={2.5} />
-                <span>
-                  Conectado com <strong>{cuidadorNome || 'cuidador'}</strong>
-                </span>
-                <button
-                  onClick={() => {
-                    setCuidadorChatId('');
-                    setCuidadorNome('');
-                  }}
-                  style={estilos.linkTrocar}
-                >
-                  trocar
+              <>
+                <div style={estilos.conectadoBox}>
+                  <Check size={18} color={CORES.sucesso} strokeWidth={2.5} />
+                  <span>
+                    Conectado com <strong>{cuidadorNome || 'cuidador'}</strong>
+                  </span>
+                  <button
+                    onClick={() => {
+                      setCuidadorChatId('');
+                      setCuidadorNome('');
+                    }}
+                    style={estilos.linkTrocar}
+                  >
+                    trocar
+                  </button>
+                </div>
+
+                <button onClick={enviarTeste} disabled={enviandoTeste} style={estilos.botaoTeste}>
+                  <TestTube2 size={16} strokeWidth={2.3} />
+                  {enviandoTeste ? 'Enviando...' : 'Enviar mensagem de teste'}
                 </button>
-              </div>
+                {resultadoTeste && <div style={estilos.resultadoTeste}>{resultadoTeste}</div>}
+              </>
             ) : (
               <div style={estilos.instrucoes}>
                 <strong>Como conectar (leva 1 minuto, é grátis):</strong>
@@ -272,6 +301,17 @@ function criarEstilos(CORES) {
       color: CORES.primaria,
       fontSize: 13,
       textDecoration: 'underline',
+    },
+    botaoTeste: {
+      ...criarBotaoSecundario(CORES),
+      width: '100%',
+      marginTop: 10,
+    },
+    resultadoTeste: {
+      fontSize: 13,
+      color: CORES.textoSecundario,
+      marginTop: 8,
+      textAlign: 'center',
     },
     botaoSalvar: {
       ...criarBotaoPrimario(CORES),
