@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud,
-  Database, Upload, CalendarClock,
+  Database, Upload, CalendarClock, Share2,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
@@ -11,7 +11,7 @@ import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { verificarAtualizacao } from '../utils/atualizacao.js';
-import { exportarBackup, lerArquivoBackup, aplicarBackup } from '../utils/backup.js';
+import { exportarBackup, compartilharBackup, lerArquivoBackup, aplicarBackup } from '../utils/backup.js';
 import { VERSAO } from '../utils/versao.js';
 
 function gerarCodigo() {
@@ -61,6 +61,14 @@ export default function ConfiguracoesScreen() {
     exportarBackup();
     setStatusBackup('✓ Backup baixado! Guarde esse arquivo em local seguro.');
     setTimeout(() => setStatusBackup(''), 4000);
+  }
+
+  async function compartilharBackupAgora() {
+    const funcionou = await compartilharBackup();
+    if (!funcionou) {
+      // aparelho/navegador não suporta compartilhar arquivo — cai pro download normal
+      baixarBackup();
+    }
   }
 
   async function aoEscolherArquivoBackup(e) {
@@ -221,6 +229,13 @@ export default function ConfiguracoesScreen() {
         <button onClick={baixarBackup} style={estilos.botaoVerificarAtualizacao}>
           <DownloadCloud size={16} strokeWidth={2.3} />
           Baixar backup
+        </button>
+        <button
+          onClick={compartilharBackupAgora}
+          style={{ ...estilos.botaoVerificarAtualizacao, marginTop: 10 }}
+        >
+          <Share2 size={16} strokeWidth={2.3} />
+          Compartilhar backup (WhatsApp, e-mail...)
         </button>
         <input
           ref={inputArquivoRef}

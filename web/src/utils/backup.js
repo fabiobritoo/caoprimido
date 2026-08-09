@@ -10,6 +10,42 @@ const CHAVES_BACKUP = [
 ];
 
 export function exportarBackup() {
+  const { blob, nomeArquivo } = montarPacoteBackup();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomeArquivo;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// Abre o menu de compartilhamento nativo do celular (WhatsApp, e-mail, Drive, etc.)
+// com o arquivo de backup já anexado. Devolve false se o aparelho/navegador
+// não suportar compartilhar arquivos, pra tela poder cair de volta pro download.
+export async function compartilharBackup() {
+  const { blob, nomeArquivo } = montarPacoteBackup();
+  const arquivo = new File([blob], nomeArquivo, { type: 'application/json' });
+
+  if (!navigator.canShare || !navigator.canShare({ files: [arquivo] })) {
+    return false;
+  }
+
+  try {
+    await navigator.share({
+      files: [arquivo],
+      title: 'Backup do Cãoprimido',
+      text: 'Backup dos meus dados do Cãoprimido.',
+    });
+    return true;
+  } catch (erro) {
+    if (erro.name === 'AbortError') return true; // usuário só cancelou o menu, sem problema
+    return false;
+  }
+}
+
+function montarPacoteBackup() {
   const dados = {};
   for (const chave of CHAVES_BACKUP) {
     const valor = localStorage.getItem(chave);
@@ -23,16 +59,9 @@ export function exportarBackup() {
     dados,
   };
 
-  const blob = new Blob([JSON.stringify(pacote, null, 2)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
   const dataArquivo = new Date().toISOString().slice(0, 10);
-  a.href = url;
-  a.download = `caoprimido-backup-${dataArquivo}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  const blob = new Blob([JSON.stringify(pacote, null, 2)], { type: 'application/json' });
+  return { blob, nomeArquivo: `caoprimido-backup-${dataArquivo}.json` };
 }
 
 // Lê um arquivo de backup (File do input) e devolve os dados pra confirmação,
