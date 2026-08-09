@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Check, Pill, Flame, Activity, Settings2 } from 'lucide-react';
+import { Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList } from 'lucide-react';
 import {
   listarRemedios,
   obterRegistros,
   doseTomada,
+  horarioRegistrado,
   alternarDose,
   obterIdDispositivo,
 } from '../utils/storage.js';
@@ -17,11 +18,18 @@ import {
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
+import DoseDetalheModal from '../components/DoseDetalheModal.jsx';
 import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
 
 const HOJE = formatarData(new Date());
+
+function formatarHora(timestamp) {
+  if (!timestamp) return '--:--';
+  const data = new Date(timestamp);
+  return `${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`;
+}
 
 export default function HomeScreen() {
   const navigate = useNavigate();
@@ -31,6 +39,7 @@ export default function HomeScreen() {
   const [registros, setRegistros] = useState({});
   const [diaSelecionado, setDiaSelecionado] = useState(HOJE);
   const [sequenciaDias, setSequenciaDias] = useState(0);
+  const [doseSelecionada, setDoseSelecionada] = useState(null);
 
   const diasDaSemana = diasDaSemanaAtualSegunda();
 
@@ -60,14 +69,19 @@ export default function HomeScreen() {
         remedio,
         horario,
         tomado: doseTomada(registros, remedio.id, diaSelecionado, horario),
+        tomadoEm: horarioRegistrado(registros, remedio.id, diaSelecionado, horario),
       });
     }
   }
   dosesDoDia.sort((a, b) => a.horario.localeCompare(b.horario));
 
-  // agrupa as doses por horário, pra mostrar um cabeçalho só uma vez por horário
+  const dosesPendentes = dosesDoDia.filter((d) => !d.tomado);
+  const dosesRegistradas = dosesDoDia
+    .filter((d) => d.tomado)
+    .sort((a, b) => (a.tomadoEm || 0) - (b.tomadoEm || 0));
+
   const gruposPorHorario = [];
-  for (const item of dosesDoDia) {
+  for (const item of dosesPendentes) {
     let grupo = gruposPorHorario.find((g) => g.horario === item.horario);
     if (!grupo) {
       grupo = { horario: item.horario, itens: [] };
@@ -79,7 +93,7 @@ export default function HomeScreen() {
   const diaEhFuturo = diaSelecionado > HOJE;
   const todasTomadas = dosesDoDia.length > 0 && dosesDoDia.every((d) => d.tomado);
 
-  async function alternarDoseItem(item) {
+  async function marcarComoTomado(item) {
     if (diaEhFuturo) return;
     const resultado = await alternarDose(item.remedio, diaSelecionado, item.horario);
     setRemedios(resultado.remedios);
@@ -108,6 +122,15 @@ export default function HomeScreen() {
         });
       }
     }
+  }
+
+  async function desfazerDose(item) {
+    const resultado = await alternarDose(item.remedio, diaSelecionado, item.horario);
+    setRemedios(resultado.remedios);
+    setRegistros(resultado.registros);
+    setSequenciaDias(calcularSequenciaDias(resultado.remedios, resultado.registros));
+    atualizarSeloLocal(resultado.remedios, resultado.registros);
+    setDoseSelecionada(null);
   }
 
   return (
@@ -188,15 +211,14 @@ export default function HomeScreen() {
 
             {grupo.itens.map((item) => {
               const unidadeTexto = rotuloUnidade(item.remedio.unidade).toLowerCase();
-              const atrasado = !item.tomado && diaSelecionado < HOJE;
+              const atrasado = diaSelecionado < HOJE;
               return (
                 <button
                   key={`${item.remedio.id}-${item.horario}`}
-                  onClick={() => alternarDoseItem(item)}
+                  onClick={() => marcarComoTomado(item)}
                   disabled={diaEhFuturo}
                   style={{
                     ...estilos.doseCard,
-                    ...(item.tomado ? estilos.doseCardTomado : {}),
                     ...(atrasado ? estilos.doseCardAtrasado : {}),
                   }}
                 >
@@ -212,17 +234,48 @@ export default function HomeScreen() {
                   <div
                     style={{
                       ...estilos.doseStatus,
-                      ...(item.tomado ? estilos.doseStatusTomado : {}),
                       ...(atrasado ? estilos.doseStatusAtrasado : {}),
                     }}
-                  >
-                    {item.tomado && <Check size={16} strokeWidth={3} color="#fff" />}
-                  </div>
+                  />
                 </button>
               );
             })}
           </div>
         ))}
+
+        {dosesRegistradas.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div style={estilos.registradoTitulo}>
+              <ClipboardList size={18} strokeWidth={2.3} color={CORES.textoSecundario} />
+              Registrado
+            </div>
+
+            {dosesRegistradas.map((item) => {
+              const unidadeTexto = rotuloUnidade(item.remedio.unidade).toLowerCase();
+              return (
+                <button
+                  key={`reg-${item.remedio.id}-${item.horario}`}
+                  onClick={() => setDoseSelecionada(item)}
+                  style={{ ...estilos.doseCard, ...estilos.doseCardTomado }}
+                >
+                  <div style={estilos.doseIcone}>
+                    <Pill size={18} color={CORES.primaria} strokeWidth={2.2} />
+                  </div>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <div style={estilos.doseNome}>{item.remedio.nome}</div>
+                    <div style={estilos.doseDetalhe}>
+                      {item.remedio.quantidadePorDose} {unidadeTexto} · agendado {item.horario}
+                    </div>
+                  </div>
+                  <div style={estilos.horaRegistrada}>{formatarHora(item.tomadoEm)}</div>
+                  <div style={{ ...estilos.doseStatus, ...estilos.doseStatusTomado }}>
+                    <Check size={16} strokeWidth={3} color="#fff" />
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {todasTomadas && (
@@ -238,6 +291,13 @@ export default function HomeScreen() {
       <div style={estilos.rodapeVersao}>
         v{VERSAO} · {VERSAO_DESCRICAO}
       </div>
+
+      <DoseDetalheModal
+        item={doseSelecionada}
+        CORES={CORES}
+        aoFechar={() => setDoseSelecionada(null)}
+        aoDesfazer={desfazerDose}
+      />
     </div>
   );
 }
@@ -327,6 +387,18 @@ function criarEstilos(CORES) {
       marginBottom: 8,
       paddingLeft: 2,
     },
+    registradoTitulo: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      fontSize: 15,
+      fontWeight: 700,
+      color: CORES.textoSecundario,
+      marginBottom: 10,
+      paddingLeft: 2,
+      borderTop: `1px solid ${CORES.borda}`,
+      paddingTop: 16,
+    },
     doseCard: {
       width: '100%',
       backgroundColor: CORES.fundoCard,
@@ -353,6 +425,12 @@ function criarEstilos(CORES) {
     },
     doseNome: { fontSize: 16, fontWeight: 600, color: CORES.textoPrincipal },
     doseDetalhe: { color: CORES.textoSecundario, fontSize: 13, marginTop: 2 },
+    horaRegistrada: {
+      fontSize: 13,
+      fontWeight: 700,
+      color: CORES.sucesso,
+      marginRight: 10,
+    },
     doseStatus: {
       width: 30,
       height: 30,

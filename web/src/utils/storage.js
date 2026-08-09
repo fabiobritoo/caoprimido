@@ -69,6 +69,12 @@ export function doseTomada(registros, remedioId, data, horario) {
   return !!registros[chaveRegistro(remedioId, data, horario)];
 }
 
+// Devolve o momento exato (timestamp) em que a dose foi marcada como tomada, ou null
+export function horarioRegistrado(registros, remedioId, data, horario) {
+  const valor = registros[chaveRegistro(remedioId, data, horario)];
+  return valor?.tomadoEm || null;
+}
+
 export async function alternarDose(remedio, data, horario) {
   const registros = await obterRegistros();
   const chave = chaveRegistro(remedio.id, data, horario);
@@ -79,7 +85,7 @@ export async function alternarDose(remedio, data, horario) {
   if (estavaTomado) {
     delete novosRegistros[chave];
   } else {
-    novosRegistros[chave] = true;
+    novosRegistros[chave] = { tomadoEm: Date.now() };
   }
   await salvarRegistros(novosRegistros);
 
