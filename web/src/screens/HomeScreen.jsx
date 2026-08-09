@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Check, Clock, ListChecks, Flame, Activity, Settings2 } from 'lucide-react';
+import { Plus, Check, Pill, Flame, Activity, Settings2 } from 'lucide-react';
 import {
   listarRemedios,
   obterRegistros,
@@ -65,6 +65,17 @@ export default function HomeScreen() {
   }
   dosesDoDia.sort((a, b) => a.horario.localeCompare(b.horario));
 
+  // agrupa as doses por horário, pra mostrar um cabeçalho só uma vez por horário
+  const gruposPorHorario = [];
+  for (const item of dosesDoDia) {
+    let grupo = gruposPorHorario.find((g) => g.horario === item.horario);
+    if (!grupo) {
+      grupo = { horario: item.horario, itens: [] };
+      gruposPorHorario.push(grupo);
+    }
+    grupo.itens.push(item);
+  }
+
   const diaEhFuturo = diaSelecionado > HOJE;
   const todasTomadas = dosesDoDia.length > 0 && dosesDoDia.every((d) => d.tomado);
 
@@ -101,15 +112,22 @@ export default function HomeScreen() {
 
   return (
     <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 96 }}>
-      <CabecalhoTopo
-        titulo="Cãoprimido"
-        botaoDireita={
-          <button onClick={() => navigate('/meus-remedios')} style={estilos.botaoTexto}>
-            <ListChecks size={16} strokeWidth={2.5} />
-            Remédios
-          </button>
-        }
-      />
+      <CabecalhoTopo titulo="Cãoprimido" />
+
+      <div style={estilos.navRapida}>
+        <button onClick={() => navigate('/meus-remedios')} style={estilos.navItem}>
+          <Pill size={20} strokeWidth={2.2} />
+          <span>Remédios</span>
+        </button>
+        <button onClick={() => navigate('/diagnostico')} style={estilos.navItem}>
+          <Activity size={20} strokeWidth={2.2} />
+          <span>Diagnóstico</span>
+        </button>
+        <button onClick={() => navigate('/configuracoes')} style={estilos.navItem}>
+          <Settings2 size={20} strokeWidth={2.2} />
+          <span>Config</span>
+        </button>
+      </div>
 
       <div style={estilos.faixaSemana}>
         {diasDaSemana.map((dia) => {
@@ -164,42 +182,47 @@ export default function HomeScreen() {
           </div>
         )}
 
-        {dosesDoDia.map((item) => {
-          const unidadeTexto = rotuloUnidade(item.remedio.unidade).toLowerCase();
-          const atrasado = !item.tomado && diaSelecionado < HOJE;
-          return (
-            <button
-              key={`${item.remedio.id}-${item.horario}`}
-              onClick={() => alternarDoseItem(item)}
-              disabled={diaEhFuturo}
-              style={{
-                ...estilos.doseCard,
-                ...(item.tomado ? estilos.doseCardTomado : {}),
-                ...(atrasado ? estilos.doseCardAtrasado : {}),
-              }}
-            >
-              <div style={estilos.doseHorarioBloco}>
-                <Clock size={15} color={CORES.primaria} strokeWidth={2.5} />
-                <span style={estilos.doseHorario}>{item.horario}</span>
-              </div>
-              <div style={{ flex: 1, textAlign: 'left' }}>
-                <div style={estilos.doseNome}>{item.remedio.nome}</div>
-                <div style={estilos.doseDetalhe}>
-                  {item.remedio.quantidadePorDose} {unidadeTexto}
-                </div>
-              </div>
-              <div
-                style={{
-                  ...estilos.doseStatus,
-                  ...(item.tomado ? estilos.doseStatusTomado : {}),
-                  ...(atrasado ? estilos.doseStatusAtrasado : {}),
-                }}
-              >
-                {item.tomado && <Check size={16} strokeWidth={3} color="#fff" />}
-              </div>
-            </button>
-          );
-        })}
+        {gruposPorHorario.map((grupo) => (
+          <div key={grupo.horario} style={{ marginBottom: 18 }}>
+            <div style={estilos.horarioTitulo}>{grupo.horario}</div>
+
+            {grupo.itens.map((item) => {
+              const unidadeTexto = rotuloUnidade(item.remedio.unidade).toLowerCase();
+              const atrasado = !item.tomado && diaSelecionado < HOJE;
+              return (
+                <button
+                  key={`${item.remedio.id}-${item.horario}`}
+                  onClick={() => alternarDoseItem(item)}
+                  disabled={diaEhFuturo}
+                  style={{
+                    ...estilos.doseCard,
+                    ...(item.tomado ? estilos.doseCardTomado : {}),
+                    ...(atrasado ? estilos.doseCardAtrasado : {}),
+                  }}
+                >
+                  <div style={estilos.doseIcone}>
+                    <Pill size={18} color={CORES.primaria} strokeWidth={2.2} />
+                  </div>
+                  <div style={{ flex: 1, textAlign: 'left' }}>
+                    <div style={estilos.doseNome}>{item.remedio.nome}</div>
+                    <div style={estilos.doseDetalhe}>
+                      Tomar {item.remedio.quantidadePorDose} {unidadeTexto}
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      ...estilos.doseStatus,
+                      ...(item.tomado ? estilos.doseStatusTomado : {}),
+                      ...(atrasado ? estilos.doseStatusAtrasado : {}),
+                    }}
+                  >
+                    {item.tomado && <Check size={16} strokeWidth={3} color="#fff" />}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </div>
 
       {todasTomadas && (
@@ -213,17 +236,7 @@ export default function HomeScreen() {
       </button>
 
       <div style={estilos.rodapeVersao}>
-        <span>
-          v{VERSAO} · {VERSAO_DESCRICAO}
-        </span>
-        <div style={estilos.rodapeLinks}>
-          <span onClick={() => navigate('/diagnostico')} style={estilos.linkDiagnostico}>
-            <Activity size={12} /> diagnóstico
-          </span>
-          <span onClick={() => navigate('/configuracoes')} style={estilos.linkDiagnostico}>
-            <Settings2 size={12} /> config
-          </span>
-        </div>
+        v{VERSAO} · {VERSAO_DESCRICAO}
       </div>
     </div>
   );
@@ -231,17 +244,25 @@ export default function HomeScreen() {
 
 function criarEstilos(CORES) {
   return {
-    botaoTexto: {
+    navRapida: {
       display: 'flex',
+      justifyContent: 'space-around',
+      backgroundColor: CORES.fundoCard,
+      padding: '10px 8px',
+      borderBottom: `1px solid ${CORES.borda}`,
+    },
+    navItem: {
+      display: 'flex',
+      flexDirection: 'column',
       alignItems: 'center',
-      gap: 6,
-      background: 'rgba(255,255,255,0.15)',
+      gap: 4,
+      background: 'none',
       border: 'none',
-      borderRadius: RAIO.pill,
-      color: '#fff',
+      color: CORES.primaria,
+      fontSize: 11,
       fontWeight: 600,
-      fontSize: 13,
-      padding: '8px 14px',
+      padding: '6px 14px',
+      borderRadius: RAIO.pequeno,
     },
     faixaSemana: {
       display: 'flex',
@@ -299,30 +320,37 @@ function criarEstilos(CORES) {
     vazioContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 30 },
     mascoteVazio: { width: 220, height: 220, objectFit: 'contain', marginBottom: 12 },
     vazioTexto: { color: CORES.textoSecundario, textAlign: 'center' },
+    horarioTitulo: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: CORES.textoPrincipal,
+      marginBottom: 8,
+      paddingLeft: 2,
+    },
     doseCard: {
       width: '100%',
       backgroundColor: CORES.fundoCard,
       border: 'none',
       borderRadius: RAIO.medio,
       padding: 14,
-      marginBottom: 10,
+      marginBottom: 8,
       display: 'flex',
       alignItems: 'center',
       boxShadow: SOMBRA.card,
     },
     doseCardTomado: { backgroundColor: CORES.sucessoFundo },
     doseCardAtrasado: { backgroundColor: CORES.perigoFundo },
-    doseHorarioBloco: {
-      width: 60,
+    doseIcone: {
+      width: 38,
+      height: 38,
+      borderRadius: RAIO.pequeno,
+      backgroundColor: CORES.primariaClara,
       display: 'flex',
-      flexDirection: 'column',
       alignItems: 'center',
-      gap: 3,
+      justifyContent: 'center',
       marginRight: 12,
-      borderRight: `1px solid ${CORES.borda}`,
-      paddingRight: 12,
+      flexShrink: 0,
     },
-    doseHorario: { fontSize: 14, fontWeight: 700, color: CORES.primaria },
     doseNome: { fontSize: 16, fontWeight: 600, color: CORES.textoPrincipal },
     doseDetalhe: { color: CORES.textoSecundario, fontSize: 13, marginTop: 2 },
     doseStatus: {
@@ -368,15 +396,6 @@ function criarEstilos(CORES) {
       color: CORES.textoSecundario,
       opacity: 0.65,
       padding: '20px 0 10px',
-    },
-    rodapeLinks: { display: 'flex', justifyContent: 'center', gap: 16, marginTop: 6 },
-    linkDiagnostico: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: 4,
-      textDecoration: 'underline',
-      cursor: 'pointer',
-      color: CORES.textoSecundario,
     },
   };
 }
