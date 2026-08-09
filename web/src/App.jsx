@@ -4,6 +4,7 @@ import HomeScreen from './screens/HomeScreen.jsx';
 import AddMedicineScreen from './screens/AddMedicineScreen.jsx';
 import ManageMedicinesScreen from './screens/ManageMedicinesScreen.jsx';
 import DiagnosticoScreen from './screens/DiagnosticoScreen.jsx';
+import EvolucaoScreen from './screens/EvolucaoScreen.jsx';
 import ConfiguracoesScreen from './screens/ConfiguracoesScreen.jsx';
 import TelaAlarme from './components/TelaAlarme.jsx';
 import { ProvedorTema } from './utils/ThemeContext.jsx';
@@ -123,6 +124,7 @@ export default function App() {
           <Route path="/editar/:id" element={<AddMedicineScreen />} />
           <Route path="/meus-remedios" element={<ManageMedicinesScreen />} />
           <Route path="/diagnostico" element={<DiagnosticoScreen />} />
+          <Route path="/evolucao" element={<EvolucaoScreen />} />
           <Route path="/configuracoes" element={<ConfiguracoesScreen />} />
         </Routes>
       </HashRouter>

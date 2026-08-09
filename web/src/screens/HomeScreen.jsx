@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList } from 'lucide-react';
+import { Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp } from 'lucide-react';
 import {
   listarRemedios,
   obterRegistros,
@@ -141,6 +141,10 @@ export default function HomeScreen() {
         <button onClick={() => navigate('/meus-remedios')} style={estilos.navItem}>
           <Pill size={20} strokeWidth={2.2} />
           <span>Remédios</span>
+        </button>
+        <button onClick={() => navigate('/evolucao')} style={estilos.navItem}>
+          <TrendingUp size={20} strokeWidth={2.2} />
+          <span>Evolução</span>
         </button>
         <button onClick={() => navigate('/diagnostico')} style={estilos.navItem}>
           <Activity size={20} strokeWidth={2.2} />
@@ -328,9 +332,9 @@ function criarEstilos(CORES) {
       background: 'none',
       border: 'none',
       color: CORES.primaria,
-      fontSize: 11,
+      fontSize: 10,
       fontWeight: 600,
-      padding: '6px 14px',
+      padding: '6px 8px',
       borderRadius: RAIO.pequeno,
     },
     faixaSemana: {
