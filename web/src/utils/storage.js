@@ -1,3 +1,5 @@
+import { formatarData } from './constantes.js';
+
 const CHAVE_REMEDIOS = '@caoprimido:lista';
 const CHAVE_REGISTROS = '@caoprimido:registros';
 const CHAVE_DISPOSITIVO = '@caoprimido:dispositivoId';
@@ -27,7 +29,10 @@ export async function salvarRemedios(lista) {
 
 export async function adicionarRemedio(remedio) {
   const lista = await listarRemedios();
-  lista.push(remedio);
+  // guarda a data de criação, pra evolução/adesão não contar dias
+  // anteriores ao cadastro como "deveria ter tomado e não tomou"
+  const comData = { dataCriacao: formatarData(new Date()), ...remedio };
+  lista.push(comData);
   await salvarRemedios(lista);
   return lista;
 }

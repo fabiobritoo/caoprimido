@@ -1,10 +1,18 @@
 import { formatarData, remedioAplicavelNoDia } from './constantes.js';
 import { doseTomada } from './storage.js';
 
-// Monta a lista de doses agendadas (remedioId+horario) pra uma data específica
-function dosesAgendadasNoDia(remedios, dataStr) {
+// Descobre a partir de qual data um remédio "existe" pra fins de cálculo.
+// Remédios cadastrados antes dessa correção não têm dataCriacao salva —
+// nesse caso, usamos a data de hoje como piso (não temos como saber ao certo
+// quando foram criados, então não penalizamos dias anteriores ao uso real).
+function dataInicioDoRemedio(remedio, hojeStr) {
+  return remedio.dataCriacao || hojeStr;
+}
+
+function dosesAgendadasNoDia(remedios, dataStr, hojeStr) {
   const doses = [];
   for (const remedio of remedios) {
+    if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
     if (!remedioAplicavelNoDia(remedio.frequencia, dataStr)) continue;
     for (const horario of remedio.horarios || []) {
       doses.push({ remedioId: remedio.id, horario, nome: remedio.nome });
@@ -15,7 +23,7 @@ function dosesAgendadasNoDia(remedios, dataStr) {
 
 /**
  * Devolve um array com os últimos `dias` dias (mais antigo primeiro), cada um com:
- * { data, status: 'sem_remedio' | 'completo' | 'parcial' | 'nenhum' | 'futuro', proporcao }
+ * { data, status: 'sem_remedio' | 'completo' | 'parcial' | 'nenhum' | 'hoje_pendente' | 'futuro', proporcao }
  */
 export function calcularMapaCalor(remedios, registros, dias = 84) {
   const hojeStr = formatarData(new Date());
@@ -27,12 +35,12 @@ export function calcularMapaCalor(remedios, registros, dias = 84) {
     data.setDate(hoje.getDate() - i);
     const dataStr = formatarData(data);
 
-    const agendadas = dosesAgendadasNoDia(remedios, dataStr);
-
     if (dataStr > hojeStr) {
       resultado.push({ data: dataStr, status: 'futuro', proporcao: 0 });
       continue;
     }
+
+    const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr);
     if (agendadas.length === 0) {
       resultado.push({ data: dataStr, status: 'sem_remedio', proporcao: 0 });
       continue;
@@ -52,7 +60,9 @@ export function calcularMapaCalor(remedios, registros, dias = 84) {
   return resultado;
 }
 
-// Percentual geral de adesão no período (ignora dias sem remédio agendado e o dia de hoje ainda em curso)
+// Percentual geral de adesão no período (ignora dias sem remédio agendado e
+// dias anteriores ao cadastro de cada remédio). O dia de hoje ENTRA na conta
+// com o que já foi feito até agora — não fica mais de fora.
 export function calcularAdesaoGeral(remedios, registros, dias = 84) {
   const hojeStr = formatarData(new Date());
   const hoje = new Date();
@@ -63,9 +73,8 @@ export function calcularAdesaoGeral(remedios, registros, dias = 84) {
     const data = new Date(hoje);
     data.setDate(hoje.getDate() - i);
     const dataStr = formatarData(data);
-    if (dataStr === hojeStr) continue; // dia em curso não conta ainda
 
-    const agendadas = dosesAgendadasNoDia(remedios, dataStr);
+    const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr);
     totalAgendadas += agendadas.length;
     totalTomadas += agendadas.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario)).length;
   }
@@ -86,8 +95,7 @@ export function calcularMelhorSequencia(remedios, registros, dias = 84) {
       atual++;
       melhor = Math.max(melhor, atual);
     } else if (dia.status === 'hoje_pendente') {
-      // dia de hoje ainda em curso, não quebra nem soma
-      continue;
+      continue; // dia de hoje ainda em curso, não quebra nem soma
     } else {
       atual = 0;
     }
@@ -95,11 +103,11 @@ export function calcularMelhorSequencia(remedios, registros, dias = 84) {
   return melhor;
 }
 
-// Adesão por remédio individualmente, no período
+// Adesão por remédio individualmente, no período (também considera a data de criação)
 export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
   const hojeStr = formatarData(new Date());
   const hoje = new Date();
-  const contadores = {}; // remedioId -> { agendadas, tomadas }
+  const contadores = {};
 
   for (const remedio of remedios) {
     contadores[remedio.id] = { nome: remedio.nome, agendadas: 0, tomadas: 0 };
@@ -109,9 +117,9 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
     const data = new Date(hoje);
     data.setDate(hoje.getDate() - i);
     const dataStr = formatarData(data);
-    if (dataStr === hojeStr) continue;
 
     for (const remedio of remedios) {
+      if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
       if (!remedioAplicavelNoDia(remedio.frequencia, dataStr)) continue;
       for (const horario of remedio.horarios || []) {
         contadores[remedio.id].agendadas++;
@@ -130,5 +138,5 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
       tomadas: c.tomadas,
       agendadas: c.agendadas,
     }))
-    .sort((a, b) => a.percentual - b.percentual); // piores primeiro, chama mais atenção
+    .sort((a, b) => a.percentual - b.percentual);
 }
