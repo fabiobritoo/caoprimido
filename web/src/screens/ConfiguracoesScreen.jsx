@@ -47,7 +47,10 @@ export default function ConfiguracoesScreen() {
     setVerificando(true);
     setErroVerificacao('');
     try {
-      const resposta = await fetch(`/api/telegram-obter-chat-id?codigo=${codigo}`);
+      const resposta = await fetch(
+        `/api/telegram-obter-chat-id?codigo=${codigo}&_=${Date.now()}`,
+        { cache: 'no-store' }
+      );
       const dados = await resposta.json();
       if (!resposta.ok) {
         setErroVerificacao(dados.erro || 'Ainda não recebi a mensagem.');
