@@ -25,6 +25,10 @@ export default async function handler(req, res) {
       webhookRemovido = dadosRemover.ok;
     }
 
+    // testa o getUpdates aqui tambem, pra comparar com o outro endpoint
+    const respostaUpdates = await fetch(`${base}/getUpdates?limit=100`, { cache: 'no-store' });
+    const dadosUpdates = await respostaUpdates.json();
+
     res.status(200).json({
       ok: true,
       bot_username: dadosMe.result.username,
@@ -32,6 +36,11 @@ export default async function handler(req, res) {
       webhook_estava_configurado: !!dadosWebhook.result?.url,
       webhook_url_anterior: dadosWebhook.result?.url || null,
       webhook_removido_agora: webhookRemovido,
+      pending_update_count_do_webhook_info: dadosWebhook.result?.pending_update_count,
+      getUpdates_ok: dadosUpdates.ok,
+      getUpdates_quantidade: dadosUpdates.result?.length || 0,
+      getUpdates_bruto: dadosUpdates.result || [],
+      getUpdates_erro: dadosUpdates.ok ? null : dadosUpdates.description,
       mensagem: dadosWebhook.result?.url
         ? webhookRemovido
           ? 'Havia um webhook configurado (por isso as mensagens não apareciam) — já removi. Tente verificar de novo no app.'
