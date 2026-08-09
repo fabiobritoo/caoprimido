@@ -1,10 +1,14 @@
 import React, { useEffect } from 'react';
 import { AlarmClock, Check, Clock3 } from 'lucide-react';
-import { CORES, RAIO } from '../utils/tema.js';
+import { RAIO } from '../utils/tema.js';
+import { useTema } from '../utils/ThemeContext.jsx';
 import { iniciarAlarme, pararAlarme } from '../utils/somAlarme.js';
 import { listarRemedios, alternarDose, doseTomada, obterRegistros, obterIdDispositivo } from '../utils/storage.js';
 
 export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoFechar }) {
+  const { CORES } = useTema();
+  const estilos = criarEstilos(CORES);
+
   useEffect(() => {
     iniciarAlarme();
     if (navigator.vibrate) {
@@ -100,7 +104,8 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
   );
 }
 
-const estilos = {
+function criarEstilos(CORES) {
+  return {
   container: {
     position: 'fixed',
     inset: 0,
@@ -152,4 +157,5 @@ const estilos = {
     fontWeight: 600,
     marginTop: 14,
   },
-};
+  };
+}

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { HeartHandshake, Save, RefreshCw } from 'lucide-react';
-import { CORES, RAIO, botaoPrimario } from '../utils/tema.js';
+import { HeartHandshake, Save, RefreshCw, Moon, Sun } from 'lucide-react';
+import { RAIO, criarBotaoPrimario } from '../utils/tema.js';
+import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.js';
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 
 export default function ConfiguracoesScreen() {
+  const { CORES, modoEscuro, setModoEscuro } = useTema();
+  const estilos = criarEstilos(CORES);
   const [cuidadorAtivo, setCuidadorAtivo] = useState(false);
   const [cuidadorTelefone, setCuidadorTelefone] = useState('');
   const [cuidadorApiKey, setCuidadorApiKey] = useState('');
@@ -42,6 +45,31 @@ export default function ConfiguracoesScreen() {
 
       <div style={{ padding: 20 }}>
         <div style={estilos.secaoTitulo}>
+          {modoEscuro ? <Moon size={20} color={CORES.primaria} /> : <Sun size={20} color={CORES.primaria} />}
+          Aparência
+        </div>
+
+        <div style={estilos.linhaToggle}>
+          <span style={estilos.label}>Modo escuro</span>
+          <button
+            onClick={() => setModoEscuro(!modoEscuro)}
+            style={{
+              ...estilos.toggle,
+              backgroundColor: modoEscuro ? CORES.primaria : CORES.borda,
+            }}
+          >
+            <div
+              style={{
+                ...estilos.toggleBolinha,
+                transform: modoEscuro ? 'translateX(20px)' : 'translateX(0)',
+              }}
+            />
+          </button>
+        </div>
+
+        <div style={estilos.divisor} />
+
+        <div style={estilos.secaoTitulo}>
           <HeartHandshake size={20} color={CORES.primaria} />
           Avisar um cuidador/familiar
         </div>
@@ -56,7 +84,7 @@ export default function ConfiguracoesScreen() {
             onClick={() => setCuidadorAtivo(!cuidadorAtivo)}
             style={{
               ...estilos.toggle,
-              backgroundColor: cuidadorAtivo ? CORES.primaria : '#DDD',
+              backgroundColor: cuidadorAtivo ? CORES.primaria : CORES.borda,
             }}
           >
             <div
@@ -114,7 +142,8 @@ export default function ConfiguracoesScreen() {
   );
 }
 
-const estilos = {
+function criarEstilos(CORES) {
+  return {
   secaoTitulo: {
     display: 'flex',
     alignItems: 'center',
@@ -125,6 +154,7 @@ const estilos = {
     marginBottom: 6,
   },
   explicacao: { color: CORES.textoSecundario, fontSize: 14, marginBottom: 20 },
+  divisor: { height: 1, backgroundColor: CORES.borda, margin: '20px 0' },
   linhaToggle: {
     display: 'flex',
     justifyContent: 'space-between',
@@ -165,8 +195,9 @@ const estilos = {
     lineHeight: 1.5,
   },
   botaoSalvar: {
-    ...botaoPrimario,
+    ...criarBotaoPrimario(CORES),
     width: '100%',
     marginTop: 30,
   },
-};
+  };
+}

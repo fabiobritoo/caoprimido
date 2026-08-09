@@ -6,6 +6,7 @@ import ManageMedicinesScreen from './screens/ManageMedicinesScreen.jsx';
 import DiagnosticoScreen from './screens/DiagnosticoScreen.jsx';
 import ConfiguracoesScreen from './screens/ConfiguracoesScreen.jsx';
 import TelaAlarme from './components/TelaAlarme.jsx';
+import { ProvedorTema } from './utils/ThemeContext.jsx';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
 import { listarRemedios, obterRegistros, doseTomada, alternarDose, obterIdDispositivo } from './utils/storage.js';
 import { remedioAplicavelNoDia, formatarData } from './utils/constantes.js';
@@ -104,7 +105,7 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <ProvedorTema>
       {alarmeAtivo && (
         <TelaAlarme
           titulo={alarmeAtivo.titulo}
@@ -125,6 +126,6 @@ export default function App() {
           <Route path="/configuracoes" element={<ConfiguracoesScreen />} />
         </Routes>
       </HashRouter>
-    </>
+    </ProvedorTema>
   );
 }

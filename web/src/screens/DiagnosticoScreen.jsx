@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
-import { CORES, RAIO, botaoSecundario } from '../utils/tema.js';
+import { RAIO, criarBotaoSecundario } from '../utils/tema.js';
+import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import { obterIdDispositivo } from '../utils/storage.js';
 
 export default function DiagnosticoScreen() {
+  const { CORES } = useTema();
+  const estilos = criarEstilos(CORES);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState(null);
   const [dados, setDados] = useState(null);
@@ -67,9 +70,10 @@ export default function DiagnosticoScreen() {
   );
 }
 
-const estilos = {
+function criarEstilos(CORES) {
+  return {
   botaoAtualizar: {
-    ...botaoSecundario,
+    ...criarBotaoSecundario(CORES),
     marginBottom: 16,
   },
   texto: { color: CORES.textoSecundario, marginTop: 10 },
@@ -84,4 +88,5 @@ const estilos = {
   nomeHorario: { fontWeight: 700, color: CORES.textoPrincipal },
   status: { color: CORES.primariaEscura, marginTop: 4, fontSize: 14 },
   detalhe: { color: CORES.textoSecundario, marginTop: 2, fontSize: 13 },
-};
+  };
+}

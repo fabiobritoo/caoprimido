@@ -4,11 +4,14 @@ import { Plus, Pencil, Trash2, Pill, Clock, Package } from 'lucide-react';
 import { listarRemedios, removerRemedio, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { rotuloUnidade, descreverFrequencia } from '../utils/constantes.js';
-import { CORES, RAIO, SOMBRA } from '../utils/tema.js';
+import { RAIO, SOMBRA } from '../utils/tema.js';
+import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
 export default function ManageMedicinesScreen() {
   const navigate = useNavigate();
+  const { CORES } = useTema();
+  const estilos = criarEstilos(CORES);
   const [remedios, setRemedios] = useState([]);
 
   const carregar = useCallback(async () => {
@@ -94,73 +97,75 @@ export default function ManageMedicinesScreen() {
   );
 }
 
-const estilos = {
-  card: {
-    backgroundColor: CORES.fundoCard,
-    borderRadius: RAIO.medio,
-    padding: 16,
-    marginBottom: 12,
-    display: 'flex',
-    alignItems: 'flex-start',
-    gap: 12,
-    boxShadow: SOMBRA.card,
-  },
-  iconeRemedio: {
-    width: 40,
-    height: 40,
-    borderRadius: RAIO.pequeno,
-    backgroundColor: CORES.primariaClara,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  nome: { fontSize: 17, fontWeight: 700, color: CORES.textoPrincipal, marginBottom: 4 },
-  linhaDetalhe: { display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 },
-  detalhe: { color: CORES.textoSecundario, fontSize: 13 },
-  acoes: { display: 'flex', flexDirection: 'column', gap: 8 },
-  botaoIconeEditar: {
-    width: 34,
-    height: 34,
-    borderRadius: RAIO.pill,
-    border: 'none',
-    backgroundColor: CORES.primariaClara,
-    color: CORES.primariaEscura,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  botaoIconeExcluir: {
-    width: 34,
-    height: 34,
-    borderRadius: RAIO.pill,
-    border: 'none',
-    backgroundColor: '#FBEAEA',
-    color: CORES.perigo,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  vazioContainer: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 60,
-  },
-  vazio: { textAlign: 'center', color: CORES.textoSecundario },
-  botaoAdicionar: {
-    position: 'fixed',
-    right: 20,
-    bottom: 30,
-    backgroundColor: CORES.primaria,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: 58,
-    height: 58,
-    borderRadius: RAIO.pill,
-    border: 'none',
-    boxShadow: SOMBRA.botao,
-  },
-};
+function criarEstilos(CORES) {
+  return {
+    card: {
+      backgroundColor: CORES.fundoCard,
+      borderRadius: RAIO.medio,
+      padding: 16,
+      marginBottom: 12,
+      display: 'flex',
+      alignItems: 'flex-start',
+      gap: 12,
+      boxShadow: SOMBRA.card,
+    },
+    iconeRemedio: {
+      width: 40,
+      height: 40,
+      borderRadius: RAIO.pequeno,
+      backgroundColor: CORES.primariaClara,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    nome: { fontSize: 17, fontWeight: 700, color: CORES.textoPrincipal, marginBottom: 4 },
+    linhaDetalhe: { display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 },
+    detalhe: { color: CORES.textoSecundario, fontSize: 13 },
+    acoes: { display: 'flex', flexDirection: 'column', gap: 8 },
+    botaoIconeEditar: {
+      width: 34,
+      height: 34,
+      borderRadius: RAIO.pill,
+      border: 'none',
+      backgroundColor: CORES.primariaClara,
+      color: CORES.primariaEscura,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    botaoIconeExcluir: {
+      width: 34,
+      height: 34,
+      borderRadius: RAIO.pill,
+      border: 'none',
+      backgroundColor: CORES.perigoFundo,
+      color: CORES.perigo,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    vazioContainer: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: 12,
+      marginTop: 60,
+    },
+    vazio: { textAlign: 'center', color: CORES.textoSecundario },
+    botaoAdicionar: {
+      position: 'fixed',
+      right: 20,
+      bottom: 30,
+      backgroundColor: CORES.primaria,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      width: 58,
+      height: 58,
+      borderRadius: RAIO.pill,
+      border: 'none',
+      boxShadow: SOMBRA.botao,
+    },
+  };
+}

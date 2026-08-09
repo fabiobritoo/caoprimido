@@ -17,7 +17,8 @@ import {
 import { adicionarRemedio, atualizarRemedio, listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { UNIDADES, DIAS_SEMANA, formatarData } from '../utils/constantes.js';
-import { CORES, RAIO, SOMBRA, botaoPrimario } from '../utils/tema.js';
+import { RAIO, criarBotaoPrimario } from '../utils/tema.js';
+import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
 const ICONE_UNIDADE = {
@@ -37,6 +38,8 @@ const FREQUENCIAS = [
 ];
 
 export default function AddMedicineScreen() {
+  const { CORES } = useTema();
+  const estilos = criarEstilos(CORES);
   const navigate = useNavigate();
   const { id: remedioIdEdicao } = useParams();
   const modoEdicao = !!remedioIdEdicao;
@@ -154,7 +157,7 @@ export default function AddMedicineScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: '#fff', paddingBottom: 40 }}>
+    <div style={{ minHeight: '100%', backgroundColor: CORES.fundoCard, paddingBottom: 40 }}>
       <CabecalhoTopo titulo={modoEdicao ? 'Editar Remédio' : 'Novo Remédio'} mostrarVoltar />
 
       <div style={{ padding: 20 }}>
@@ -310,7 +313,8 @@ export default function AddMedicineScreen() {
   );
 }
 
-const estilos = {
+function criarEstilos(CORES) {
+  return {
   label: {
     display: 'block',
     fontWeight: 600,
@@ -334,7 +338,7 @@ const estilos = {
     borderRadius: RAIO.pequeno,
     padding: '0 16px',
     color: CORES.primaria,
-    background: '#fff',
+    background: CORES.fundoCard,
     fontWeight: 600,
     whiteSpace: 'nowrap',
   },
@@ -346,8 +350,8 @@ const estilos = {
     border: `1.5px solid ${CORES.borda}`,
     borderRadius: RAIO.pill,
     padding: '7px 14px',
-    background: '#fff',
-    color: '#444',
+    background: CORES.fundoCard,
+    color: CORES.textoPrincipal,
     fontSize: 14,
   },
   chipSelecionado: { backgroundColor: CORES.primaria, borderColor: CORES.primaria, color: '#fff' },
@@ -369,7 +373,7 @@ const estilos = {
     padding: 12,
     borderRadius: RAIO.medio,
     border: `1.5px solid ${CORES.borda}`,
-    background: '#fff',
+    background: CORES.fundoCard,
     textAlign: 'left',
   },
   cartaoFrequenciaSelecionado: {
@@ -392,14 +396,15 @@ const estilos = {
     height: 40,
     borderRadius: RAIO.pill,
     border: `1.5px solid ${CORES.borda}`,
-    background: '#fff',
-    color: '#444',
+    background: CORES.fundoCard,
+    color: CORES.textoPrincipal,
     fontWeight: 600,
   },
   diaCirculoSelecionado: { backgroundColor: CORES.primaria, borderColor: CORES.primaria, color: '#fff' },
   botaoSalvar: {
-    ...botaoPrimario,
+    ...criarBotaoPrimario(CORES),
     width: '100%',
     marginTop: 30,
   },
-};
+  };
+}
