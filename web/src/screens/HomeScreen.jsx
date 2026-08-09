@@ -297,7 +297,7 @@ export default function HomeScreen() {
           <div
             style={{
               ...estilos.trilhoSemanas,
-              transform: `translateX(calc(-100% + ${deltaXArrasto}px))`,
+              transform: `translateX(calc(-33.3333% + ${deltaXArrasto}px))`,
               transition: transicaoAtiva ? 'transform 0.22s ease-out' : 'none',
             }}
           >
