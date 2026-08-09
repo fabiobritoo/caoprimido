@@ -3,6 +3,7 @@ export const UNIDADES = [
   { valor: 'capsula', rotulo: 'Cápsula(s)' },
   { valor: 'gota', rotulo: 'Gota(s)' },
   { valor: 'ml', rotulo: 'ml' },
+  { valor: 'grama', rotulo: 'g' },
   { valor: 'injecao', rotulo: 'Injeção/Injeções' },
   { valor: 'sache', rotulo: 'Sachê(s)' },
   { valor: 'unidade', rotulo: 'Unidade(s)' },
