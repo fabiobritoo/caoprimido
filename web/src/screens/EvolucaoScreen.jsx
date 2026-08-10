@@ -16,7 +16,7 @@ import SaudeSecao from '../components/SaudeSecao.jsx';
 const DIAS_HISTORICO = 84; // 12 semanas
 
 export default function EvolucaoScreen() {
-  const { CORES } = useTema();
+  const { CORES, modoBob } = useTema();
   const estilos = criarEstilos(CORES);
   const [gerandoPdf, setGerandoPdf] = useState(false);
   const [aba, setAba] = useState('remedios');
@@ -70,7 +70,7 @@ export default function EvolucaoScreen() {
     setGerandoPdf(true);
     try {
       const { gerarRelatorioPdf } = await import('../utils/relatorioPdf.js');
-      await gerarRelatorioPdf();
+      await gerarRelatorioPdf({ modoBob });
     } catch (e) {
       console.error('Erro ao gerar PDF', e);
       alert('Não consegui gerar o PDF agora. Tente de novo.');

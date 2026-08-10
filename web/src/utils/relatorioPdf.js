@@ -47,7 +47,7 @@ function carregarImagemComoBase64(url) {
   });
 }
 
-export async function gerarRelatorioPdf() {
+export async function gerarRelatorioPdf({ modoBob = false } = {}) {
   const remedios = await listarRemedios();
   const registros = await obterRegistros();
   const registrosSaude = await listarRegistrosSaude();
@@ -62,8 +62,8 @@ export async function gerarRelatorioPdf() {
     .sort((a, b) => b.data.localeCompare(a.data))[0] || null;
 
   const [logoBase64, mascoteBase64] = await Promise.all([
-    carregarImagemComoBase64('/logo-caoprimido.png').catch(() => null),
-    carregarImagemComoBase64('/nina/mascote-lendo.png').catch(() => null),
+    carregarImagemComoBase64(modoBob ? '/logo-bob.png' : '/logo-caoprimido.png').catch(() => null),
+    carregarImagemComoBase64(modoBob ? '/bob/mascote-parabens.png' : '/nina/mascote-lendo.png').catch(() => null),
   ]);
 
   const doc = new jsPDF();

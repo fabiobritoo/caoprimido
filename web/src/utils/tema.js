@@ -36,6 +36,41 @@ export const CORES_ESCURO = {
   borda: '#392E27',
 };
 
+// Paleta do "Modo Bob" — tons de azul, pro outro cachorro da família
+export const CORES_CLARO_BOB = {
+  primaria: '#3B7DD8',
+  primariaEscura: '#2C5FA8',
+  primariaClara: '#D9E7FA',
+  dourado: '#E0A94C',
+  fundo: '#EFF4F9',
+  fundoCard: '#FFFFFF',
+  sucesso: '#6FBF73',
+  sucessoFundo: '#E8F5E9',
+  atencao: '#F0A63A',
+  perigo: '#D9534F',
+  perigoFundo: '#FBEAEA',
+  textoPrincipal: '#1E3A5F',
+  textoSecundario: '#6B85A0',
+  borda: '#D3E2F0',
+};
+
+export const CORES_ESCURO_BOB = {
+  primaria: '#5B9BE0',
+  primariaEscura: '#8AC0F0',
+  primariaClara: '#1E3550',
+  dourado: '#E0A94C',
+  fundo: '#0F1720',
+  fundoCard: '#1A2530',
+  sucesso: '#7FCB82',
+  sucessoFundo: '#1B2E20',
+  atencao: '#F0B85C',
+  perigo: '#E7807A',
+  perigoFundo: '#332020',
+  textoPrincipal: '#E5EEF7',
+  textoSecundario: '#93A8BE',
+  borda: '#26374A',
+};
+
 // Tokens reutilizáveis (iguais nas duas paletas)
 export const RAIO = {
   pequeno: 10,

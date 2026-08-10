@@ -26,7 +26,7 @@ function gerarCodigo() {
 
 export default function ConfiguracoesScreen() {
   const navigate = useNavigate();
-  const { CORES, modoEscuro, setModoEscuro } = useTema();
+  const { CORES, modoEscuro, setModoEscuro, modoBob, setModoBob } = useTema();
   const estilos = criarEstilos(CORES);
   const inputArquivoRef = useRef(null);
   const [statusBackup, setStatusBackup] = useState('');
@@ -254,6 +254,27 @@ export default function ConfiguracoesScreen() {
               }}
             />
           </button>
+        </div>
+
+        <div style={estilos.linhaToggle}>
+          <span style={estilos.label}>Modo Bob 🐶</span>
+          <button
+            onClick={() => setModoBob(!modoBob)}
+            style={{
+              ...estilos.toggle,
+              backgroundColor: modoBob ? CORES.primaria : CORES.borda,
+            }}
+          >
+            <div
+              style={{
+                ...estilos.toggleBolinha,
+                transform: modoBob ? 'translateX(20px)' : 'translateX(0)',
+              }}
+            />
+          </button>
+        </div>
+        <div style={{ ...estilos.explicacao, marginTop: -8 }}>
+          Troca as mascotes e a cor do app pro Bob (paleta azul).
         </div>
 
         <div style={estilos.divisor} />

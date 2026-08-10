@@ -46,7 +46,7 @@ function formatarDataCurtaBR(dataStr) {
 
 export default function HomeScreen() {
   const navigate = useNavigate();
-  const { CORES } = useTema();
+  const { CORES, pastaMascote } = useTema();
   const estilos = criarEstilos(CORES);
   const [remedios, setRemedios] = useState([]);
   const [registros, setRegistros] = useState({});
@@ -379,7 +379,7 @@ export default function HomeScreen() {
         {dosesDoDia.length > 0 && (
           <div style={estilos.cabecalhoLista}>
             <img
-              src={todasTomadas ? '/nina/mascote-parabens.png' : '/nina/mascote-hora-remedio.png'}
+              src={todasTomadas ? `/${pastaMascote}/mascote-parabens.png` : `/${pastaMascote}/mascote-hora-remedio.png`}
               alt=""
               style={estilos.mascoteCabecalho}
             />
@@ -391,7 +391,7 @@ export default function HomeScreen() {
 
         {dosesDoDia.length === 0 && (
           <div style={estilos.vazioContainer}>
-            <img src="/nina/mascote-dormindo.png" alt="" style={estilos.mascoteVazio} />
+            <img src={`/${pastaMascote}/mascote-dormindo.png`} alt="" style={estilos.mascoteVazio} />
             <div style={estilos.vazioTexto}>Nenhum remédio agendado para esse dia.</div>
           </div>
         )}
@@ -471,7 +471,7 @@ export default function HomeScreen() {
 
       {todasTomadas && (
         <div style={estilos.gifCanto}>
-          <img src="/nina/nina-lambendo.gif" alt="" style={{ width: '100%', height: '100%' }} />
+          <img src={`/${pastaMascote}/mascote-lambendo.gif`} alt="" style={{ width: '100%', height: '100%' }} />
         </div>
       )}
 
