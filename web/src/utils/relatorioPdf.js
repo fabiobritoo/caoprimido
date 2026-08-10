@@ -8,13 +8,28 @@ import { obterPerfil } from './perfil.js';
 import { rotuloUnidade, descreverFrequencia } from './constantes.js';
 
 // Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
-const ROSA = [217, 82, 122];
-const ROSA_ESCURO = [179, 61, 99];
-const DOURADO = [224, 169, 76];
-const CREME = [250, 243, 231];
-const TEXTO_PRINCIPAL = [74, 46, 30];
-const TEXTO_SECUNDARIO = [138, 111, 92];
-const BRANCO = [255, 255, 255];
+function obterPaletaPdf(modoBob) {
+  if (modoBob) {
+    return {
+      PRIMARIA: [59, 125, 216], // #3B7DD8
+      PRIMARIA_ESCURA: [44, 95, 168], // #2C5FA8
+      DOURADO: [224, 169, 76],
+      CREME: [217, 231, 250], // tom clarinho de azul, equivalente ao creme
+      TEXTO_PRINCIPAL: [30, 58, 95], // #1E3A5F
+      TEXTO_SECUNDARIO: [107, 133, 160], // #6B85A0
+      BRANCO: [255, 255, 255],
+    };
+  }
+  return {
+    PRIMARIA: [217, 82, 122],
+    PRIMARIA_ESCURA: [179, 61, 99],
+    DOURADO: [224, 169, 76],
+    CREME: [250, 243, 231],
+    TEXTO_PRINCIPAL: [74, 46, 30],
+    TEXTO_SECUNDARIO: [138, 111, 92],
+    BRANCO: [255, 255, 255],
+  };
+}
 
 function formatarDataExtenso(dataStr) {
   const [ano, mes, dia] = dataStr.split('-');
@@ -48,6 +63,15 @@ function carregarImagemComoBase64(url) {
 }
 
 export async function gerarRelatorioPdf({ modoBob = false } = {}) {
+  const paleta = obterPaletaPdf(modoBob);
+  const ROSA = paleta.PRIMARIA;
+  const ROSA_ESCURO = paleta.PRIMARIA_ESCURA;
+  const DOURADO = paleta.DOURADO;
+  const CREME = paleta.CREME;
+  const TEXTO_PRINCIPAL = paleta.TEXTO_PRINCIPAL;
+  const TEXTO_SECUNDARIO = paleta.TEXTO_SECUNDARIO;
+  const BRANCO = paleta.BRANCO;
+
   const remedios = await listarRemedios();
   const registros = await obterRegistros();
   const registrosSaude = await listarRegistrosSaude();
