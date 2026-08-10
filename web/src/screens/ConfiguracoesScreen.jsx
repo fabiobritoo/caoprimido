@@ -257,7 +257,7 @@ export default function ConfiguracoesScreen() {
         </div>
 
         <div style={estilos.linhaToggle}>
-          <span style={estilos.label}>Modo Bob 🐶</span>
+          <span style={estilos.label}>{modoBob ? 'Modo Nina 🐶' : 'Modo Bob 🐶'}</span>
           <button
             onClick={() => setModoBob(!modoBob)}
             style={{
@@ -274,7 +274,9 @@ export default function ConfiguracoesScreen() {
           </button>
         </div>
         <div style={{ ...estilos.explicacao, marginTop: -8 }}>
-          Troca as mascotes e a cor do app pro Bob (paleta azul).
+          {modoBob
+            ? 'Voltar pra Nina (paleta rosa).'
+            : 'Troca as mascotes e a cor do app pro Bob (paleta azul).'}
         </div>
 
         <div style={estilos.divisor} />
