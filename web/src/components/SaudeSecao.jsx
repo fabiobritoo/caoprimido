@@ -117,29 +117,31 @@ export default function SaudeSecao({ CORES }) {
 
         {periodoAberto && (
           <div style={estilos.seletorPeriodo}>
-            <div style={{ flex: '1 1 130px', minWidth: 0 }}>
-              <label style={estilos.labelPeriodo}>De</label>
-              <input
-                type="date"
-                value={dataInicioPeriodo}
-                max={dataFimPeriodo}
-                onChange={(e) => setDataInicioPeriodo(e.target.value)}
-                style={estilos.inputPeriodo}
-              />
-            </div>
-            <div style={{ flex: '1 1 130px', minWidth: 0 }}>
-              <label style={estilos.labelPeriodo}>Até</label>
-              <input
-                type="date"
-                value={dataFimPeriodo}
-                min={dataInicioPeriodo}
-                max={HOJE}
-                onChange={(e) => setDataFimPeriodo(e.target.value)}
-                style={estilos.inputPeriodo}
-              />
+            <div style={estilos.linhaDatas}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <label style={estilos.labelPeriodo}>De</label>
+                <input
+                  type="date"
+                  value={dataInicioPeriodo}
+                  max={dataFimPeriodo}
+                  onChange={(e) => setDataInicioPeriodo(e.target.value)}
+                  style={estilos.inputPeriodo}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <label style={estilos.labelPeriodo}>Até</label>
+                <input
+                  type="date"
+                  value={dataFimPeriodo}
+                  min={dataInicioPeriodo}
+                  max={HOJE}
+                  onChange={(e) => setDataFimPeriodo(e.target.value)}
+                  style={estilos.inputPeriodo}
+                />
+              </div>
             </div>
             <button onClick={usarUltimos7Dias} style={estilos.botaoResetPeriodo}>
-              7 dias
+              Usar últimos 7 dias
             </button>
           </div>
         )}
@@ -426,10 +428,13 @@ function criarEstilos(CORES) {
     },
     seletorPeriodo: {
       display: 'flex',
-      flexWrap: 'wrap',
-      alignItems: 'flex-end',
-      gap: 8,
+      flexDirection: 'column',
+      gap: 10,
       marginTop: 12,
+    },
+    linhaDatas: {
+      display: 'flex',
+      gap: 8,
     },
     labelPeriodo: { display: 'block', fontSize: 11, color: CORES.textoSecundario, marginBottom: 4 },
     inputPeriodo: {
@@ -443,15 +448,16 @@ function criarEstilos(CORES) {
       boxSizing: 'border-box',
     },
     botaoResetPeriodo: {
+      width: '100%',
       border: `1.5px solid ${CORES.primaria}`,
       background: 'none',
       color: CORES.primaria,
       borderRadius: RAIO.pequeno,
       padding: '10px 14px',
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: 700,
       whiteSpace: 'nowrap',
-      flexShrink: 0,
+      boxSizing: 'border-box',
     },
     semDadosPeriodo: {
       textAlign: 'center',
