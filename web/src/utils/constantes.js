@@ -125,7 +125,10 @@ export function somarDias(dataStr, quantidade) {
 }
 
 export function diasDaSemanaContendo(dataBase) {
-  const base = new Date(dataBase);
+  // se vier como string ("2026-08-10"), forçar meio-dia evita o bug de fuso
+  // horário onde "new Date('2026-08-10')" vira meia-noite UTC e, convertido
+  // pro horário local (ex: Brasil, UTC-3), "volta" pro dia anterior
+  const base = typeof dataBase === 'string' ? new Date(`${dataBase}T12:00:00`) : new Date(dataBase);
   const diaSemanaBase = base.getDay(); // 0=domingo
   const offsetSegunda = diaSemanaBase === 0 ? -6 : 1 - diaSemanaBase;
   const segunda = new Date(base);
