@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Scale, HeartPulse, Activity, FileText, X } from 'lucide-react';
-import { listarRegistrosSaude, adicionarRegistroSaude, removerRegistroSaude } from '../utils/saude.js';
+import { Plus, Trash2, Pencil, Scale, HeartPulse, Activity, FileText, X } from 'lucide-react';
+import {
+  listarRegistrosSaude,
+  adicionarRegistroSaude,
+  removerRegistroSaude,
+  atualizarRegistroSaude,
+} from '../utils/saude.js';
 import { formatarData } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 
@@ -15,6 +20,7 @@ export default function SaudeSecao({ CORES }) {
   const estilos = criarEstilos(CORES);
   const [registros, setRegistros] = useState([]);
   const [formularioAberto, setFormularioAberto] = useState(false);
+  const [idEditando, setIdEditando] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
   const [data, setData] = useState(HOJE);
@@ -40,6 +46,18 @@ export default function SaudeSecao({ CORES }) {
     setDiastolica('');
     setFrequencia('');
     setAnotacoes('');
+    setIdEditando(null);
+  }
+
+  function abrirParaEditar(registro) {
+    setData(registro.data);
+    setPeso(registro.peso != null ? String(registro.peso) : '');
+    setSistolica(registro.pressaoSistolica != null ? String(registro.pressaoSistolica) : '');
+    setDiastolica(registro.pressaoDiastolica != null ? String(registro.pressaoDiastolica) : '');
+    setFrequencia(registro.frequenciaCardiaca != null ? String(registro.frequenciaCardiaca) : '');
+    setAnotacoes(registro.anotacoes || '');
+    setIdEditando(registro.id);
+    setFormularioAberto(true);
   }
 
   async function salvar() {
@@ -47,14 +65,21 @@ export default function SaudeSecao({ CORES }) {
       alert('Preencha ao menos um campo.');
       return;
     }
-    await adicionarRegistroSaude({
+    const dados = {
       data,
       peso: peso ? Number(peso) : null,
       pressaoSistolica: sistolica ? Number(sistolica) : null,
       pressaoDiastolica: diastolica ? Number(diastolica) : null,
       frequenciaCardiaca: frequencia ? Number(frequencia) : null,
       anotacoes: anotacoes.trim() || null,
-    });
+    };
+
+    if (idEditando) {
+      await atualizarRegistroSaude(idEditando, dados);
+    } else {
+      await adicionarRegistroSaude(dados);
+    }
+
     limparFormulario();
     setFormularioAberto(false);
     await carregar();
@@ -75,12 +100,22 @@ export default function SaudeSecao({ CORES }) {
       {pontosPeso.length >= 2 && <GraficoPeso pontos={pontosPeso} CORES={CORES} />}
 
       {!formularioAberto ? (
-        <button onClick={() => setFormularioAberto(true)} style={estilos.botaoNovoRegistro}>
+        <button
+          onClick={() => {
+            limparFormulario();
+            setFormularioAberto(true);
+          }}
+          style={estilos.botaoNovoRegistro}
+        >
           <Plus size={18} strokeWidth={2.5} />
           Novo registro
         </button>
       ) : (
         <div style={estilos.formulario}>
+          <div style={estilos.formularioTitulo}>
+            {idEditando ? 'Editar registro' : 'Novo registro'}
+          </div>
+
           <label style={estilos.label}>Data</label>
           <input
             type="date"
@@ -155,7 +190,7 @@ export default function SaudeSecao({ CORES }) {
               <X size={16} /> Cancelar
             </button>
             <button onClick={salvar} style={estilos.botaoSalvar}>
-              Salvar registro
+              {idEditando ? 'Salvar alterações' : 'Salvar registro'}
             </button>
           </div>
         </div>
@@ -170,9 +205,14 @@ export default function SaudeSecao({ CORES }) {
           <div key={r.id} style={estilos.cartaoRegistro}>
             <div style={estilos.cartaoTopo}>
               <span style={estilos.cartaoData}>{formatarDataExibicao(r.data)}</span>
-              <button onClick={() => excluir(r.id)} style={estilos.botaoExcluir}>
-                <Trash2 size={15} />
-              </button>
+              <div style={estilos.acoesCartao}>
+                <button onClick={() => abrirParaEditar(r)} style={estilos.botaoEditar}>
+                  <Pencil size={14} />
+                </button>
+                <button onClick={() => excluir(r.id)} style={estilos.botaoExcluir}>
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
             <div style={estilos.cartaoValores}>
               {r.peso != null && (
@@ -208,7 +248,7 @@ function GraficoPeso({ pontos, CORES }) {
   const largura = 320;
   const altura = 150;
   const padding = 24;
-  const alturaLinha = altura - 34; // reserva espaço embaixo pras datas
+  const alturaLinha = altura - 34;
 
   const pesos = pontos.map((p) => p.peso);
   const min = Math.min(...pesos);
@@ -220,8 +260,6 @@ function GraficoPeso({ pontos, CORES }) {
 
   const linha = pontos.map((p, i) => `${coordX(i)},${coordY(p.peso)}`).join(' ');
 
-  // pra não poluir quando tem muitos pontos, mostra no máximo ~5 datas espaçadas
-  // (sempre incluindo a primeira e a última)
   const maximoRotulos = 5;
   const passo = Math.max(1, Math.ceil(pontos.length / maximoRotulos));
   const indicesComRotulo = new Set();
@@ -285,6 +323,12 @@ function criarEstilos(CORES) {
       padding: 16,
       boxShadow: SOMBRA.card,
     },
+    formularioTitulo: {
+      fontWeight: 700,
+      fontSize: 15,
+      color: CORES.textoPrincipal,
+      marginBottom: 4,
+    },
     label: {
       display: 'flex',
       alignItems: 'center',
@@ -345,7 +389,23 @@ function criarEstilos(CORES) {
     },
     cartaoTopo: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
     cartaoData: { fontWeight: 700, color: CORES.textoPrincipal, fontSize: 14 },
-    botaoExcluir: { background: 'none', border: 'none', color: CORES.perigo, padding: 4 },
+    acoesCartao: { display: 'flex', gap: 4 },
+    botaoEditar: {
+      background: CORES.primariaClara,
+      border: 'none',
+      borderRadius: RAIO.pill,
+      color: CORES.primariaEscura,
+      padding: 6,
+      display: 'flex',
+    },
+    botaoExcluir: {
+      background: CORES.perigoFundo,
+      border: 'none',
+      borderRadius: RAIO.pill,
+      color: CORES.perigo,
+      padding: 6,
+      display: 'flex',
+    },
     cartaoValores: { display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 8 },
     valorItem: {
       display: 'inline-flex',

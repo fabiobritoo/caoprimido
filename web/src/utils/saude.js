@@ -29,3 +29,10 @@ export async function removerRegistroSaude(id) {
   await salvarRegistrosSaude(novaLista);
   return novaLista;
 }
+
+export async function atualizarRegistroSaude(id, dadosAtualizados) {
+  const lista = await listarRegistrosSaude();
+  const novaLista = lista.map((r) => (r.id === id ? { ...r, ...dadosAtualizados } : r));
+  await salvarRegistrosSaude(novaLista);
+  return novaLista.sort((a, b) => b.data.localeCompare(a.data));
+}
