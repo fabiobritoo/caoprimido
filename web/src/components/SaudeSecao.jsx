@@ -117,30 +117,26 @@ export default function SaudeSecao({ CORES }) {
 
         {periodoAberto && (
           <div style={estilos.seletorPeriodo}>
-            <div style={estilos.linhaDatas}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <label style={estilos.labelPeriodo}>De</label>
-                <input
-                  type="date"
-                  value={dataInicioPeriodo}
-                  max={dataFimPeriodo}
-                  onChange={(e) => setDataInicioPeriodo(e.target.value)}
-                  style={estilos.inputPeriodo}
-                />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <label style={estilos.labelPeriodo}>Até</label>
-                <input
-                  type="date"
-                  value={dataFimPeriodo}
-                  min={dataInicioPeriodo}
-                  max={HOJE}
-                  onChange={(e) => setDataFimPeriodo(e.target.value)}
-                  style={estilos.inputPeriodo}
-                />
-              </div>
-            </div>
-            <button onClick={usarUltimos7Dias} style={estilos.botaoResetPeriodo}>
+            <label style={estilos.labelPeriodo}>De</label>
+            <input
+              type="date"
+              value={dataInicioPeriodo}
+              max={dataFimPeriodo}
+              onChange={(e) => setDataInicioPeriodo(e.target.value)}
+              style={estilos.inputPeriodo}
+            />
+
+            <label style={estilos.labelPeriodo}>Até</label>
+            <input
+              type="date"
+              value={dataFimPeriodo}
+              min={dataInicioPeriodo}
+              max={HOJE}
+              onChange={(e) => setDataFimPeriodo(e.target.value)}
+              style={estilos.inputPeriodo}
+            />
+
+            <button onClick={usarUltimos7Dias} style={estilos.linkResetPeriodo}>
               Usar últimos 7 dias
             </button>
           </div>
@@ -429,14 +425,10 @@ function criarEstilos(CORES) {
     seletorPeriodo: {
       display: 'flex',
       flexDirection: 'column',
-      gap: 10,
+      gap: 6,
       marginTop: 12,
     },
-    linhaDatas: {
-      display: 'flex',
-      gap: 8,
-    },
-    labelPeriodo: { display: 'block', fontSize: 11, color: CORES.textoSecundario, marginBottom: 4 },
+    labelPeriodo: { fontSize: 11, color: CORES.textoSecundario, marginTop: 6 },
     inputPeriodo: {
       width: '100%',
       border: `1.5px solid ${CORES.borda}`,
@@ -447,17 +439,16 @@ function criarEstilos(CORES) {
       color: CORES.textoPrincipal,
       boxSizing: 'border-box',
     },
-    botaoResetPeriodo: {
-      width: '100%',
-      border: `1.5px solid ${CORES.primaria}`,
+    linkResetPeriodo: {
       background: 'none',
+      border: 'none',
       color: CORES.primaria,
-      borderRadius: RAIO.pequeno,
-      padding: '10px 14px',
       fontSize: 13,
       fontWeight: 700,
-      whiteSpace: 'nowrap',
-      boxSizing: 'border-box',
+      textDecoration: 'underline',
+      marginTop: 8,
+      alignSelf: 'flex-start',
+      padding: 0,
     },
     semDadosPeriodo: {
       textAlign: 'center',
