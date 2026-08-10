@@ -15,7 +15,7 @@ export function contarDosesPendentes(remedios, registros) {
 
   let contador = 0;
   for (const remedio of remedios) {
-    if (!remedioAplicavelNoDia(remedio.frequencia, hoje)) continue;
+    if (!remedioAplicavelNoDia(remedio.frequencia, hoje, remedio.dataInicio, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
       if (horario > horaAtual) continue; // ainda não chegou a hora
       if (!doseTomada(registros, remedio.id, hoje, horario)) contador++;

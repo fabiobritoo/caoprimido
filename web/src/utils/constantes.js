@@ -59,7 +59,10 @@ function diferencaEmDias(dataInicioStr, dataFimStr) {
 }
 
 // Diz se um remédio deve ser tomado numa determinada data, de acordo com sua frequência
-export function remedioAplicavelNoDia(frequencia, dataStr) {
+export function remedioAplicavelNoDia(frequencia, dataStr, dataInicio, dataTermino) {
+  if (dataInicio && dataStr < dataInicio) return false;
+  if (dataTermino && dataStr > dataTermino) return false;
+
   if (!frequencia || frequencia.tipo === 'diaria') return true;
 
   if (frequencia.tipo === 'dias_semana') {

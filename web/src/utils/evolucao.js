@@ -13,7 +13,7 @@ function dosesAgendadasNoDia(remedios, dataStr, hojeStr) {
   const doses = [];
   for (const remedio of remedios) {
     if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
-    if (!remedioAplicavelNoDia(remedio.frequencia, dataStr)) continue;
+    if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
       doses.push({ remedioId: remedio.id, horario, nome: remedio.nome });
     }
@@ -120,7 +120,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
 
     for (const remedio of remedios) {
       if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
-      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr)) continue;
+      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
         contadores[remedio.id].agendadas++;
         if (doseTomada(registros, remedio.id, dataStr, horario)) {

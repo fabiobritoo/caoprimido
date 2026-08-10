@@ -22,6 +22,12 @@ import { RAIO, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
+function formatarDataExibicao(dataStr) {
+  if (!dataStr) return '';
+  const [ano, mes, dia] = dataStr.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
+
 const ICONE_UNIDADE = {
   comprimido: Pill,
   capsula: Pill,
@@ -59,6 +65,9 @@ export default function AddMedicineScreen() {
   const [tipoFrequencia, setTipoFrequencia] = useState('diaria');
   const [diasSemanaSelecionados, setDiasSemanaSelecionados] = useState([]);
   const [intervaloDias, setIntervaloDias] = useState('2');
+  const [dataInicio, setDataInicio] = useState(formatarData(new Date()));
+  const [terminoAtivo, setTerminoAtivo] = useState(false);
+  const [dataTermino, setDataTermino] = useState(formatarData(new Date()));
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -78,6 +87,11 @@ export default function AddMedicineScreen() {
         setTipoFrequencia(freq.tipo);
         if (freq.tipo === 'dias_semana') setDiasSemanaSelecionados(freq.dias || []);
         if (freq.tipo === 'intervalo') setIntervaloDias(String(freq.intervaloDias || 2));
+        if (encontrado.dataInicio) setDataInicio(encontrado.dataInicio);
+        if (encontrado.dataTermino) {
+          setTerminoAtivo(true);
+          setDataTermino(encontrado.dataTermino);
+        }
       }
       setCarregando(false);
     })();
@@ -127,6 +141,9 @@ export default function AddMedicineScreen() {
     if (tipoFrequencia === 'dias_semana' && diasSemanaSelecionados.length === 0) {
       return alert('Selecione ao menos um dia da semana.');
     }
+    if (terminoAtivo && dataTermino < dataInicio) {
+      return alert('A data de término não pode ser antes da data de início.');
+    }
 
     setSalvando(true);
 
@@ -139,6 +156,8 @@ export default function AddMedicineScreen() {
       frequencia: montarFrequencia(),
       quantidadeAtual: Number(quantidadeAtual),
       quantidadeMinima: Number(quantidadeMinima) || 5,
+      dataInicio,
+      dataTermino: terminoAtivo ? dataTermino : null,
     };
 
     if (modoEdicao) {
@@ -288,6 +307,51 @@ export default function AddMedicineScreen() {
           </>
         )}
 
+        <div style={estilos.divisor} />
+        <label style={estilos.label}>
+          <CalendarClock size={14} /> Duração
+        </label>
+
+        <div style={estilos.subLabel}>Data de início</div>
+        <input
+          type="date"
+          value={dataInicio}
+          onChange={(e) => setDataInicio(e.target.value)}
+          style={estilos.input}
+        />
+
+        <div style={estilos.linhaToggleTermino}>
+          <span style={{ fontWeight: 600, color: CORES.textoPrincipal }}>Definir término</span>
+          <button
+            onClick={() => setTerminoAtivo(!terminoAtivo)}
+            style={{
+              ...estilos.toggle,
+              backgroundColor: terminoAtivo ? CORES.primaria : CORES.borda,
+            }}
+          >
+            <div
+              style={{
+                ...estilos.toggleBolinha,
+                transform: terminoAtivo ? 'translateX(20px)' : 'translateX(0)',
+              }}
+            />
+          </button>
+        </div>
+
+        {terminoAtivo ? (
+          <input
+            type="date"
+            value={dataTermino}
+            min={dataInicio}
+            onChange={(e) => setDataTermino(e.target.value)}
+            style={estilos.input}
+          />
+        ) : (
+          <div style={estilos.subLabel}>
+            Início em {formatarDataExibicao(dataInicio)}, sem data de término.
+          </div>
+        )}
+
         <label style={estilos.label}>Quantidade atual em estoque</label>
         <input
           style={estilos.input}
@@ -325,6 +389,30 @@ function criarEstilos(CORES) {
     color: CORES.textoPrincipal,
   },
   subLabel: { fontSize: 13, color: CORES.textoSecundario, marginBottom: 6 },
+  divisor: { height: 1, backgroundColor: CORES.borda, margin: '22px 0 4px' },
+  linhaToggleTermino: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 14,
+    marginBottom: 8,
+  },
+  toggle: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    border: 'none',
+    padding: 2,
+    display: 'flex',
+    alignItems: 'center',
+  },
+  toggleBolinha: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+    transition: 'transform 0.2s',
+  },
   input: {
     width: '100%',
     border: `1.5px solid ${CORES.borda}`,

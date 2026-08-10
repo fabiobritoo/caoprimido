@@ -81,7 +81,7 @@ export default function App() {
       const registros = await obterRegistros();
 
       for (const remedio of remedios) {
-        if (!remedioAplicavelNoDia(remedio.frequencia, hoje)) continue;
+        if (!remedioAplicavelNoDia(remedio.frequencia, hoje, remedio.dataInicio, remedio.dataTermino)) continue;
         for (const horario of remedio.horarios || []) {
           if (horario !== horaAtual) continue;
           const chave = `${remedio.id}|${hoje}|${horario}`;

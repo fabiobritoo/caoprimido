@@ -85,7 +85,7 @@ export default async function handler(req, res) {
       // (usado tanto pro selo/contador quanto pra decidir o que reenviar)
       const dosesPendentes = [];
       for (const remedio of remedios) {
-        if (!remedioAplicavelNoDia(remedio.frequencia, hoje)) continue;
+        if (!remedioAplicavelNoDia(remedio.frequencia, hoje, remedio.dataInicio, remedio.dataTermino)) continue;
         for (const horario of remedio.horarios || []) {
           if (horario > horaAtual) continue;
 

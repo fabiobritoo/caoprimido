@@ -42,7 +42,10 @@ function diferencaEmDias(dataInicioStr, dataFimStr) {
   return Math.round((b - a) / 86400000);
 }
 
-export function remedioAplicavelNoDia(frequencia, dataStr) {
+export function remedioAplicavelNoDia(frequencia, dataStr, dataInicio, dataTermino) {
+  if (dataInicio && dataStr < dataInicio) return false;
+  if (dataTermino && dataStr > dataTermino) return false;
+
   if (!frequencia || frequencia.tipo === 'diaria') return true;
 
   if (frequencia.tipo === 'dias_semana') {

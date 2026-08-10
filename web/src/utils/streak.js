@@ -14,7 +14,7 @@ export function calcularSequenciaDias(remedios, registros) {
     const dosesDoDia = [];
 
     for (const remedio of remedios) {
-      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr)) continue;
+      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
         dosesDoDia.push({ remedioId: remedio.id, horario });
       }
