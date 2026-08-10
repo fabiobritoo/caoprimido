@@ -6,7 +6,7 @@ import {
   removerRegistroSaude,
   atualizarRegistroSaude,
 } from '../utils/saude.js';
-import { formatarData } from '../utils/constantes.js';
+import { formatarData, somarDias } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 
 const HOJE = formatarData(new Date());
@@ -22,6 +22,9 @@ export default function SaudeSecao({ CORES }) {
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
   const [carregando, setCarregando] = useState(true);
+  const [periodoAberto, setPeriodoAberto] = useState(false);
+  const [dataInicioPeriodo, setDataInicioPeriodo] = useState(somarDias(HOJE, -6));
+  const [dataFimPeriodo, setDataFimPeriodo] = useState(HOJE);
 
   const [data, setData] = useState(HOJE);
   const [peso, setPeso] = useState('');
@@ -91,13 +94,66 @@ export default function SaudeSecao({ CORES }) {
   }
 
   const pontosPeso = registros
-    .filter((r) => r.peso != null)
+    .filter((r) => r.peso != null && r.data >= dataInicioPeriodo && r.data <= dataFimPeriodo)
     .slice()
     .sort((a, b) => a.data.localeCompare(b.data));
 
+  function usarUltimos7Dias() {
+    setDataInicioPeriodo(somarDias(HOJE, -6));
+    setDataFimPeriodo(HOJE);
+  }
+
   return (
     <div>
-      {pontosPeso.length >= 2 && <GraficoPeso pontos={pontosPeso} CORES={CORES} />}
+      <div style={estilos.blocoPeriodo}>
+        <div style={estilos.linhaPeriodoTopo}>
+          <span style={estilos.periodoTexto}>
+            Período: {formatarDataExibicao(dataInicioPeriodo)} — {formatarDataExibicao(dataFimPeriodo)}
+          </span>
+          <button onClick={() => setPeriodoAberto(!periodoAberto)} style={estilos.linkPeriodo}>
+            {periodoAberto ? 'Fechar' : 'Escolher período'}
+          </button>
+        </div>
+
+        {periodoAberto && (
+          <div style={estilos.seletorPeriodo}>
+            <div style={{ flex: 1 }}>
+              <label style={estilos.labelPeriodo}>De</label>
+              <input
+                type="date"
+                value={dataInicioPeriodo}
+                max={dataFimPeriodo}
+                onChange={(e) => setDataInicioPeriodo(e.target.value)}
+                style={estilos.inputPeriodo}
+              />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={estilos.labelPeriodo}>Até</label>
+              <input
+                type="date"
+                value={dataFimPeriodo}
+                min={dataInicioPeriodo}
+                max={HOJE}
+                onChange={(e) => setDataFimPeriodo(e.target.value)}
+                style={estilos.inputPeriodo}
+              />
+            </div>
+            <button onClick={usarUltimos7Dias} style={estilos.botaoResetPeriodo}>
+              7 dias
+            </button>
+          </div>
+        )}
+      </div>
+
+      {pontosPeso.length >= 2 ? (
+        <GraficoPeso pontos={pontosPeso} CORES={CORES} />
+      ) : (
+        <div style={estilos.semDadosPeriodo}>
+          {registros.some((r) => r.peso != null)
+            ? 'Sem pelo menos 2 registros de peso nesse período pra montar o gráfico.'
+            : 'Registre o peso em pelo menos 2 datas diferentes pra ver o gráfico.'}
+        </div>
+      )}
 
       {!formularioAberto ? (
         <button
@@ -266,6 +322,13 @@ function GraficoPeso({ pontos, CORES }) {
   for (let i = 0; i < pontos.length; i += passo) indicesComRotulo.add(i);
   indicesComRotulo.add(pontos.length - 1);
 
+  const pesoInicial = pontos[0].peso;
+  const pesoFinal = pontos[pontos.length - 1].peso;
+  const variacaoAbsoluta = pesoFinal - pesoInicial;
+  const variacaoPercentual = pesoInicial !== 0 ? (variacaoAbsoluta / pesoInicial) * 100 : 0;
+  const perdeu = variacaoAbsoluta < 0;
+  const semMudanca = Math.abs(variacaoAbsoluta) < 0.05;
+
   return (
     <div
       style={{
@@ -307,12 +370,97 @@ function GraficoPeso({ pontos, CORES }) {
             )
         )}
       </svg>
+
+      {!semMudanca ? (
+        <div
+          style={{
+            ...estiloResumoVariacao,
+            backgroundColor: perdeu ? CORES.sucessoFundo : CORES.perigoFundo,
+            color: perdeu ? CORES.sucesso : CORES.perigo,
+          }}
+        >
+          {perdeu ? '▼' : '▲'} {Math.abs(variacaoAbsoluta).toFixed(1)} kg (
+          {variacaoPercentual > 0 ? '+' : ''}
+          {variacaoPercentual.toFixed(1)}%) nesse período
+        </div>
+      ) : (
+        <div style={{ ...estiloResumoVariacao, backgroundColor: CORES.fundo, color: CORES.textoSecundario }}>
+          Sem variação nesse período
+        </div>
+      )}
     </div>
   );
 }
 
+const estiloResumoVariacao = {
+  marginTop: 10,
+  padding: '8px 12px',
+  borderRadius: RAIO.pequeno,
+  fontSize: 13,
+  fontWeight: 700,
+  textAlign: 'center',
+};
+
 function criarEstilos(CORES) {
   return {
+    blocoPeriodo: {
+      backgroundColor: CORES.fundoCard,
+      borderRadius: RAIO.pequeno,
+      padding: 12,
+      marginBottom: 10,
+      boxShadow: SOMBRA.card,
+    },
+    linhaPeriodoTopo: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+    },
+    periodoTexto: { fontSize: 13, color: CORES.textoPrincipal, fontWeight: 600 },
+    linkPeriodo: {
+      background: 'none',
+      border: 'none',
+      color: CORES.primaria,
+      fontSize: 13,
+      fontWeight: 700,
+      textDecoration: 'underline',
+    },
+    seletorPeriodo: {
+      display: 'flex',
+      alignItems: 'flex-end',
+      gap: 8,
+      marginTop: 12,
+    },
+    labelPeriodo: { display: 'block', fontSize: 11, color: CORES.textoSecundario, marginBottom: 4 },
+    inputPeriodo: {
+      width: '100%',
+      border: `1.5px solid ${CORES.borda}`,
+      borderRadius: RAIO.pequeno,
+      padding: 8,
+      fontSize: 13,
+      backgroundColor: CORES.fundo,
+      color: CORES.textoPrincipal,
+      boxSizing: 'border-box',
+    },
+    botaoResetPeriodo: {
+      border: `1.5px solid ${CORES.primaria}`,
+      background: 'none',
+      color: CORES.primaria,
+      borderRadius: RAIO.pequeno,
+      padding: '8px 10px',
+      fontSize: 12,
+      fontWeight: 700,
+      whiteSpace: 'nowrap',
+    },
+    semDadosPeriodo: {
+      textAlign: 'center',
+      color: CORES.textoSecundario,
+      fontSize: 13,
+      backgroundColor: CORES.fundoCard,
+      borderRadius: RAIO.pequeno,
+      padding: 16,
+      marginBottom: 16,
+      lineHeight: 1.5,
+    },
     botaoNovoRegistro: {
       ...criarBotaoPrimario(CORES),
       width: '100%',
