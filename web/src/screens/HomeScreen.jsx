@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock,
+  ChevronLeft,
 } from 'lucide-react';
 import {
   listarRemedios,
@@ -16,6 +17,7 @@ import {
   diasDaSemanaContendo,
   remedioAplicavelNoDia,
   formatarData,
+  formatarDataPorExtenso,
   somarDias,
 } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
@@ -228,6 +230,19 @@ export default function HomeScreen() {
     setSequenciaDias(calcularSequenciaDias(resultado.remedios, resultado.registros));
     atualizarSeloLocal(resultado.remedios, resultado.registros);
     setDoseSelecionada(null);
+
+    // avisa o servidor que a confirmação foi desfeita, senão ele acha que já
+    // foi tomada e nunca mais reenvia o lembrete pra esse horário
+    fetch('/api/desreconhecer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deviceId: obterIdDispositivo(),
+        remedioId: item.remedio.id,
+        dia: diaSelecionado,
+        horario: item.horario,
+      }),
+    }).catch(() => {});
   }
 
   function corDoCirculo(status) {
@@ -318,6 +333,22 @@ export default function HomeScreen() {
         <button onClick={() => setCalendarioAberto(true)} style={estilos.botaoCalendario}>
           <CalendarDays size={19} color={CORES.primaria} strokeWidth={2.2} />
         </button>
+      </div>
+
+      <div style={estilos.faixaDataSelecionada}>
+        <span style={estilos.textoDataSelecionada}>{formatarDataPorExtenso(diaSelecionado)}</span>
+        {diaSelecionado !== HOJE && (
+          <button
+            onClick={() => {
+              setDiaSelecionado(HOJE);
+              setSemanaAncora(HOJE);
+            }}
+            style={estilos.botaoVoltarHoje}
+          >
+            <ChevronLeft size={13} strokeWidth={2.5} />
+            Voltar para hoje
+          </button>
+        )}
       </div>
 
       <div
@@ -517,6 +548,32 @@ function criarEstilos(CORES) {
       flexShrink: 0,
       padding: '0 5px',
       boxSizing: 'border-box',
+    },
+    faixaDataSelecionada: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '10px 16px',
+      backgroundColor: CORES.fundoCard,
+      borderBottom: `1px solid ${CORES.borda}`,
+    },
+    textoDataSelecionada: {
+      fontSize: 13,
+      fontWeight: 600,
+      color: CORES.textoPrincipal,
+      textTransform: 'capitalize',
+    },
+    botaoVoltarHoje: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 2,
+      background: CORES.primariaClara,
+      color: CORES.primariaEscura,
+      border: 'none',
+      borderRadius: RAIO.pill,
+      padding: '5px 10px 5px 6px',
+      fontSize: 12,
+      fontWeight: 700,
     },
     divisorCalendario: {
       width: 1,

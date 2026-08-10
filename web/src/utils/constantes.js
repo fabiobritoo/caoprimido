@@ -99,6 +99,23 @@ export function diasDaSemanaAtual() {
 }
 
 const ABREV_DIAS = ['dom.', 'seg.', 'ter.', 'qua.', 'qui.', 'sex.', 'sáb.'];
+const NOMES_DIA_SEMANA_EXTENSO = [
+  'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado',
+];
+const NOMES_MES_EXTENSO = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+];
+
+// Devolve algo como "segunda-feira, 3 de agosto de 2026"
+export function formatarDataPorExtenso(dataStr) {
+  const data = new Date(dataStr + 'T12:00:00');
+  const diaSemana = NOMES_DIA_SEMANA_EXTENSO[data.getDay()];
+  const dia = data.getDate();
+  const mes = NOMES_MES_EXTENSO[data.getMonth()];
+  const ano = data.getFullYear();
+  return `${diaSemana}, ${dia} de ${mes} de ${ano}`;
+}
 
 // Igual à função acima, mas começando na segunda-feira (pra bater com a UI de agenda)
 export function somarDias(dataStr, quantidade) {
