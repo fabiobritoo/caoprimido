@@ -117,7 +117,7 @@ export default function SaudeSecao({ CORES }) {
 
         {periodoAberto && (
           <div style={estilos.seletorPeriodo}>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 130px', minWidth: 0 }}>
               <label style={estilos.labelPeriodo}>De</label>
               <input
                 type="date"
@@ -127,7 +127,7 @@ export default function SaudeSecao({ CORES }) {
                 style={estilos.inputPeriodo}
               />
             </div>
-            <div style={{ flex: 1 }}>
+            <div style={{ flex: '1 1 130px', minWidth: 0 }}>
               <label style={estilos.labelPeriodo}>Até</label>
               <input
                 type="date"
@@ -426,6 +426,7 @@ function criarEstilos(CORES) {
     },
     seletorPeriodo: {
       display: 'flex',
+      flexWrap: 'wrap',
       alignItems: 'flex-end',
       gap: 8,
       marginTop: 12,
@@ -446,10 +447,11 @@ function criarEstilos(CORES) {
       background: 'none',
       color: CORES.primaria,
       borderRadius: RAIO.pequeno,
-      padding: '8px 10px',
+      padding: '10px 14px',
       fontSize: 12,
       fontWeight: 700,
       whiteSpace: 'nowrap',
+      flexShrink: 0,
     },
     semDadosPeriodo: {
       textAlign: 'center',
