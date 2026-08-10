@@ -87,7 +87,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
 
   const [logoBase64, mascoteBase64] = await Promise.all([
     carregarImagemComoBase64(modoBob ? '/logo-bob.png' : '/logo-caoprimido.png').catch(() => null),
-    carregarImagemComoBase64(modoBob ? '/bob/mascote-parabens.png' : '/nina/mascote-lendo.png').catch(() => null),
+    carregarImagemComoBase64(modoBob ? '/bob/mascote-lendo.png' : '/nina/mascote-lendo.png').catch(() => null),
   ]);
 
   const doc = new jsPDF();

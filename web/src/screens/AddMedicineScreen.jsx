@@ -114,21 +114,18 @@ export default function AddMedicineScreen() {
   }
 
   function montarFrequencia() {
-    const hoje = formatarData(new Date());
     if (tipoFrequencia === 'diaria') return { tipo: 'diaria' };
     if (tipoFrequencia === 'dias_semana') {
       return { tipo: 'dias_semana', dias: diasSemanaSelecionados };
     }
     if (tipoFrequencia === 'intervalo') {
-      const dataInicioExistente =
-        remedioOriginal?.frequencia?.tipo === 'intervalo'
-          ? remedioOriginal.frequencia.dataInicio
-          : null;
       return {
         tipo: 'intervalo',
         intervaloDias: Number(intervaloDias) || 2,
-        dataInicio: dataInicioExistente || hoje,
-        proximaData: hoje,
+        // usa a MESMA data de início escolhida no campo "Duração",
+        // pra não ter duas datas de início conflitantes pro mesmo remédio
+        dataInicio,
+        proximaData: dataInicio,
       };
     }
     return { tipo: 'diaria' };
