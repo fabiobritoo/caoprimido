@@ -7,6 +7,7 @@ const CHAVES_BACKUP = [
   '@caoprimido:saude', // registros de saúde
   '@caoprimido:consultas', // consultas médicas
   '@caoprimido:modoEscuro', // preferência de tema
+  '@caoprimido:modoBob', // Nina ou Bob
   '@caoprimido:perfil', // nome, idade, altura
   '@caoprimido:compras', // historico de precos/compras
 ];

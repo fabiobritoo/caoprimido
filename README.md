@@ -1,75 +1,123 @@
-# Meus Remédios — App de controle de medicamentos
+# Cãoprimido 🐶💊
 
-App em React Native + Expo para cadastrar remédios, receber alarmes nos
-horários certos e ser avisado quando o estoque estiver acabando.
+App web (PWA) de controle de medicamentos — cadastro de remédios, lembretes por
+notificação push, acompanhamento de saúde e evolução, com dois "modos" de mascote
+(Nina e Bob) e várias funcionalidades de apoio. Feito pra ser instalado na tela
+inicial do celular (Android e iPhone) e funcionar como um app nativo, mas sem
+passar por loja de aplicativos.
 
-## O que já está pronto
+**App publicado em:** https://caoprimido.vercel.app
+**Repositório:** privado, hospedado no GitHub, deploy automático via Vercel
 
-- Cadastro de remédio (nome, dosagem, horários, quantidade em estoque)
-- Alarme diário repetido por notificação local, para cada horário cadastrado
-- Botão "Tomei" que desconta 1 unidade do estoque
-- Aviso automático quando o estoque chega na quantidade mínima definida
-- Tudo funciona OFFLINE (dados salvos no próprio celular)
+---
 
-## Passo a passo para rodar
+## Stack
 
-### 1. Instale o Node.js (só uma vez)
-Baixe em https://nodejs.org (versão LTS). Confirme no terminal:
-```
-node -v
-```
+- **Frontend:** React + Vite, PWA com Service Worker próprio (`injectManifest`)
+- **Hospedagem:** Vercel (deploy automático a cada push na branch `main`)
+- **Backend:** Funções serverless da Vercel (`/web/api/`), em ESM
+- **Banco:** Upstash Redis (`@vercel/kv`) — guarda inscrições push e estado de notificação
+- **Notificações agendadas:** cron-job.org chama `/api/check` a cada minuto
+- **Notificações push:** Web Push API (VAPID) + Service Worker
+- **Aviso a cuidador:** Telegram Bot API (gratuito, sem limite prático de mensagens)
+- **Relatório em PDF:** jsPDF + jspdf-autotable, gerado no navegador (client-side)
+- **Armazenamento de dados do usuário:** localStorage (nada vai pra nuvem —
+  por isso existe a função de backup/restauração manual)
 
-### 2. Instale o Expo CLI e as dependências do projeto
-Dentro da pasta do projeto (`remedios-app`), rode:
-```
-npm install
-```
+---
 
-### 3. Instale o app "Expo Go" no seu celular
-- Android: procure "Expo Go" na Play Store
-- iPhone: procure "Expo Go" na App Store
-(Essa é a única instalação manual que você vai precisar fazer — depois
-disso, toda atualização do app aparece automaticamente, sem reinstalar nada.)
+## Funcionalidades
 
-### 4. Inicie o servidor de desenvolvimento
-No terminal, dentro da pasta do projeto:
-```
-npx expo start
-```
-Isso abre um QR code no terminal (e também numa página no navegador).
+### Remédios
+- Cadastro com nome, unidade (comprimido, cápsula, gota, ml, grama, injeção,
+  sachê, unidade), dose, horários, frequência (diária / dias específicos da
+  semana / a cada X dias), estoque com aviso de quantidade mínima
+- Data de início (padrão hoje) e data de término opcional
+- Edição e exclusão
+- Histórico de preços/compras por remédio (opcional, discreto — ícone de
+  etiqueta em "Meus Remédios"), com comparação de variação percentual entre compras
 
-### 5. Abra no celular
-- **Android**: abra o app Expo Go e escaneie o QR code
-- **iPhone**: abra a câmera do iPhone e aponte pro QR code — vai aparecer
-  um aviso pra abrir no Expo Go
+### Tela inicial
+- Agenda por dia, navegável por semana (arrasta com o dedo, segue o gesto em
+  tempo real) ou pelo ícone de calendário (mês inteiro, dias coloridos por status)
+- Doses pendentes agrupadas por horário; doses já tomadas ficam na seção
+  "Registrado" com o horário exato da confirmação (editável/desfazível)
+- Sequência de dias em dia (streak) e selo no ícone do app com doses pendentes
+- Aviso de próxima consulta médica, se houver uma cadastrada
 
-O app vai carregar direto no celular. A partir daqui, qualquer alteração
-que eu fizer no código atualiza sozinha na tela (hot reload) — você não
-precisa reinstalar nada.
+### Notificações
+- Push mesmo com o app fechado (funciona no Android normalmente; no iPhone
+  precisa estar instalado na tela inicial — limitação da Apple)
+- Reenvio escalonado a cada 3 minutos por até 30 min, com mensagens que ficam
+  mais urgentes com o tempo, acumulando na central de notificações
+- Botões de ação direto na notificação ("Já tomei" / "Adiar 10 min")
+- Aviso a um cuidador via Telegram se a dose ficar 15+ min sem confirmar, com
+  segunda mensagem de alívio quando finalmente for confirmada
 
-### Importante sobre notificações
-- No emulador Android, notificações locais funcionam normalmente.
-- No Expo Go, alarmes agendados funcionam bem para testes, mas para uso
-  "de produção" (app final na loja), o ideal é migrar esse agendamento
-  para um build standalone (`expo build` / EAS Build) — isso a gente faz
-  mais pra frente, quando o app estiver mais maduro.
+### Evolução (duas abas)
+- **Remédios:** % de adesão geral, sequência atual/melhor, mapa de calor das
+  últimas 12 semanas (estilo GitHub), adesão individual por remédio
+- **Saúde:** peso (com gráfico, período customizável, resumo de variação em
+  kg/%), pressão arterial, frequência cardíaca, anotações livres — histórico
+  editável por data
+
+### Outros
+- Consultas médicas (data, médico, local, anotações)
+- Exportação de relatório em PDF (remédios + adesão + saúde + dados pessoais),
+  com logo e cores da marca
+- Backup/restauração completa dos dados (exporta/importa um `.json`)
+- Modo escuro
+- **Modo Bob**: troca a mascote e a paleta de cores (rosa → azul) pra quem
+  também cuida de outro cachorro no mesmo app
+- Verificação de atualização manual (útil quando o Service Worker demora a
+  detectar uma versão nova sozinho)
+
+---
 
 ## Estrutura do projeto
 
 ```
 remedios-app/
-├── App.js                          → navegação principal
-├── app.json                        → configurações do app (nome, ícone, permissões)
-├── src/
-│   ├── screens/
-│   │   ├── HomeScreen.js           → lista de remédios cadastrados
-│   │   └── AddMedicineScreen.js    → formulário de cadastro
-│   └── utils/
-│       ├── storage.js              → salvar/ler remédios no celular
-│       └── notifications.js        → agendar alarmes e avisos de estoque
+├── web/                          → PWA (React + Vite) — é isso que está no ar
+│   ├── src/
+│   │   ├── screens/              → cada tela do app
+│   │   ├── components/           → modais e componentes reutilizáveis
+│   │   ├── utils/                → lógica de dados, tema, evolução, etc.
+│   │   └── sw.js                 → Service Worker (push, notificações, cache)
+│   ├── api/                      → funções serverless da Vercel
+│   │   ├── check.js              → roda a cada minuto, dispara os lembretes
+│   │   ├── subscribe.js          → salva a inscrição push do dispositivo
+│   │   ├── reconhecer.js         → marca dose como confirmada
+│   │   ├── soneca.js             → adia o lembrete
+│   │   ├── status.js             → debug do estado de cada dose
+│   │   ├── telegram-*.js         → integração do aviso ao cuidador
+│   │   └── _logica.js            → funções compartilhadas entre as rotas
+│   └── public/
+│       ├── nina/ e bob/          → mascotes de cada modo
+│       └── logo-*.png            → logos usadas no relatório PDF
+└── assets/                       → cópia das mascotes (referência/backup)
 ```
 
-## Próximos passos possíveis
-- Editar remédio já cadastrado (hoje só dá pra adicionar/excluir)
-- Histórico de doses tomadas
-- Preparar o build final (EAS Build) para gerar o .apk / enviar pra loja
+*(Existe também uma tentativa inicial em React Native/Expo, hoje abandonada —
+o projeto seguiu inteiramente como PWA web.)*
+
+---
+
+## Rodando localmente
+
+```bash
+cd web
+npm install
+npm run build     # gera a pasta dist/
+npm run dev       # ambiente de desenvolvimento (Vite)
+```
+
+Pra funcionalidades de servidor (notificações, Telegram), é preciso configurar
+as variáveis de ambiente na Vercel: chaves VAPID, `CRON_SECRET`,
+`TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, e a integração do Upstash Redis
+(`@vercel/kv`).
+
+## Versão atual
+
+Consulte `web/src/utils/versao.js` — o número e a descrição da última mudança
+aparecem também no rodapé da tela inicial do app.
