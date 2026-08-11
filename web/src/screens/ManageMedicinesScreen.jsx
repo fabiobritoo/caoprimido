@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Pill, Clock, Package } from 'lucide-react';
+import { Plus, Pencil, Trash2, Pill, Clock, Package, Tag } from 'lucide-react';
 import { listarRemedios, removerRemedio, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { rotuloUnidade, descreverFrequencia } from '../utils/constantes.js';
@@ -71,6 +71,13 @@ export default function ManageMedicinesScreen() {
 
               <div style={estilos.acoes}>
                 <button
+                  onClick={() => navigate(`/remedio/${item.id}/compras`)}
+                  style={estilos.botaoIconePreco}
+                  aria-label="Histórico de preços"
+                >
+                  <Tag size={16} strokeWidth={2.2} />
+                </button>
+                <button
                   onClick={() => navigate(`/editar/${item.id}`)}
                   style={estilos.botaoIconeEditar}
                   aria-label="Editar"
@@ -123,6 +130,17 @@ function criarEstilos(CORES) {
     linhaDetalhe: { display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 },
     detalhe: { color: CORES.textoSecundario, fontSize: 13 },
     acoes: { display: 'flex', flexDirection: 'column', gap: 8 },
+    botaoIconePreco: {
+      width: 34,
+      height: 34,
+      borderRadius: RAIO.pill,
+      border: 'none',
+      backgroundColor: CORES.fundo,
+      color: CORES.textoSecundario,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     botaoIconeEditar: {
       width: 34,
       height: 34,

@@ -8,6 +8,7 @@ const CHAVES_BACKUP = [
   '@caoprimido:consultas', // consultas médicas
   '@caoprimido:modoEscuro', // preferência de tema
   '@caoprimido:perfil', // nome, idade, altura
+  '@caoprimido:compras', // historico de precos/compras
 ];
 
 export function exportarBackup() {
