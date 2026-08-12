@@ -66,3 +66,29 @@ body {
 .semana-entra-esquerda {
   animation: deslizarEntradaDaEsquerda 0.24s ease-out;
 }
+
+@keyframes confirmarDosePulso {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.035); }
+  100% { transform: scale(1); }
+}
+.dose-confirmando {
+  animation: confirmarDosePulso 0.4s ease-out;
+}
+
+@keyframes checkApareceCom {
+  0% { transform: scale(0); opacity: 0; }
+  60% { transform: scale(1.25); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.check-aparecendo {
+  animation: checkApareceCom 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes entradaNoRegistrado {
+  0% { opacity: 0; transform: translateY(-14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.dose-entrando-registrado {
+  animation: entradaNoRegistrado 0.35s ease-out;
+}

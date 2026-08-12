@@ -56,6 +56,8 @@ export default function HomeScreen() {
   const [sequenciaDias, setSequenciaDias] = useState(0);
   const [doseSelecionada, setDoseSelecionada] = useState(null);
   const [calendarioAberto, setCalendarioAberto] = useState(false);
+  const [idConfirmando, setIdConfirmando] = useState(null);
+  const [idRecemRegistrado, setIdRecemRegistrado] = useState(null);
   const [deltaXArrasto, setDeltaXArrasto] = useState(0);
   const [arrastando, setArrastando] = useState(false);
   const [transicaoAtiva, setTransicaoAtiva] = useState(true);
@@ -194,13 +196,27 @@ export default function HomeScreen() {
 
   async function marcarComoTomado(item) {
     if (diaEhFuturo) return;
+    const chave = `${item.remedio.id}-${item.horario}`;
+
+    if (!item.tomado) {
+      // dá um retorno visual imediato (o card "confirma" no lugar) antes de
+      // efetivamente mover pra "Registrado" — sem isso, a troca é tão rápida
+      // que às vezes não dá pra perceber que o toque funcionou
+      setIdConfirmando(chave);
+      await new Promise((resolve) => setTimeout(resolve, 420));
+    }
+
     const resultado = await alternarDose(item.remedio, diaSelecionado, item.horario);
     setRemedios(resultado.remedios);
     setRegistros(resultado.registros);
     setSequenciaDias(calcularSequenciaDias(resultado.remedios, resultado.registros));
     atualizarSeloLocal(resultado.remedios, resultado.registros);
+    setIdConfirmando(null);
 
     if (resultado.tomadoAgora) {
+      setIdRecemRegistrado(chave);
+      setTimeout(() => setIdRecemRegistrado(null), 500);
+
       fetch('/api/reconhecer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -403,14 +419,18 @@ export default function HomeScreen() {
             {grupo.itens.map((item) => {
               const unidadeTexto = rotuloUnidade(item.remedio.unidade).toLowerCase();
               const atrasado = diaSelecionado < HOJE;
+              const chave = `${item.remedio.id}-${item.horario}`;
+              const confirmando = idConfirmando === chave;
               return (
                 <button
-                  key={`${item.remedio.id}-${item.horario}`}
+                  key={chave}
                   onClick={() => marcarComoTomado(item)}
-                  disabled={diaEhFuturo}
+                  disabled={diaEhFuturo || confirmando}
+                  className={confirmando ? 'dose-confirmando' : ''}
                   style={{
                     ...estilos.doseCard,
                     ...(atrasado ? estilos.doseCardAtrasado : {}),
+                    ...(confirmando ? estilos.doseCardConfirmando : {}),
                   }}
                 >
                   <div style={estilos.doseIcone}>
@@ -426,8 +446,13 @@ export default function HomeScreen() {
                     style={{
                       ...estilos.doseStatus,
                       ...(atrasado ? estilos.doseStatusAtrasado : {}),
+                      ...(confirmando ? estilos.doseStatusTomado : {}),
                     }}
-                  />
+                  >
+                    {confirmando && (
+                      <Check size={16} strokeWidth={3} color="#fff" className="check-aparecendo" />
+                    )}
+                  </div>
                 </button>
               );
             })}
@@ -443,10 +468,13 @@ export default function HomeScreen() {
 
             {dosesRegistradas.map((item) => {
               const unidadeTexto = rotuloUnidade(item.remedio.unidade).toLowerCase();
+              const chave = `${item.remedio.id}-${item.horario}`;
+              const recemRegistrado = idRecemRegistrado === chave;
               return (
                 <button
-                  key={`reg-${item.remedio.id}-${item.horario}`}
+                  key={`reg-${chave}`}
                   onClick={() => setDoseSelecionada(item)}
+                  className={recemRegistrado ? 'dose-entrando-registrado' : ''}
                   style={{ ...estilos.doseCard, ...estilos.doseCardTomado }}
                 >
                   <div style={estilos.doseIcone}>
@@ -696,6 +724,7 @@ function criarEstilos(CORES) {
       boxShadow: SOMBRA.card,
     },
     doseCardTomado: { backgroundColor: CORES.sucessoFundo },
+    doseCardConfirmando: { backgroundColor: CORES.sucessoFundo },
     doseCardAtrasado: { backgroundColor: CORES.perigoFundo },
     doseIcone: {
       width: 38,
