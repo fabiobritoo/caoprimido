@@ -1,6 +1,6 @@
 import { kv } from '@vercel/kv';
 import webpush from 'web-push';
-import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso } from './_logica.js';
+import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso, nomeResumido } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
 const JANELA_MAXIMA_MS = 30 * 60 * 1000;
@@ -10,7 +10,7 @@ async function avisarCuidador(config, nomeRemedio, horario, perfil) {
   if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
 
-  const nomePessoa = perfil?.nome?.trim();
+  const nomePessoa = perfil?.nome?.trim() ? nomeResumido(perfil.nome) : '';
   const identificacao = nomePessoa
     ? `👤 ${nomePessoa}`
     : '⚠️ [Nome não cadastrado — configure em Configurações > Dados pessoais pra identificar quem é]';

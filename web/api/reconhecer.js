@@ -1,10 +1,11 @@
 import { kv } from '@vercel/kv';
+import { nomeResumido } from './_logica.js';
 
 async function avisarCuidadorQueTomou(config, nomeRemedio, horario, perfil) {
   if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
 
-  const nomePessoa = perfil?.nome?.trim();
+  const nomePessoa = perfil?.nome?.trim() ? nomeResumido(perfil.nome) : '';
   const identificacao = nomePessoa
     ? `👤 ${nomePessoa}`
     : '⚠️ [Nome não cadastrado — configure em Configurações > Dados pessoais pra identificar quem é]';

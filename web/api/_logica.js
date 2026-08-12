@@ -5,6 +5,14 @@ export function formatarData(date) {
   return `${y}-${m}-${d}`;
 }
 
+// Pra evitar mensagens gigantes no Telegram quando alguém cadastra o nome
+// completo, usa só o primeiro e o último nome (se houver mais de uma palavra)
+export function nomeResumido(nomeCompleto) {
+  const partes = nomeCompleto.trim().split(/\s+/).filter(Boolean);
+  if (partes.length <= 1) return partes[0] || '';
+  return `${partes[0]} ${partes[partes.length - 1]}`;
+}
+
 // Pega a data e hora atuais SEMPRE no fuso do Brasil (America/Sao_Paulo),
 // não importa em qual fuso o servidor da Vercel esteja rodando.
 export function obterDataHoraBrasil(data = new Date()) {
