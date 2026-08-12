@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud,
-  Database, Upload, CalendarClock, User, FolderOpen,
+  Database, Upload, User, FolderOpen,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
@@ -355,20 +355,6 @@ export default function ConfiguracoesScreen() {
           Restaurar backup
         </button>
         {statusBackup && <div style={estilos.statusAtualizacaoTexto}>{statusBackup}</div>}
-
-        <div style={estilos.divisor} />
-
-        <div style={estilos.secaoTitulo}>
-          <CalendarClock size={20} color={CORES.primaria} />
-          Consultas médicas
-        </div>
-        <div style={estilos.explicacao}>
-          Guarde a data da próxima consulta, separado dos horários de remédio.
-        </div>
-        <button onClick={() => navigate('/consultas')} style={estilos.botaoVerificarAtualizacao}>
-          <CalendarClock size={16} strokeWidth={2.3} />
-          Ver/adicionar consultas
-        </button>
 
         <div style={estilos.divisor} />
 

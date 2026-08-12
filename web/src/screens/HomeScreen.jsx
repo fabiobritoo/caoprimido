@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database,
+  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database,
   ChevronLeft,
 } from 'lucide-react';
 import {
@@ -334,9 +334,9 @@ export default function HomeScreen() {
           <TrendingUp size={20} strokeWidth={2.2} />
           <span>Evolução</span>
         </button>
-        <button onClick={() => navigate('/diagnostico')} style={estilos.navItem}>
-          <Activity size={20} strokeWidth={2.2} />
-          <span>Diagnóstico</span>
+        <button onClick={() => navigate('/consultas')} style={estilos.navItem}>
+          <CalendarClock size={20} strokeWidth={2.2} />
+          <span>Consultas</span>
         </button>
         <button onClick={() => navigate('/configuracoes')} style={estilos.navItem}>
           <Settings2 size={20} strokeWidth={2.2} />
