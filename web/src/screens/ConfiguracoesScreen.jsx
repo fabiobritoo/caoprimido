@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud,
-  Database, Upload, CalendarClock, User,
+  Database, Upload, CalendarClock, User, FolderOpen,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
@@ -11,7 +11,7 @@ import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { verificarAtualizacao } from '../utils/atualizacao.js';
-import { exportarBackup, lerArquivoBackup, aplicarBackup } from '../utils/backup.js';
+import { exportarBackup, salvarBackupEmLocalEscolhido, lerArquivoBackup, aplicarBackup } from '../utils/backup.js';
 import { obterPerfil, salvarPerfil } from '../utils/perfil.js';
 import { VERSAO } from '../utils/versao.js';
 
@@ -86,6 +86,22 @@ export default function ConfiguracoesScreen() {
     exportarBackup();
     setStatusBackup('✓ Backup baixado! Guarde esse arquivo em local seguro.');
     setTimeout(() => setStatusBackup(''), 4000);
+  }
+
+  async function salvarBackupEmPastaEscolhida() {
+    const resultado = await salvarBackupEmLocalEscolhido();
+    if (resultado === 'salvo') {
+      setStatusBackup('✓ Backup salvo no local escolhido!');
+      setTimeout(() => setStatusBackup(''), 4000);
+    } else if (resultado === 'cancelado') {
+      // não faz nada, a pessoa só desistiu de escolher a pasta
+    } else if (resultado === 'sem_suporte') {
+      setStatusBackup('Esse navegador não permite escolher a pasta — usando o download normal.');
+      baixarBackup();
+    } else {
+      setStatusBackup('Não consegui salvar. Tente de novo ou use "Baixar backup".');
+      setTimeout(() => setStatusBackup(''), 4000);
+    }
   }
 
   async function aoEscolherArquivoBackup(e) {
@@ -316,6 +332,13 @@ export default function ConfiguracoesScreen() {
         <button onClick={baixarBackup} style={estilos.botaoVerificarAtualizacao}>
           <DownloadCloud size={16} strokeWidth={2.3} />
           Baixar backup
+        </button>
+        <button
+          onClick={salvarBackupEmPastaEscolhida}
+          style={{ ...estilos.botaoVerificarAtualizacao, marginTop: 10 }}
+        >
+          <FolderOpen size={16} strokeWidth={2.3} />
+          Salvar em uma pasta específica
         </button>
         <input
           ref={inputArquivoRef}

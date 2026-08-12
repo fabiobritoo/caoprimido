@@ -25,6 +25,39 @@ export function exportarBackup() {
   registrarBackupFeitoAgora();
 }
 
+// Abre o seletor de pastas/local pra salvar nativo do aparelho, deixando a
+// pessoa escolher ONDE guardar o arquivo (uma pasta específica, um cartão
+// SD, uma pasta sincronizada com nuvem, etc.) em vez de sempre cair na
+// pasta padrão de Downloads. Só funciona em navegadores que suportam a
+// File System Access API (Chrome/Edge no Android e desktop); no Safari/iOS
+// não tem suporte ainda — nesse caso devolve 'sem_suporte' pra tela cair de
+// volta pro download comum.
+export async function salvarBackupEmLocalEscolhido() {
+  if (!window.showSaveFilePicker) return 'sem_suporte';
+
+  const { blob, nomeArquivo } = montarPacoteBackup();
+
+  try {
+    const handle = await window.showSaveFilePicker({
+      suggestedName: nomeArquivo,
+      types: [
+        {
+          description: 'Backup do Cãoprimido',
+          accept: { 'application/json': ['.json'] },
+        },
+      ],
+    });
+    const writable = await handle.createWritable();
+    await writable.write(blob);
+    await writable.close();
+    registrarBackupFeitoAgora();
+    return 'salvo';
+  } catch (erro) {
+    if (erro.name === 'AbortError') return 'cancelado'; // a pessoa só fechou o seletor
+    return 'erro';
+  }
+}
+
 // Abre o menu de compartilhamento nativo do celular (WhatsApp, e-mail, Drive, etc.)
 // com o arquivo de backup já anexado. Devolve false se o aparelho/navegador
 // não suportar compartilhar arquivos, pra tela poder cair de volta pro download.
