@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Flame, Award, Percent, FileDown } from 'lucide-react';
+import { TrendingUp, Flame, Award, Percent, FileDown, Tag } from 'lucide-react';
 import { listarRemedios, obterRegistros } from '../utils/storage.js';
 import {
   calcularMapaCalor,
@@ -19,6 +19,7 @@ export default function EvolucaoScreen() {
   const { CORES, modoBob } = useTema();
   const estilos = criarEstilos(CORES);
   const [gerandoPdf, setGerandoPdf] = useState(false);
+  const [gerandoPdfPreco, setGerandoPdfPreco] = useState(false);
   const [aba, setAba] = useState('remedios');
   const [carregando, setCarregando] = useState(true);
   const [mapaCalor, setMapaCalor] = useState([]);
@@ -78,6 +79,18 @@ export default function EvolucaoScreen() {
     setGerandoPdf(false);
   }
 
+  async function baixarRelatorioPreco() {
+    setGerandoPdfPreco(true);
+    try {
+      const { gerarRelatorioPrecoPdf } = await import('../utils/relatorioPrecoPdf.js');
+      await gerarRelatorioPrecoPdf({ modoBob });
+    } catch (e) {
+      console.error('Erro ao gerar PDF de preços', e);
+      alert('Não consegui gerar o PDF agora. Tente de novo.');
+    }
+    setGerandoPdfPreco(false);
+  }
+
   return (
     <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 40 }}>
       <CabecalhoTopo titulo="Evolução" mostrarVoltar />
@@ -96,6 +109,15 @@ export default function EvolucaoScreen() {
           Saúde
         </button>
       </div>
+
+      {aba === 'remedios' && (
+        <div style={{ padding: '14px 16px 0' }}>
+          <button onClick={baixarRelatorioPreco} disabled={gerandoPdfPreco} style={estilos.botaoPdfPreco}>
+            <Tag size={16} strokeWidth={2.3} />
+            {gerandoPdfPreco ? 'Gerando PDF...' : 'Exportar relatório de preços'}
+          </button>
+        </div>
+      )}
 
       <div style={{ padding: '14px 16px 0' }}>
         <button onClick={baixarRelatorio} disabled={gerandoPdf} style={estilos.botaoPdf}>
@@ -220,6 +242,11 @@ function criarEstilos(CORES) {
     botaoPdf: {
       ...criarBotaoSecundario(CORES),
       width: '100%',
+    },
+    botaoPdfPreco: {
+      ...criarBotaoSecundario(CORES),
+      width: '100%',
+      backgroundColor: CORES.primariaClara,
     },
     seletorAbas: {
       display: 'flex',

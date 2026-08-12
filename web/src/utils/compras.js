@@ -13,7 +13,7 @@ export async function listarComprasDoRemedio(remedioId) {
   }
 }
 
-async function obterTodasCompras() {
+export async function obterTodasCompras() {
   try {
     const json = localStorage.getItem(CHAVE_COMPRAS);
     return json ? JSON.parse(json) : [];
