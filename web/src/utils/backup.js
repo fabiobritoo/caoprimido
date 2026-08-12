@@ -22,6 +22,7 @@ export function exportarBackup() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  registrarBackupFeitoAgora();
 }
 
 // Abre o menu de compartilhamento nativo do celular (WhatsApp, e-mail, Drive, etc.)
@@ -68,6 +69,26 @@ function montarPacoteBackup() {
   return { blob, nomeArquivo: `caoprimido-backup-${dataArquivo}.json` };
 }
 
+const CHAVE_ULTIMO_BACKUP = '@caoprimido:ultimoBackupEm';
+const DIAS_PARA_LEMBRAR = 21;
+
+// Devolve true se já faz tempo suficiente desde o último backup (ou se
+// nunca foi feito um) pra valer a pena mostrar um lembrete discreto
+export function deveLembrarBackup() {
+  const dadosExistem = CHAVES_BACKUP.some((chave) => localStorage.getItem(chave) !== null);
+  if (!dadosExistem) return false; // nada cadastrado ainda, sem o que perder
+
+  const ultimoBackupEm = localStorage.getItem(CHAVE_ULTIMO_BACKUP);
+  if (!ultimoBackupEm) return true; // nunca fez backup
+
+  const diasDesde = (Date.now() - Number(ultimoBackupEm)) / (1000 * 60 * 60 * 24);
+  return diasDesde >= DIAS_PARA_LEMBRAR;
+}
+
+function registrarBackupFeitoAgora() {
+  localStorage.setItem(CHAVE_ULTIMO_BACKUP, String(Date.now()));
+}
+
 // Lê um arquivo de backup (File do input) e devolve os dados pra confirmação,
 // sem já sobrescrever nada — a escrita de verdade é feita por aplicarBackup()
 export function lerArquivoBackup(arquivo) {
@@ -101,4 +122,5 @@ export function aplicarBackup(pacote) {
       localStorage.removeItem(chave);
     }
   }
+  registrarBackupFeitoAgora();
 }

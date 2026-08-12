@@ -73,6 +73,10 @@ export default function ConfiguracoesScreen() {
   async function salvarPerfilAgora() {
     setSalvandoPerfil(true);
     await salvarPerfil({ nome: nomePerfil.trim(), idade: idadePerfil, altura: alturaPerfil });
+    // sincroniza na hora, pra o servidor já saber o nome pro proximo aviso
+    // ao cuidador, sem precisar esperar mexer em outra coisa antes
+    const remedios = await listarRemedios();
+    await sincronizarNotificacoesServidor(obterIdDispositivo(), remedios);
     setSalvandoPerfil(false);
     setPerfilSalvo(true);
     setTimeout(() => setPerfilSalvo(false), 2500);

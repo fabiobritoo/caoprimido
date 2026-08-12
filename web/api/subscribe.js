@@ -6,19 +6,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { deviceId, subscription, remedios, configuracoes } = req.body;
+    const { deviceId, subscription, remedios, configuracoes, perfil } = req.body;
 
     if (!deviceId || !subscription) {
       return res.status(400).json({ erro: 'Faltam dados obrigatórios' });
     }
 
-    // preserva configurações antigas se essa chamada não mandou nenhuma
+    // preserva configurações/perfil antigos se essa chamada não mandou nenhum
     const registroAnterior = await kv.get(`dispositivo:${deviceId}`);
 
     await kv.set(`dispositivo:${deviceId}`, {
       subscription,
       remedios: remedios || [],
       configuracoes: configuracoes || registroAnterior?.configuracoes || null,
+      perfil: perfil || registroAnterior?.perfil || null,
       atualizadoEm: Date.now(),
     });
 

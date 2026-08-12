@@ -6,11 +6,16 @@ const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
 const JANELA_MAXIMA_MS = 30 * 60 * 1000;
 const LIMIAR_AVISO_CUIDADOR_MS = 15 * 60 * 1000;
 
-async function avisarCuidador(config, nomeRemedio, horario) {
+async function avisarCuidador(config, nomeRemedio, horario, perfil) {
   if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
 
-  const texto = `⚠️ Cãoprimido: a dose de "${nomeRemedio}" das ${horario} ainda não foi confirmada.`;
+  const nomePessoa = perfil?.nome?.trim();
+  const identificacao = nomePessoa
+    ? `👤 ${nomePessoa}`
+    : '⚠️ [Nome não cadastrado — configure em Configurações > Dados pessoais pra identificar quem é]';
+
+  const texto = `${identificacao}\nCãoprimido: a dose de "${nomeRemedio}" das ${horario} ainda não foi confirmada.`;
   const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
 
   try {
@@ -79,7 +84,7 @@ export default async function handler(req, res) {
       const dadosDispositivo = await kv.get(`dispositivo:${deviceId}`);
       if (!dadosDispositivo || !dadosDispositivo.subscription) continue;
 
-      const { remedios = [], subscription, configuracoes } = dadosDispositivo;
+      const { remedios = [], subscription, configuracoes, perfil } = dadosDispositivo;
 
       // Primeiro: descobre todas as doses de hoje já vencidas e não confirmadas
       // (usado tanto pro selo/contador quanto pra decidir o que reenviar)
@@ -105,7 +110,7 @@ export default async function handler(req, res) {
         if (atrasoMs >= LIMIAR_AVISO_CUIDADOR_MS) {
           const jaAvisouCuidador = await kv.get(`avisouCuidador:${chaveBase}`);
           if (!jaAvisouCuidador) {
-            await avisarCuidador(configuracoes, remedio.nome, horario);
+            await avisarCuidador(configuracoes, remedio.nome, horario, perfil);
             await kv.set(`avisouCuidador:${chaveBase}`, true, { ex: 172800 });
           }
         }

@@ -1,10 +1,15 @@
 import { kv } from '@vercel/kv';
 
-async function avisarCuidadorQueTomou(config, nomeRemedio, horario) {
+async function avisarCuidadorQueTomou(config, nomeRemedio, horario, perfil) {
   if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
 
-  const texto = `✅ Cãoprimido: a dose de "${nomeRemedio}" das ${horario} (que estava atrasada) acabou de ser confirmada. Tudo certo agora!`;
+  const nomePessoa = perfil?.nome?.trim();
+  const identificacao = nomePessoa
+    ? `👤 ${nomePessoa}`
+    : '⚠️ [Nome não cadastrado — configure em Configurações > Dados pessoais pra identificar quem é]';
+
+  const texto = `${identificacao}\nCãoprimido: a dose de "${nomeRemedio}" das ${horario} (que estava atrasada) acabou de ser confirmada. Tudo certo agora!`;
   const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
 
   try {
@@ -39,7 +44,7 @@ export default async function handler(req, res) {
       const dispositivo = await kv.get(`dispositivo:${deviceId}`);
       const remedio = dispositivo?.remedios?.find((r) => r.id === remedioId);
       if (dispositivo?.configuracoes && remedio) {
-        await avisarCuidadorQueTomou(dispositivo.configuracoes, remedio.nome, horario);
+        await avisarCuidadorQueTomou(dispositivo.configuracoes, remedio.nome, horario, dispositivo.perfil);
       }
     }
 

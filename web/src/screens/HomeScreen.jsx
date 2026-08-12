@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock,
+  Plus, Check, Pill, Flame, Activity, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database,
   ChevronLeft,
 } from 'lucide-react';
 import {
@@ -28,6 +28,7 @@ import CalendarioModal from '../components/CalendarioModal.jsx';
 import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { obterProximaConsulta } from '../utils/consultas.js';
+import { deveLembrarBackup } from '../utils/backup.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
 
 const HOJE = formatarData(new Date());
@@ -58,6 +59,7 @@ export default function HomeScreen() {
   const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [idConfirmando, setIdConfirmando] = useState(null);
   const [idRecemRegistrado, setIdRecemRegistrado] = useState(null);
+  const [lembrarBackup, setLembrarBackup] = useState(false);
   const [deltaXArrasto, setDeltaXArrasto] = useState(0);
   const [arrastando, setArrastando] = useState(false);
   const [transicaoAtiva, setTransicaoAtiva] = useState(true);
@@ -78,6 +80,7 @@ export default function HomeScreen() {
     setSequenciaDias(calcularSequenciaDias(lista, regs));
     atualizarSeloLocal(lista, regs);
     setProximaConsulta(await obterProximaConsulta());
+    setLembrarBackup(deveLembrarBackup());
   }, []);
 
   useEffect(() => {
@@ -391,6 +394,13 @@ export default function HomeScreen() {
         </button>
       )}
 
+      {lembrarBackup && (
+        <button onClick={() => navigate('/configuracoes')} style={estilos.faixaBackup}>
+          <Database size={15} strokeWidth={2.3} />
+          Faz um tempo que você não faz backup dos dados — toque pra fazer agora
+        </button>
+      )}
+
       <div style={{ padding: 16 }}>
         {dosesDoDia.length > 0 && (
           <div style={estilos.cabecalhoLista}>
@@ -665,6 +675,22 @@ function criarEstilos(CORES) {
       boxSizing: 'border-box',
     },
     faixaConsulta: {
+      width: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      textAlign: 'center',
+      backgroundColor: CORES.fundoCard,
+      borderBottom: `1px solid ${CORES.borda}`,
+      color: CORES.textoSecundario,
+      fontWeight: 600,
+      fontSize: 12,
+      padding: '9px 10px',
+      border: 'none',
+      borderRadius: 0,
+    },
+    faixaBackup: {
       width: '100%',
       display: 'flex',
       alignItems: 'center',
