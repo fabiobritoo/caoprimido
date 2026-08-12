@@ -197,6 +197,22 @@ export default function HomeScreen() {
   const diaEhFuturo = diaSelecionado > HOJE;
   const todasTomadas = dosesDoDia.length > 0 && dosesDoDia.every((d) => d.tomado);
 
+  // se a próxima dose pendente estiver a mais de 1h de distância, mostra a
+  // mascote "standby" em vez da "hora do remédio" (que fica reservada pra
+  // quando realmente está perto/na hora)
+  let proximaDoseEmBreve = true;
+  if (diaSelecionado === HOJE && dosesPendentes.length > 0) {
+    const agora = new Date();
+    const minutosAte = (horario) => {
+      const [h, m] = horario.split(':').map(Number);
+      const alvo = new Date();
+      alvo.setHours(h, m, 0, 0);
+      return (alvo - agora) / 60000;
+    };
+    const menorDistancia = Math.min(...dosesPendentes.map((d) => minutosAte(d.horario)));
+    proximaDoseEmBreve = menorDistancia <= 60;
+  }
+
   async function marcarComoTomado(item) {
     if (diaEhFuturo) return;
     const chave = `${item.remedio.id}-${item.horario}`;
@@ -405,7 +421,13 @@ export default function HomeScreen() {
         {dosesDoDia.length > 0 && (
           <div style={estilos.cabecalhoLista}>
             <img
-              src={todasTomadas ? `/${pastaMascote}/mascote-parabens.png` : `/${pastaMascote}/mascote-hora-remedio.png`}
+              src={
+                todasTomadas
+                  ? `/${pastaMascote}/mascote-parabens.png`
+                  : proximaDoseEmBreve
+                  ? `/${pastaMascote}/mascote-hora-remedio.png`
+                  : `/${pastaMascote}/mascote-standby.png`
+              }
               alt=""
               style={estilos.mascoteCabecalho}
             />
