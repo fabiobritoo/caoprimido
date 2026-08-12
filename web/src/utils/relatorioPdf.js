@@ -227,7 +227,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
   y = tituloSecao('Registros de saúde', y);
 
   if (registrosSaude.length > 0) {
-    const ordenados = [...registrosSaude].sort((a, b) => a.data.localeCompare(b.data));
+    const ordenados = [...registrosSaude].sort((a, b) => b.data.localeCompare(a.data));
     autoTable(doc, {
       startY: y,
       head: [['Data', 'Peso', 'Pressão', 'Freq. cardíaca', 'Anotações']],
