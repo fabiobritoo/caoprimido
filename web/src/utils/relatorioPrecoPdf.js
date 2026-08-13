@@ -64,16 +64,17 @@ function calcularMediaDosesPorDia(remedio) {
 function descreverFrequenciaResumo(remedio) {
   const freq = remedio.frequencia;
   const horariosPorDia = remedio.horarios?.length || 1;
-  const sufixoHorarios = ` · ${horariosPorDia}x ao dia`;
+  const dose = `${remedio.quantidadePorDose || 1} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
+  const sufixo = ` · ${horariosPorDia}x ao dia · ${dose} por dose`;
 
-  if (!freq || freq.tipo === 'diaria') return `todos os dias${sufixoHorarios}`;
+  if (!freq || freq.tipo === 'diaria') return `todos os dias${sufixo}`;
   if (freq.tipo === 'dias_semana') {
     const n = freq.dias?.length || 0;
     const diasTexto = n === 1 ? '1x por semana' : `${n}x por semana`;
-    return `${diasTexto}${sufixoHorarios}`;
+    return `${diasTexto}${sufixo}`;
   }
   if (freq.tipo === 'intervalo') {
-    return `a cada ${freq.intervaloDias || 1} dias${sufixoHorarios}`;
+    return `a cada ${freq.intervaloDias || 1} dias${sufixo}`;
   }
   return '';
 }
@@ -266,9 +267,10 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     y += 6;
 
     doc.setFont('helvetica', 'bold');
-    doc.text(`Frequência: ${descreverFrequenciaResumo(remedio)}`, 14, y);
+    const linhasFrequencia = doc.splitTextToSize(`Frequência: ${descreverFrequenciaResumo(remedio)}`, larguraPagina - 28);
+    doc.text(linhasFrequencia, 14, y);
     doc.setFont('helvetica', 'normal');
-    y += 6;
+    y += linhasFrequencia.length * 4.2 + 2;
 
     if (variacaoDesdeInicio != null && Math.abs(variacaoDesdeInicio) >= 0.5) {
       const subiu = variacaoDesdeInicio > 0;
