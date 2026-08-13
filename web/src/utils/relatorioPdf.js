@@ -36,12 +36,6 @@ function formatarDataExtenso(dataStr) {
   return `${dia}/${mes}/${ano}`;
 }
 
-function formatarNomeArquivo(date) {
-  const ano = date.getFullYear();
-  const mes = String(date.getMonth() + 1).padStart(2, '0');
-  const dia = String(date.getDate()).padStart(2, '0');
-  return `${ano}-${mes}-${dia}`;
-}
 
 // Carrega uma imagem do /public e devolve como data URL base64,
 // pro jsPDF conseguir desenhar ela na página
@@ -63,6 +57,11 @@ function carregarImagemComoBase64(url) {
 }
 
 export async function gerarRelatorioPdf({ modoBob = false } = {}) {
+  // abre a aba já aqui, ANTES de qualquer await — se abrir só depois de
+  // esperar imagens/dados carregarem, o Safari/iOS bloqueia como popup
+  // indesejado por não estar mais "dentro" do clique do usuário
+  const janela = window.open('', '_blank');
+
   const paleta = obterPaletaPdf(modoBob);
   const ROSA = paleta.PRIMARIA;
   const ROSA_ESCURO = paleta.PRIMARIA_ESCURA;
@@ -282,5 +281,13 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
     doc.text(`Página ${i} de ${totalPaginas}`, 14, alturaPagina - 6);
   }
 
-  doc.save(`caoprimido-relatorio-${formatarNomeArquivo(agora)}.pdf`);
+  doc.setProperties({ title: 'caoprimido-relatorio' });
+  const blobUrl = doc.output('bloburl');
+
+  if (janela) {
+    janela.location.href = blobUrl;
+  } else {
+    // navegador bloqueou o popup mesmo assim — cai pro download tradicional
+    doc.save('caoprimido-relatorio.pdf');
+  }
 }

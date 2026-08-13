@@ -96,7 +96,19 @@ function carregarImagemComoBase64(url) {
   });
 }
 
+function abrirOuSalvarPdf(doc, janela, nomeArquivo) {
+  doc.setProperties({ title: nomeArquivo.replace('.pdf', '') });
+  const blobUrl = doc.output('bloburl');
+  if (janela) {
+    janela.location.href = blobUrl;
+  } else {
+    doc.save(nomeArquivo);
+  }
+}
+
 export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
+  const janela = window.open('', '_blank');
+
   const paleta = obterPaletaPdf(modoBob);
   const { PRIMARIA, PRIMARIA_ESCURA, DOURADO, CREME, TEXTO_PRINCIPAL, TEXTO_SECUNDARIO, BRANCO, SUCESSO, PERIGO } =
     paleta;
@@ -155,7 +167,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.text('Nenhum registro de preço/compra cadastrado ainda.', larguraPagina / 2, y + 10, {
       align: 'center',
     });
-    doc.save('caoprimido-relatorio-precos.pdf');
+    abrirOuSalvarPdf(doc, janela, 'caoprimido-relatorio-precos.pdf');
     return;
   }
 
@@ -341,6 +353,5 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.text(`Página ${i} de ${totalPaginas}`, 14, alturaPagina - 6);
   }
 
-  const dataArquivo = agora.toISOString().slice(0, 10);
-  doc.save(`caoprimido-relatorio-precos-${dataArquivo}.pdf`);
+  abrirOuSalvarPdf(doc, janela, 'caoprimido-relatorio-precos.pdf');
 }

@@ -97,9 +97,8 @@ function montarPacoteBackup() {
     dados,
   };
 
-  const dataArquivo = new Date().toISOString().slice(0, 10);
   const blob = new Blob([JSON.stringify(pacote, null, 2)], { type: 'application/json' });
-  return { blob, nomeArquivo: `caoprimido-backup-${dataArquivo}.json` };
+  return { blob, nomeArquivo: 'caoprimido-backup.json' };
 }
 
 const CHAVE_ULTIMO_BACKUP = '@caoprimido:ultimoBackupEm';
