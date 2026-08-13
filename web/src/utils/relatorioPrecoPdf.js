@@ -63,13 +63,17 @@ function calcularMediaDosesPorDia(remedio) {
 
 function descreverFrequenciaResumo(remedio) {
   const freq = remedio.frequencia;
-  if (!freq || freq.tipo === 'diaria') return 'todos os dias';
+  const horariosPorDia = remedio.horarios?.length || 1;
+  const sufixoHorarios = ` · ${horariosPorDia}x ao dia`;
+
+  if (!freq || freq.tipo === 'diaria') return `todos os dias${sufixoHorarios}`;
   if (freq.tipo === 'dias_semana') {
     const n = freq.dias?.length || 0;
-    return n === 1 ? '1x por semana' : `${n}x por semana`;
+    const diasTexto = n === 1 ? '1x por semana' : `${n}x por semana`;
+    return `${diasTexto}${sufixoHorarios}`;
   }
   if (freq.tipo === 'intervalo') {
-    return `a cada ${freq.intervaloDias || 1} dias`;
+    return `a cada ${freq.intervaloDias || 1} dias${sufixoHorarios}`;
   }
   return '';
 }
@@ -222,7 +226,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
   doc.setTextColor(...TEXTO_SECUNDARIO);
   doc.setFont('helvetica', 'italic');
   const textoExplicativo =
-    'Custo diário/mensal considera o preço mais recente por unidade × dose × a frequência real cadastrada de cada remédio (todos os dias, X vezes por semana, ou a cada X dias) — não assume uso diário pra remédios ocasionais.';
+    'Custo diário/mensal considera o preço mais recente por unidade × quantidade por dose × doses por dia (conta os horários cadastrados, ex: 3 horários = 3x ao dia) × a frequência real (todos os dias, X vezes por semana, ou a cada X dias) — não assume uso diário pra remédios ocasionais.';
   const linhasExplicacao = doc.splitTextToSize(textoExplicativo, larguraPagina - 28);
   doc.text(linhasExplicacao, 14, y);
   y += linhasExplicacao.length * 3.6 + 8;
