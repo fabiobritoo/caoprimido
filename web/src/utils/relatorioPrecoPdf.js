@@ -14,6 +14,8 @@ function obterPaletaPdf(modoBob) {
       TEXTO_PRINCIPAL: [30, 58, 95],
       TEXTO_SECUNDARIO: [107, 133, 160],
       BRANCO: [255, 255, 255],
+      SUCESSO: [76, 154, 92],
+      PERIGO: [196, 78, 74],
     };
   }
   return {
@@ -24,6 +26,8 @@ function obterPaletaPdf(modoBob) {
     TEXTO_PRINCIPAL: [74, 46, 30],
     TEXTO_SECUNDARIO: [138, 111, 92],
     BRANCO: [255, 255, 255],
+    SUCESSO: [76, 154, 92],
+    PERIGO: [196, 78, 74],
   };
 }
 
@@ -55,7 +59,8 @@ function carregarImagemComoBase64(url) {
 
 export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
   const paleta = obterPaletaPdf(modoBob);
-  const { PRIMARIA, PRIMARIA_ESCURA, DOURADO, CREME, TEXTO_PRINCIPAL, TEXTO_SECUNDARIO, BRANCO } = paleta;
+  const { PRIMARIA, PRIMARIA_ESCURA, DOURADO, CREME, TEXTO_PRINCIPAL, TEXTO_SECUNDARIO, BRANCO, SUCESSO, PERIGO } =
+    paleta;
 
   const remedios = await listarRemedios();
   const todasCompras = await obterTodasCompras();
@@ -115,57 +120,74 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     return;
   }
 
-  let gastoTotal = 0;
-  let custoDiarioTotal = 0;
-  for (const remedio of remediosComPreco) {
+  const metricasPorRemedio = remediosComPreco.map((remedio) => {
     const compras = comprasPorRemedio[remedio.id];
-    gastoTotal += compras.reduce((soma, c) => soma + c.preco, 0);
+    const maisRecente = compras[compras.length - 1];
+    const primeira = compras[0];
 
-    const comQuantidade = compras.filter((c) => c.quantidade > 0);
-    if (comQuantidade.length > 0) {
-      const precoMedioUnidade =
-        comQuantidade.reduce((soma, c) => soma + c.preco / c.quantidade, 0) / comQuantidade.length;
+    const precos = compras.map((c) => c.preco);
+    const precoMedio = precos.reduce((a, b) => a + b, 0) / precos.length;
+    const precoMinimo = Math.min(...precos);
+    const precoMaximo = Math.max(...precos);
+
+    const variacaoDesdeInicio =
+      compras.length > 1 ? ((maisRecente.preco - primeira.preco) / primeira.preco) * 100 : null;
+
+    let custoDiarioEstimado = null;
+    if (maisRecente.quantidade > 0) {
+      const precoPorUnidade = maisRecente.preco / maisRecente.quantidade;
       const dosesPorDia = remedio.horarios?.length || 1;
-      custoDiarioTotal += precoMedioUnidade * (remedio.quantidadePorDose || 1) * dosesPorDia;
+      custoDiarioEstimado = precoPorUnidade * (remedio.quantidadePorDose || 1) * dosesPorDia;
     }
-  }
+
+    const locais = [...new Set(compras.filter((c) => c.local).map((c) => c.local))];
+    let localMaisBarato = null;
+    if (locais.length > 1) {
+      const compraMaisBarata = compras.reduce((menor, c) => (c.preco < menor.preco ? c : menor));
+      localMaisBarato = compraMaisBarata.local;
+    }
+
+    return {
+      remedio,
+      compras,
+      maisRecente,
+      precoMedio,
+      precoMinimo,
+      precoMaximo,
+      variacaoDesdeInicio,
+      custoDiarioEstimado,
+      localMaisBarato,
+    };
+  });
+
+  const gastoRecente = metricasPorRemedio.reduce((soma, m) => soma + m.maisRecente.preco, 0);
+  const custoDiarioTotal = metricasPorRemedio.reduce((soma, m) => soma + (m.custoDiarioEstimado || 0), 0);
 
   const cartoes = [
-    { rotulo: 'Gasto total registrado', valor: formatarPreco(gastoTotal) },
+    { rotulo: 'Gasto na última compra de cada', valor: formatarPreco(gastoRecente) },
     { rotulo: 'Custo diário estimado', valor: formatarPreco(custoDiarioTotal) },
-    { rotulo: 'Remédios com preço', valor: `${remediosComPreco.length}` },
+    { rotulo: 'Custo mensal estimado (×30)', valor: formatarPreco(custoDiarioTotal * 30) },
   ];
   const larguraCartao = (larguraPagina - 28 - 12) / 3;
   cartoes.forEach((c, i) => {
     const x = 14 + i * (larguraCartao + 6);
     doc.setFillColor(...CREME);
-    doc.roundedRect(x, y, larguraCartao, 24, 3, 3, 'F');
-    doc.setFontSize(13);
+    doc.roundedRect(x, y, larguraCartao, 26, 3, 3, 'F');
+    doc.setFontSize(12.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(...PRIMARIA_ESCURA);
     doc.text(c.valor, x + larguraCartao / 2, y + 12, { align: 'center' });
-    doc.setFontSize(8);
+    doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...TEXTO_SECUNDARIO);
-    doc.text(c.rotulo, x + larguraCartao / 2, y + 19, { align: 'center' });
+    doc.text(c.rotulo, x + larguraCartao / 2, y + 19, { align: 'center', maxWidth: larguraCartao - 6 });
   });
-  y += 24 + 8;
+  y += 26 + 10;
 
-  doc.setFontSize(8);
-  doc.setTextColor(...TEXTO_SECUNDARIO);
-  doc.setFont('helvetica', 'italic');
-  doc.text(
-    'Custo diário estimado considera o preço médio por unidade × dose × horários cadastrados, só para remédios com quantidade informada nas compras.',
-    14,
-    y,
-    { maxWidth: larguraPagina - 28 }
-  );
-  y += 14;
+  for (const m of metricasPorRemedio) {
+    const { remedio, compras, maisRecente, precoMedio, precoMinimo, precoMaximo, variacaoDesdeInicio } = m;
 
-  for (const remedio of remediosComPreco) {
-    const compras = comprasPorRemedio[remedio.id];
-
-    if (y > alturaPagina - 70) {
+    if (y > alturaPagina - 65) {
       doc.addPage();
       y = 20;
     }
@@ -177,57 +199,57 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.setTextColor(...TEXTO_PRINCIPAL);
     doc.text(remedio.nome, 20, y);
 
-    const precoMaisRecente = compras[compras.length - 1].preco;
-    const precoMedio = compras.reduce((soma, c) => soma + c.preco, 0) / compras.length;
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...TEXTO_SECUNDARIO);
-    doc.text(
-      `Preço médio: ${formatarPreco(precoMedio)}   ·   Mais recente: ${formatarPreco(precoMaisRecente)}`,
-      larguraPagina - 14,
-      y,
-      { align: 'right' }
-    );
-    y += 8;
+    doc.text(`Mais recente: ${formatarPreco(maisRecente.preco)}`, larguraPagina - 14, y, { align: 'right' });
+    y += 7;
 
-    if (compras.length >= 2) {
-      const larguraGrafico = larguraPagina - 28;
-      const alturaGrafico = 28;
-      const precos = compras.map((c) => c.preco);
-      const min = Math.min(...precos);
-      const max = Math.max(...precos);
-      const faixa = max - min || 1;
-      const padX = 4;
+    const metricasTexto = [
+      `Médio: ${formatarPreco(precoMedio)}`,
+      `Mín: ${formatarPreco(precoMinimo)}`,
+      `Máx: ${formatarPreco(precoMaximo)}`,
+    ];
+    if (m.custoDiarioEstimado != null) {
+      metricasTexto.push(`Custo/dia: ${formatarPreco(m.custoDiarioEstimado)}`);
+    }
+    doc.setFontSize(8.5);
+    doc.setTextColor(...TEXTO_SECUNDARIO);
+    doc.text(metricasTexto.join('   ·   '), 14, y);
+    y += 6;
 
-      const coordX = (i) => 14 + padX + (i * (larguraGrafico - padX * 2)) / Math.max(1, compras.length - 1);
-      const coordY = (preco) => y + alturaGrafico - 4 - ((preco - min) / faixa) * (alturaGrafico - 8);
-
-      doc.setDrawColor(...PRIMARIA);
-      doc.setLineWidth(0.6);
-      for (let i = 0; i < compras.length - 1; i++) {
-        doc.line(coordX(i), coordY(compras[i].preco), coordX(i + 1), coordY(compras[i + 1].preco));
-      }
-      doc.setFillColor(...PRIMARIA);
-      compras.forEach((c, i) => {
-        doc.circle(coordX(i), coordY(c.preco), 1.1, 'F');
-      });
-
-      y += alturaGrafico + 6;
+    if (variacaoDesdeInicio != null && Math.abs(variacaoDesdeInicio) >= 0.5) {
+      const subiu = variacaoDesdeInicio > 0;
+      doc.setTextColor(...(subiu ? PERIGO : SUCESSO));
+      doc.setFont('helvetica', 'bold');
+      doc.text(
+        `${subiu ? '▲' : '▼'} ${subiu ? '+' : ''}${variacaoDesdeInicio.toFixed(1)}% desde a primeira compra registrada`,
+        14,
+        y
+      );
+      y += 6;
     }
 
+    if (m.localMaisBarato) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...TEXTO_SECUNDARIO);
+      doc.text(`Local mais barato encontrado: ${m.localMaisBarato}`, 14, y);
+      y += 6;
+    }
+
+    y += 2;
+
+    const ultimasTres = compras.slice(-3).reverse();
     autoTable(doc, {
       startY: y,
       head: [['Data', 'Preço', 'Local', 'Qtd', 'Anotações']],
-      body: compras
-        .slice()
-        .reverse()
-        .map((c) => [
-          formatarDataExtenso(c.data),
-          formatarPreco(c.preco),
-          c.local || '—',
-          c.quantidade != null ? `${c.quantidade} ${rotuloUnidade(remedio.unidade).toLowerCase()}` : '—',
-          c.anotacoes || '—',
-        ]),
+      body: ultimasTres.map((c) => [
+        formatarDataExtenso(c.data),
+        formatarPreco(c.preco),
+        c.local || '—',
+        c.quantidade != null ? `${c.quantidade} ${rotuloUnidade(remedio.unidade).toLowerCase()}` : '—',
+        c.anotacoes || '—',
+      ]),
       theme: 'plain',
       headStyles: { fillColor: PRIMARIA, textColor: BRANCO, fontStyle: 'bold', fontSize: 8.5 },
       bodyStyles: { fontSize: 8.5, textColor: TEXTO_PRINCIPAL },
@@ -236,7 +258,15 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       styles: { cellPadding: 3 },
     });
 
-    y = doc.lastAutoTable.finalY + 16;
+    y = doc.lastAutoTable.finalY;
+    if (compras.length > 3) {
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'italic');
+      doc.setTextColor(...TEXTO_SECUNDARIO);
+      doc.text(`+ ${compras.length - 3} compra(s) mais antiga(s) não exibida(s).`, 14, y + 5);
+      y += 5;
+    }
+    y += 14;
   }
 
   const totalPaginas = doc.internal.getNumberOfPages();
