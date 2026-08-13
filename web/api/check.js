@@ -15,7 +15,7 @@ async function avisarCuidador(config, nomeRemedio, horario, perfil) {
     ? `👤 ${nomePessoa}`
     : '⚠️ [Nome não cadastrado — configure em Configurações > Dados pessoais pra identificar quem é]';
 
-  const texto = `${identificacao}\nCãoprimido: a dose de "${nomeRemedio}" das ${horario} ainda não foi confirmada.`;
+  const texto = `${identificacao}\n⚠️ Cãoprimido: a dose de "${nomeRemedio}" das ${horario} ainda não foi confirmada.`;
   const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
 
   try {
