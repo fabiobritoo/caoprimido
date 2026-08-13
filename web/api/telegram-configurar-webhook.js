@@ -10,15 +10,34 @@ export default async function handler(req, res) {
   const urlBase = `https://${req.headers.host}`;
   const urlWebhook = `${urlBase}/api/telegram-webhook?token=${process.env.CRON_SECRET}`;
   const urlTelegram = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setWebhook`;
+  const urlComandos = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/setMyCommands`;
 
   try {
-    const resposta = await fetch(urlTelegram, {
+    const respostaWebhook = await fetch(urlTelegram, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: urlWebhook }),
     });
-    const dados = await resposta.json();
-    res.status(200).json({ webhookConfigurado: urlWebhook, resultadoTelegram: dados });
+    const dadosWebhook = await respostaWebhook.json();
+
+    // registra a lista de comandos que aparece como sugestão ao digitar "/"
+    // no chat com o bot
+    const respostaComandos = await fetch(urlComandos, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        commands: [
+          { command: 'status', description: 'Ver quem está com dose atrasada hoje' },
+        ],
+      }),
+    });
+    const dadosComandos = await respostaComandos.json();
+
+    res.status(200).json({
+      webhookConfigurado: urlWebhook,
+      resultadoTelegram: dadosWebhook,
+      comandosConfigurados: dadosComandos,
+    });
   } catch (erro) {
     res.status(500).json({ erro: erro.message });
   }
