@@ -28,6 +28,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         commands: [
           { command: 'status', description: 'Ver quem está com dose atrasada hoje' },
+          { command: 'help', description: 'Ver o que esse bot faz' },
         ],
       }),
     });

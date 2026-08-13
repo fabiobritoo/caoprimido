@@ -2,6 +2,17 @@ import { kv } from '@vercel/kv';
 import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso, nomeResumido } from './_logica.js';
 
 const COMANDOS_STATUS = ['/status', '/pendentes', 'status', 'pendentes'];
+const COMANDOS_AJUDA = ['/start', '/help', '/ajuda', 'ajuda'];
+
+const MENSAGEM_AJUDA = `🐶💊 *Cãoprimido Alertas*
+
+Eu aviso quando uma dose de remédio ficar atrasada, e ajudo você a acompanhar quem você cuida.
+
+*Comandos disponíveis:*
+/status — Ver quem está com dose atrasada hoje
+/help — Ver essa mensagem de novo
+
+Pra eu te avisar sobre alguém, essa pessoa precisa ativar a opção "Avisar um cuidador" nas Configurações do app dela e usar o código que aparece lá pra se conectar com esse chat.`;
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).end();
@@ -22,9 +33,13 @@ export default async function handler(req, res) {
     }
 
     const ehComandoStatus = COMANDOS_STATUS.some((c) => texto === c || texto.startsWith(`${c}@`));
+    const ehComandoAjuda = COMANDOS_AJUDA.some((c) => texto === c || texto.startsWith(`${c}@`));
+
     if (ehComandoStatus) {
       const resposta = await montarResumoPendencias(String(chatId));
       await enviarMensagemTelegram(String(chatId), resposta);
+    } else if (ehComandoAjuda) {
+      await enviarMensagemTelegram(String(chatId), MENSAGEM_AJUDA, true);
     }
 
     res.status(200).json({ ok: true });
@@ -87,14 +102,16 @@ async function montarResumoPendencias(chatId) {
   return linhas.join('\n').trim();
 }
 
-async function enviarMensagemTelegram(chatId, texto) {
+async function enviarMensagemTelegram(chatId, texto, comFormatacao = false) {
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
   const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+  const corpo = { chat_id: chatId, text: texto };
+  if (comFormatacao) corpo.parse_mode = 'Markdown';
   try {
     await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: chatId, text: texto }),
+      body: JSON.stringify(corpo),
     });
   } catch (e) {
     console.error('Falha ao responder no webhook do Telegram:', e.message);
