@@ -258,11 +258,16 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       `Máx: ${formatarPreco(precoMaximo)}`,
     ];
     if (m.custoDiarioEstimado != null) {
-      metricasTexto.push(`Custo/dia: ${formatarPreco(m.custoDiarioEstimado)} (${descreverFrequenciaResumo(remedio)})`);
+      metricasTexto.push(`Custo/mês: ${formatarPreco(m.custoDiarioEstimado * 30)}`);
     }
     doc.setFontSize(8.5);
     doc.setTextColor(...TEXTO_SECUNDARIO);
     doc.text(metricasTexto.join('   ·   '), 14, y);
+    y += 6;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Frequência: ${descreverFrequenciaResumo(remedio)}`, 14, y);
+    doc.setFont('helvetica', 'normal');
     y += 6;
 
     if (variacaoDesdeInicio != null && Math.abs(variacaoDesdeInicio) >= 0.5) {
