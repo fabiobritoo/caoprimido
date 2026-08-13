@@ -1,8 +1,7 @@
 import { kv } from '@vercel/kv';
 import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso, nomeResumido } from './_logica.js';
 
-const COMANDOS_STATUS = ['/status', '/pendentes', 'status', 'pendentes'];
-const COMANDOS_AJUDA = ['/start', '/help', '/ajuda', 'ajuda'];
+const COMANDOS_STATUS = ['/status', '/pendentes', 'status', 'pendentes'];const COMANDOS_AJUDA = ['/start', '/help', '/ajuda', 'ajuda'];
 
 const MENSAGEM_AJUDA = `🐶💊 *Cãoprimido Alertas*
 
@@ -49,6 +48,15 @@ export default async function handler(req, res) {
   }
 }
 
+// pra atrasos de 1h+, mostra em horas (e minutos, se sobrar) em vez de só
+// minutos corridos — "2h15min" é mais fácil de ler que "135 min"
+function formatarAtraso(totalMinutos) {
+  if (totalMinutos < 60) return `${totalMinutos} min`;
+  const horas = Math.floor(totalMinutos / 60);
+  const minutosRestantes = totalMinutos % 60;
+  return minutosRestantes === 0 ? `${horas}h` : `${horas}h${minutosRestantes}min`;
+}
+
 async function montarResumoPendencias(chatId) {
   const idsDispositivos = (await kv.smembers('dispositivos')) || [];
   const agora = new Date();
@@ -93,7 +101,7 @@ async function montarResumoPendencias(chatId) {
     } else {
       linhas.push(`⚠️ ${pessoa.nome}:`);
       for (const p of pessoa.pendentes) {
-        linhas.push(`   • ${p.nome} (${p.horario} — atrasado ${p.atrasoMin} min)`);
+        linhas.push(`   • ${p.nome} (${p.horario} — atrasado ${formatarAtraso(p.atrasoMin)})`);
       }
     }
     linhas.push('');
