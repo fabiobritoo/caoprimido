@@ -40,6 +40,40 @@ function formatarPreco(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
+// Calcula a média de doses por dia considerando a frequência real do
+// remédio — sem isso, um remédio "1x por semana" seria calculado como se
+// fosse tomado todo santo dia, inflando o custo estimado em até 7x
+function calcularMediaDosesPorDia(remedio) {
+  const horariosPorDia = remedio.horarios?.length || 1;
+  const freq = remedio.frequencia;
+
+  if (!freq || freq.tipo === 'diaria') {
+    return horariosPorDia;
+  }
+  if (freq.tipo === 'dias_semana') {
+    const diasPorSemana = freq.dias?.length || 7;
+    return (horariosPorDia * diasPorSemana) / 7;
+  }
+  if (freq.tipo === 'intervalo') {
+    const intervalo = freq.intervaloDias || 1;
+    return horariosPorDia / intervalo;
+  }
+  return horariosPorDia;
+}
+
+function descreverFrequenciaResumo(remedio) {
+  const freq = remedio.frequencia;
+  if (!freq || freq.tipo === 'diaria') return 'todos os dias';
+  if (freq.tipo === 'dias_semana') {
+    const n = freq.dias?.length || 0;
+    return n === 1 ? '1x por semana' : `${n}x por semana`;
+  }
+  if (freq.tipo === 'intervalo') {
+    return `a cada ${freq.intervaloDias || 1} dias`;
+  }
+  return '';
+}
+
 function carregarImagemComoBase64(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -136,8 +170,8 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     let custoDiarioEstimado = null;
     if (maisRecente.quantidade > 0) {
       const precoPorUnidade = maisRecente.preco / maisRecente.quantidade;
-      const dosesPorDia = remedio.horarios?.length || 1;
-      custoDiarioEstimado = precoPorUnidade * (remedio.quantidadePorDose || 1) * dosesPorDia;
+      const mediaDosesPorDia = calcularMediaDosesPorDia(remedio);
+      custoDiarioEstimado = precoPorUnidade * (remedio.quantidadePorDose || 1) * mediaDosesPorDia;
     }
 
     const locais = [...new Set(compras.filter((c) => c.local).map((c) => c.local))];
@@ -182,7 +216,16 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.setTextColor(...TEXTO_SECUNDARIO);
     doc.text(c.rotulo, x + larguraCartao / 2, y + 19, { align: 'center', maxWidth: larguraCartao - 6 });
   });
-  y += 26 + 10;
+  y += 26 + 8;
+
+  doc.setFontSize(8);
+  doc.setTextColor(...TEXTO_SECUNDARIO);
+  doc.setFont('helvetica', 'italic');
+  const textoExplicativo =
+    'Custo diário/mensal considera o preço mais recente por unidade × dose × a frequência real cadastrada de cada remédio (todos os dias, X vezes por semana, ou a cada X dias) — não assume uso diário pra remédios ocasionais.';
+  const linhasExplicacao = doc.splitTextToSize(textoExplicativo, larguraPagina - 28);
+  doc.text(linhasExplicacao, 14, y);
+  y += linhasExplicacao.length * 3.6 + 8;
 
   for (const m of metricasPorRemedio) {
     const { remedio, compras, maisRecente, precoMedio, precoMinimo, precoMaximo, variacaoDesdeInicio } = m;
@@ -211,7 +254,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       `Máx: ${formatarPreco(precoMaximo)}`,
     ];
     if (m.custoDiarioEstimado != null) {
-      metricasTexto.push(`Custo/dia: ${formatarPreco(m.custoDiarioEstimado)}`);
+      metricasTexto.push(`Custo/dia: ${formatarPreco(m.custoDiarioEstimado)} (${descreverFrequenciaResumo(remedio)})`);
     }
     doc.setFontSize(8.5);
     doc.setTextColor(...TEXTO_SECUNDARIO);
