@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database,
+  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database, Download,
   ChevronLeft,
 } from 'lucide-react';
 import {
@@ -29,6 +29,7 @@ import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { obterProximaConsulta } from '../utils/consultas.js';
 import { deveLembrarBackup } from '../utils/backup.js';
+import { estaInstalado } from '../utils/instalacao.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
 
 const HOJE = formatarData(new Date());
@@ -60,6 +61,8 @@ export default function HomeScreen() {
   const [idConfirmando, setIdConfirmando] = useState(null);
   const [idRecemRegistrado, setIdRecemRegistrado] = useState(null);
   const [lembrarBackup, setLembrarBackup] = useState(false);
+  const [jaInstalado, setJaInstalado] = useState(true); // começa true pra não "piscar" o banner à toa
+  const [promptInstalacao, setPromptInstalacao] = useState(null);
   const [deltaXArrasto, setDeltaXArrasto] = useState(0);
   const [arrastando, setArrastando] = useState(false);
   const [transicaoAtiva, setTransicaoAtiva] = useState(true);
@@ -91,6 +94,39 @@ export default function HomeScreen() {
     document.addEventListener('visibilitychange', aoVoltarParaAba);
     return () => document.removeEventListener('visibilitychange', aoVoltarParaAba);
   }, [carregar]);
+
+  useEffect(() => {
+    setJaInstalado(estaInstalado());
+
+    // o Chrome/Android dispara esse evento quando o app é instalável — a
+    // gente "segura" ele (preventDefault) pra poder mostrar nosso próprio
+    // botão, em vez do banner genérico do navegador
+    const aoFicarInstalavel = (evento) => {
+      evento.preventDefault();
+      setPromptInstalacao(evento);
+    };
+    const aoInstalar = () => {
+      setJaInstalado(true);
+      setPromptInstalacao(null);
+    };
+
+    window.addEventListener('beforeinstallprompt', aoFicarInstalavel);
+    window.addEventListener('appinstalled', aoInstalar);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', aoFicarInstalavel);
+      window.removeEventListener('appinstalled', aoInstalar);
+    };
+  }, []);
+
+  async function instalarAgora() {
+    if (!promptInstalacao) {
+      navigate('/como-instalar');
+      return;
+    }
+    promptInstalacao.prompt();
+    await promptInstalacao.userChoice;
+    setPromptInstalacao(null);
+  }
 
   const obterStatusDoDia = useCallback(
     (dataStr) => {
@@ -417,6 +453,18 @@ export default function HomeScreen() {
         </button>
       )}
 
+      {!jaInstalado && (
+        <div style={estilos.faixaInstalar}>
+          <button onClick={instalarAgora} style={estilos.botaoInstalarPrincipal}>
+            <Download size={15} strokeWidth={2.3} />
+            {promptInstalacao ? 'Instalar app' : 'Instale o app no seu celular'}
+          </button>
+          <button onClick={() => navigate('/como-instalar')} style={estilos.linkComoInstalar}>
+            Como instalar
+          </button>
+        </div>
+      )}
+
       <div style={{ padding: 16 }}>
         {dosesDoDia.length > 0 && (
           <div style={estilos.cabecalhoLista}>
@@ -727,6 +775,36 @@ function criarEstilos(CORES) {
       padding: '9px 10px',
       border: 'none',
       borderRadius: 0,
+    },
+    faixaInstalar: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 10,
+      backgroundColor: CORES.primariaClara,
+      borderBottom: `1px solid ${CORES.borda}`,
+      padding: '9px 10px',
+      flexWrap: 'wrap',
+    },
+    botaoInstalarPrincipal: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 6,
+      backgroundColor: CORES.primaria,
+      color: '#fff',
+      border: 'none',
+      borderRadius: RAIO.pill,
+      padding: '6px 12px',
+      fontSize: 12,
+      fontWeight: 700,
+    },
+    linkComoInstalar: {
+      background: 'none',
+      border: 'none',
+      color: CORES.primariaEscura,
+      fontSize: 12,
+      fontWeight: 700,
+      textDecoration: 'underline',
     },
     cabecalhoLista: {
       display: 'flex',
