@@ -10,6 +10,7 @@ import { formatarData, somarDias } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 
 const HOJE = formatarData(new Date());
+const INICIO_DOS_TEMPOS = '1970-01-01'; // usado como "sem filtro de início", pra mostrar todo o histórico
 
 function formatarDataExibicao(dataStr) {
   const [ano, mes, dia] = dataStr.split('-');
@@ -23,7 +24,7 @@ export default function SaudeSecao({ CORES }) {
   const [idEditando, setIdEditando] = useState(null);
   const [carregando, setCarregando] = useState(true);
   const [periodoAberto, setPeriodoAberto] = useState(false);
-  const [dataInicioPeriodo, setDataInicioPeriodo] = useState(somarDias(HOJE, -6));
+  const [dataInicioPeriodo, setDataInicioPeriodo] = useState(INICIO_DOS_TEMPOS);
   const [dataFimPeriodo, setDataFimPeriodo] = useState(HOJE);
 
   const [data, setData] = useState(HOJE);
@@ -98,8 +99,13 @@ export default function SaudeSecao({ CORES }) {
     .slice()
     .sort((a, b) => a.data.localeCompare(b.data));
 
-  function usarUltimos7Dias() {
-    setDataInicioPeriodo(somarDias(HOJE, -6));
+  function usarUltimos8Dias() {
+    setDataInicioPeriodo(somarDias(HOJE, -7));
+    setDataFimPeriodo(HOJE);
+  }
+
+  function usarTodoHistorico() {
+    setDataInicioPeriodo(INICIO_DOS_TEMPOS);
     setDataFimPeriodo(HOJE);
   }
 
@@ -108,7 +114,10 @@ export default function SaudeSecao({ CORES }) {
       <div style={estilos.blocoPeriodo}>
         <div style={estilos.linhaPeriodoTopo}>
           <span style={estilos.periodoTexto}>
-            Período: {formatarDataExibicao(dataInicioPeriodo)} — {formatarDataExibicao(dataFimPeriodo)}
+            Período:{' '}
+            {dataInicioPeriodo === INICIO_DOS_TEMPOS
+              ? `Todo o histórico (até ${formatarDataExibicao(dataFimPeriodo)})`
+              : `${formatarDataExibicao(dataInicioPeriodo)} — ${formatarDataExibicao(dataFimPeriodo)}`}
           </span>
           <button onClick={() => setPeriodoAberto(!periodoAberto)} style={estilos.linkPeriodo}>
             {periodoAberto ? 'Fechar' : 'Escolher período'}
@@ -120,7 +129,7 @@ export default function SaudeSecao({ CORES }) {
             <label style={estilos.labelPeriodo}>De</label>
             <input
               type="date"
-              value={dataInicioPeriodo}
+              value={dataInicioPeriodo === INICIO_DOS_TEMPOS ? '' : dataInicioPeriodo}
               max={dataFimPeriodo}
               onChange={(e) => setDataInicioPeriodo(e.target.value)}
               style={estilos.inputPeriodo}
@@ -130,14 +139,17 @@ export default function SaudeSecao({ CORES }) {
             <input
               type="date"
               value={dataFimPeriodo}
-              min={dataInicioPeriodo}
+              min={dataInicioPeriodo === INICIO_DOS_TEMPOS ? undefined : dataInicioPeriodo}
               max={HOJE}
               onChange={(e) => setDataFimPeriodo(e.target.value)}
               style={estilos.inputPeriodo}
             />
 
-            <button onClick={usarUltimos7Dias} style={estilos.linkResetPeriodo}>
-              Usar últimos 7 dias
+            <button onClick={usarUltimos8Dias} style={estilos.linkResetPeriodo}>
+              Usar últimos 8 dias
+            </button>
+            <button onClick={usarTodoHistorico} style={estilos.linkResetPeriodo}>
+              Usar todo o histórico
             </button>
           </div>
         )}
