@@ -1,24 +1,39 @@
 import { formatarData, remedioAplicavelNoDia } from './constantes.js';
 import { doseTomada } from './storage.js';
 
-// Descobre a partir de qual data um remédio "existe" pra fins de cálculo.
-// Remédios cadastrados antes dessa correção não têm dataCriacao salva —
-// nesse caso, usamos a data de hoje como piso (não temos como saber ao certo
-// quando foram criados, então não penalizamos dias anteriores ao uso real).
-function dataInicioDoRemedio(remedio, hojeStr) {
-  return remedio.dataCriacao || hojeStr;
+// Acha, dentro dos registros salvos, a data mais antiga em que existe
+// QUALQUER confirmação de dose pra esse remédio específico — evidência
+// concreta e inquestionável de que o remédio já era usado naquele dia,
+// independente do que dataCriacao diz.
+function dataMaisAntigaComRegistro(remedioId, registros) {
+  let maisAntiga = null;
+  for (const chave in registros) {
+    const [id, data] = chave.split('|');
+    if (id !== remedioId) continue;
+    if (!maisAntiga || data < maisAntiga) maisAntiga = data;
+  }
+  return maisAntiga;
 }
 
-function dosesAgendadasNoDia(remedios, dataStr, hojeStr) {
+// Descobre a partir de qual data um remédio "existe" pra fins de cálculo.
+// Usa o menor entre: a data de criação salva (ou hoje, se não tiver) e a
+// data do registro mais antigo encontrado — assim, mesmo que dataCriacao
+// esteja errada/desatualizada por algum motivo, uma dose realmente
+// confirmada no passado nunca fica de fora do cálculo.
+function dataInicioDoRemedio(remedio, hojeStr, registros) {
+  const piso = remedio.dataCriacao || hojeStr;
+  const maisAntigaComRegistro = dataMaisAntigaComRegistro(remedio.id, registros);
+  if (maisAntigaComRegistro && maisAntigaComRegistro < piso) return maisAntigaComRegistro;
+  return piso;
+}
+
+function dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros) {
   const doses = [];
   for (const remedio of remedios) {
-    if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
+    if (dataStr < dataInicioDoRemedio(remedio, hojeStr, registros)) continue;
     // pra fins de ADESÃO HISTÓRICA, propositalmente NÃO passamos
     // remedio.dataInicio aqui — esse campo é pra decidir o que aparece na
     // agenda/notificações daqui pra frente, não pra reescrever o passado.
-    // Confiamos só na dataCriacao (que nunca é alterada por edição) como
-    // piso histórico. dataTermino continua valendo (remédio descontinuado
-    // de verdade não deveria contar depois do fim).
     if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
       doses.push({ remedioId: remedio.id, horario, nome: remedio.nome });
@@ -46,7 +61,7 @@ export function calcularMapaCalor(remedios, registros, dias = 84) {
       continue;
     }
 
-    const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr);
+    const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros);
     if (agendadas.length === 0) {
       resultado.push({ data: dataStr, status: 'sem_remedio', proporcao: 0 });
       continue;
@@ -82,7 +97,7 @@ export function calcularAdesaoGeral(remedios, registros, dias = 84) {
     const dataStr = formatarData(data);
     if (dataStr === hojeStr) continue;
 
-    const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr);
+    const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros);
     totalAgendadas += agendadas.length;
     totalTomadas += agendadas.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario)).length;
   }
@@ -129,7 +144,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
     if (dataStr === hojeStr) continue;
 
     for (const remedio of remedios) {
-      if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
+      if (dataStr < dataInicioDoRemedio(remedio, hojeStr, registros)) continue;
       if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
         contadores[remedio.id].agendadas++;
