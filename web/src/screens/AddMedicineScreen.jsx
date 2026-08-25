@@ -66,6 +66,8 @@ export default function AddMedicineScreen() {
   const [diasSemanaSelecionados, setDiasSemanaSelecionados] = useState([]);
   const [intervaloDias, setIntervaloDias] = useState('2');
   const [dataInicio, setDataInicio] = useState(formatarData(new Date()));
+  const [dataInicioEraDesconhecida, setDataInicioEraDesconhecida] = useState(false);
+  const [dataInicioTocada, setDataInicioTocada] = useState(false);
   const [terminoAtivo, setTerminoAtivo] = useState(false);
   const [dataTermino, setDataTermino] = useState(formatarData(new Date()));
   const [salvando, setSalvando] = useState(false);
@@ -87,7 +89,14 @@ export default function AddMedicineScreen() {
         setTipoFrequencia(freq.tipo);
         if (freq.tipo === 'dias_semana') setDiasSemanaSelecionados(freq.dias || []);
         if (freq.tipo === 'intervalo') setIntervaloDias(String(freq.intervaloDias || 2));
-        if (encontrado.dataInicio) setDataInicio(encontrado.dataInicio);
+        if (encontrado.dataInicio) {
+          setDataInicio(encontrado.dataInicio);
+        } else {
+          // remédio antigo, cadastrado antes desse campo existir — não temos
+          // a data real de início, então NÃO vamos gravar "hoje" por engano
+          // se a pessoa só editar outra coisa e salvar
+          setDataInicioEraDesconhecida(true);
+        }
         if (encontrado.dataTermino) {
           setTerminoAtivo(true);
           setDataTermino(encontrado.dataTermino);
@@ -144,6 +153,12 @@ export default function AddMedicineScreen() {
 
     setSalvando(true);
 
+    // se a data de início era desconhecida (remédio antigo) e a pessoa não
+    // mexeu nela agora, não grava "hoje" por engano — isso apagaria o
+    // histórico de adesão desse remédio sem querer
+    const dataInicioParaSalvar =
+      dataInicioEraDesconhecida && !dataInicioTocada ? null : dataInicio;
+
     const dadosRemedio = {
       nome: nome.trim(),
       unidade,
@@ -153,7 +168,7 @@ export default function AddMedicineScreen() {
       frequencia: montarFrequencia(),
       quantidadeAtual: Number(quantidadeAtual),
       quantidadeMinima: Number(quantidadeMinima) || 5,
-      dataInicio,
+      dataInicio: dataInicioParaSalvar,
       dataTermino: terminoAtivo ? dataTermino : null,
     };
 
@@ -313,7 +328,10 @@ export default function AddMedicineScreen() {
         <input
           type="date"
           value={dataInicio}
-          onChange={(e) => setDataInicio(e.target.value)}
+          onChange={(e) => {
+            setDataInicio(e.target.value);
+            setDataInicioTocada(true);
+          }}
           style={estilos.input}
         />
 

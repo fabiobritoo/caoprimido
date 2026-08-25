@@ -60,9 +60,10 @@ export function calcularMapaCalor(remedios, registros, dias = 84) {
   return resultado;
 }
 
-// Percentual geral de adesão no período (ignora dias sem remédio agendado e
-// dias anteriores ao cadastro de cada remédio). O dia de hoje ENTRA na conta
-// com o que já foi feito até agora — não fica mais de fora.
+// Percentual geral de adesão no período (ignora dias sem remédio agendado,
+// dias anteriores ao cadastro de cada remédio, e o dia de HOJE — que ainda
+// está em curso, então contar ele traria doses que nem chegaram no horário
+// ainda como se já tivessem sido "perdidas")
 export function calcularAdesaoGeral(remedios, registros, dias = 84) {
   const hojeStr = formatarData(new Date());
   const hoje = new Date();
@@ -73,6 +74,7 @@ export function calcularAdesaoGeral(remedios, registros, dias = 84) {
     const data = new Date(hoje);
     data.setDate(hoje.getDate() - i);
     const dataStr = formatarData(data);
+    if (dataStr === hojeStr) continue;
 
     const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr);
     totalAgendadas += agendadas.length;
@@ -103,7 +105,8 @@ export function calcularMelhorSequencia(remedios, registros, dias = 84) {
   return melhor;
 }
 
-// Adesão por remédio individualmente, no período (também considera a data de criação)
+// Adesão por remédio individualmente, no período (também considera a data de
+// criação, e ignora o dia de hoje pelo mesmo motivo do cálculo geral)
 export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
   const hojeStr = formatarData(new Date());
   const hoje = new Date();
@@ -117,6 +120,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
     const data = new Date(hoje);
     data.setDate(hoje.getDate() - i);
     const dataStr = formatarData(data);
+    if (dataStr === hojeStr) continue;
 
     for (const remedio of remedios) {
       if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
