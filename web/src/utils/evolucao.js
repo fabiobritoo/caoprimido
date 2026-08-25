@@ -13,7 +13,13 @@ function dosesAgendadasNoDia(remedios, dataStr, hojeStr) {
   const doses = [];
   for (const remedio of remedios) {
     if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
-    if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
+    // pra fins de ADESÃO HISTÓRICA, propositalmente NÃO passamos
+    // remedio.dataInicio aqui — esse campo é pra decidir o que aparece na
+    // agenda/notificações daqui pra frente, não pra reescrever o passado.
+    // Confiamos só na dataCriacao (que nunca é alterada por edição) como
+    // piso histórico. dataTermino continua valendo (remédio descontinuado
+    // de verdade não deveria contar depois do fim).
+    if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
       doses.push({ remedioId: remedio.id, horario, nome: remedio.nome });
     }
@@ -124,7 +130,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
 
     for (const remedio of remedios) {
       if (dataStr < dataInicioDoRemedio(remedio, hojeStr)) continue;
-      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
+      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
         contadores[remedio.id].agendadas++;
         if (doseTomada(registros, remedio.id, dataStr, horario)) {
