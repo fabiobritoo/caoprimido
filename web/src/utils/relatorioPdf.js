@@ -255,7 +255,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
     y = tituloSecao('Remédios parados', y);
     autoTable(doc, {
       startY: y,
-      head: [['Remédio', 'Dose', '1ª dose', 'Última dose', 'Parou em']],
+      head: [['Remédio', 'Dose', 'Frequência', 'Horários', '1ª dose', 'Última dose']],
       body: remediosParados.map((r) => {
         const unidadeTexto = rotuloUnidade(r.unidade).toLowerCase();
         const primeiraDose = primeiraDoseDoRemedio(r.id, registros);
@@ -263,9 +263,10 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
         return [
           r.nome,
           `${r.quantidadePorDose} ${unidadeTexto}`,
+          descreverFrequencia(r.frequencia),
+          (r.horarios || []).join(', '),
           primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
           ultimaDose ? formatarDataExtenso(ultimaDose) : '—',
-          r.dataTermino ? formatarDataExtenso(r.dataTermino) : '—',
         ];
       }),
       theme: 'plain',
