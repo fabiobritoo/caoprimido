@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { listarRemedios } from './storage.js';
 import { obterTodasCompras } from './compras.js';
-import { rotuloUnidade } from './constantes.js';
+import { rotuloUnidade, remedioEstaAtivo, formatarData } from './constantes.js';
 
 function obterPaletaPdf(modoBob) {
   if (modoBob) {
@@ -211,8 +211,15 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     };
   });
 
-  const gastoRecente = metricasPorRemedio.reduce((soma, m) => soma + m.maisRecente.preco, 0);
-  const custoDiarioTotal = metricasPorRemedio.reduce((soma, m) => soma + (m.custoDiarioEstimado || 0), 0);
+  const hojeStrRelatorio = formatarData(new Date());
+  const metricasAtivas = metricasPorRemedio.filter((m) => remedioEstaAtivo(m.remedio, hojeStrRelatorio));
+  const metricasParadas = metricasPorRemedio.filter((m) => !remedioEstaAtivo(m.remedio, hojeStrRelatorio));
+
+  // os cartões de resumo (gasto/custo estimado) só consideram remédios
+  // ativos — não faz sentido incluir na estimativa atual algo que já foi
+  // descontinuado
+  const gastoRecente = metricasAtivas.reduce((soma, m) => soma + m.maisRecente.preco, 0);
+  const custoDiarioTotal = metricasAtivas.reduce((soma, m) => soma + (m.custoDiarioEstimado || 0), 0);
 
   const cartoes = [
     { rotulo: 'Gasto na última compra de cada', valor: formatarPreco(gastoRecente) },
@@ -244,7 +251,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
   doc.text(linhasExplicacao, 14, y);
   y += linhasExplicacao.length * 3.6 + 8;
 
-  for (const m of metricasPorRemedio) {
+  function renderizarBlocoRemedio(m) {
     const { remedio, compras, maisRecente, precoMedio, precoMinimo, precoMaximo, variacaoDesdeInicio } = m;
 
     if (y > alturaPagina - 65) {
@@ -333,6 +340,24 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       y += 5;
     }
     y += 14;
+  }
+
+  metricasAtivas.forEach(renderizarBlocoRemedio);
+
+  if (metricasParadas.length > 0) {
+    if (y > alturaPagina - 40) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.setFillColor(...PRIMARIA);
+    doc.rect(14, y - 5, 3, 6, 'F');
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...TEXTO_PRINCIPAL);
+    doc.text('Remédios parados', 20, y);
+    y += 12;
+
+    metricasParadas.forEach(renderizarBlocoRemedio);
   }
 
   const totalPaginas = doc.internal.getNumberOfPages();

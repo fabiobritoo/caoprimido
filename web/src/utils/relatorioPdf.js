@@ -5,7 +5,7 @@ import { listarRegistrosSaude } from './saude.js';
 import { calcularAdesaoPorRemedio, calcularAdesaoGeral } from './evolucao.js';
 import { calcularSequenciaDias } from './streak.js';
 import { obterPerfil } from './perfil.js';
-import { rotuloUnidade, descreverFrequencia } from './constantes.js';
+import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData } from './constantes.js';
 
 // Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
 function obterPaletaPdf(modoBob) {
@@ -194,23 +194,29 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
 
   y = tituloSecao('Remédios cadastrados', y);
 
-  if (remedios.length > 0) {
+  const hojeStrRelatorio = formatarData(new Date());
+  const remediosAtivos = remedios.filter((r) => remedioEstaAtivo(r, hojeStrRelatorio));
+  const remediosParados = remedios.filter((r) => !remedioEstaAtivo(r, hojeStrRelatorio));
+
+  function montarLinhaRemedio(r) {
+    const adesao = adesaoPorRemedio.find((a) => a.nome === r.nome);
+    const unidadeTexto = rotuloUnidade(r.unidade).toLowerCase();
+    const primeiraDose = primeiraDoseDoRemedio(r.id, registros);
+    return [
+      r.nome,
+      `${r.quantidadePorDose} ${unidadeTexto}`,
+      descreverFrequencia(r.frequencia),
+      (r.horarios || []).join(', '),
+      primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
+      adesao ? `${adesao.percentual}%` : '—',
+    ];
+  }
+
+  if (remediosAtivos.length > 0) {
     autoTable(doc, {
       startY: y,
       head: [['Remédio', 'Dose', 'Frequência', 'Horários', '1ª dose', 'Adesão']],
-      body: remedios.map((r) => {
-        const adesao = adesaoPorRemedio.find((a) => a.nome === r.nome);
-        const unidadeTexto = rotuloUnidade(r.unidade).toLowerCase();
-        const primeiraDose = primeiraDoseDoRemedio(r.id, registros);
-        return [
-          r.nome,
-          `${r.quantidadePorDose} ${unidadeTexto}`,
-          descreverFrequencia(r.frequencia),
-          (r.horarios || []).join(', '),
-          primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
-          adesao ? `${adesao.percentual}%` : '—',
-        ];
-      }),
+      body: remediosAtivos.map(montarLinhaRemedio),
       theme: 'plain',
       headStyles: {
         fillColor: ROSA,
@@ -227,8 +233,33 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
   } else {
     doc.setFontSize(10);
     doc.setTextColor(...TEXTO_SECUNDARIO);
-    doc.text('Nenhum remédio cadastrado.', 14, y);
+    doc.text('Nenhum remédio ativo cadastrado.', 14, y);
     y += 14;
+  }
+
+  if (remediosParados.length > 0) {
+    if (y > alturaPagina - 60) {
+      doc.addPage();
+      y = 20;
+    }
+    y = tituloSecao('Remédios parados', y);
+    autoTable(doc, {
+      startY: y,
+      head: [['Remédio', 'Dose', 'Frequência', 'Horários', '1ª dose', 'Adesão']],
+      body: remediosParados.map(montarLinhaRemedio),
+      theme: 'plain',
+      headStyles: {
+        fillColor: TEXTO_SECUNDARIO,
+        textColor: BRANCO,
+        fontStyle: 'bold',
+        fontSize: 8.5,
+      },
+      bodyStyles: { fontSize: 8, textColor: TEXTO_PRINCIPAL },
+      alternateRowStyles: { fillColor: CREME },
+      margin: { left: 14, right: 14 },
+      styles: { cellPadding: 3.5 },
+    });
+    y = doc.lastAutoTable.finalY + 14;
   }
 
   // ---------- Seção: Saúde ----------
