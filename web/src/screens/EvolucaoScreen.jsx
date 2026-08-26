@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Flame, Award, Percent, FileDown, Tag } from 'lucide-react';
-import { listarRemedios, obterRegistros } from '../utils/storage.js';
+import { TrendingUp, Flame, Award, Percent, FileDown, Tag, X, Check } from 'lucide-react';
+import { listarRemedios, obterRegistros, doseTomada } from '../utils/storage.js';
 import {
   calcularMapaCalor,
   calcularAdesaoGeral,
   calcularMelhorSequencia,
   calcularAdesaoPorRemedio,
 } from '../utils/evolucao.js';
+import { remedioAplicavelNoDia, formatarData } from '../utils/constantes.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { RAIO, SOMBRA, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
@@ -14,6 +15,11 @@ import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import SaudeSecao from '../components/SaudeSecao.jsx';
 
 const DIAS_HISTORICO = 84; // 12 semanas
+
+function formatarDataExibicao(dataStr) {
+  const [ano, mes, dia] = dataStr.split('-');
+  return `${dia}/${mes}/${ano}`;
+}
 
 export default function EvolucaoScreen() {
   const { CORES, modoBob } = useTema();
@@ -27,17 +33,22 @@ export default function EvolucaoScreen() {
   const [sequenciaAtual, setSequenciaAtual] = useState(0);
   const [melhorSequencia, setMelhorSequencia] = useState(0);
   const [porRemedio, setPorRemedio] = useState([]);
+  const [remedios, setRemedios] = useState([]);
+  const [registros, setRegistros] = useState({});
+  const [diaDetalhe, setDiaDetalhe] = useState(null);
 
   useEffect(() => {
     (async () => {
-      const remedios = await listarRemedios();
-      const registros = await obterRegistros();
+      const listaRemedios = await listarRemedios();
+      const listaRegistros = await obterRegistros();
+      setRemedios(listaRemedios);
+      setRegistros(listaRegistros);
 
-      setMapaCalor(calcularMapaCalor(remedios, registros, DIAS_HISTORICO));
-      setAdesaoGeral(calcularAdesaoGeral(remedios, registros, DIAS_HISTORICO));
-      setSequenciaAtual(calcularSequenciaDias(remedios, registros));
-      setMelhorSequencia(calcularMelhorSequencia(remedios, registros, DIAS_HISTORICO));
-      setPorRemedio(calcularAdesaoPorRemedio(remedios, registros, DIAS_HISTORICO));
+      setMapaCalor(calcularMapaCalor(listaRemedios, listaRegistros, DIAS_HISTORICO));
+      setAdesaoGeral(calcularAdesaoGeral(listaRemedios, listaRegistros, DIAS_HISTORICO));
+      setSequenciaAtual(calcularSequenciaDias(listaRemedios, listaRegistros));
+      setMelhorSequencia(calcularMelhorSequencia(listaRemedios, listaRegistros, DIAS_HISTORICO));
+      setPorRemedio(calcularAdesaoPorRemedio(listaRemedios, listaRegistros, DIAS_HISTORICO));
       setCarregando(false);
     })();
   }, []);
@@ -65,6 +76,30 @@ export default function EvolucaoScreen() {
       case 'sem_remedio': return CORES.borda;
       default: return 'transparent';
     }
+  }
+
+  // monta, pra um dia específico, a lista de doses agendadas naquele dia e
+  // se cada uma foi tomada ou não — usado no painel de detalhe ao clicar
+  // num quadradinho do mapa de calor
+  function montarDetalheDoDia(dataStr) {
+    const itens = [];
+    for (const remedio of remedios) {
+      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
+      for (const horario of remedio.horarios || []) {
+        itens.push({
+          nome: remedio.nome,
+          horario,
+          tomado: doseTomada(registros, remedio.id, dataStr, horario),
+        });
+      }
+    }
+    itens.sort((a, b) => a.horario.localeCompare(b.horario));
+    return itens;
+  }
+
+  function abrirDetalheDoDia(dia) {
+    if (!dia || dia.status === 'sem_remedio' || dia.status === 'futuro') return;
+    setDiaDetalhe({ data: dia.data, status: dia.status, itens: montarDetalheDoDia(dia.data) });
   }
 
   async function baixarRelatorio() {
@@ -167,9 +202,10 @@ export default function EvolucaoScreen() {
                 <div key={i} style={estilos.colunaSemana}>
                   {coluna.map((dia, j) =>
                     dia ? (
-                      <div
+                      <button
                         key={j}
                         title={dia.data}
+                        onClick={() => abrirDetalheDoDia(dia)}
                         style={{
                           ...estilos.quadradoDia,
                           backgroundColor: corDoStatus(dia.status),
@@ -183,6 +219,7 @@ export default function EvolucaoScreen() {
               ))}
             </div>
           </div>
+          <div style={estilos.dicaClicar}>Toque num quadradinho pra ver o detalhe do dia</div>
 
           <div style={estilos.legenda}>
             <span style={estilos.legendaItem}>
@@ -231,6 +268,46 @@ export default function EvolucaoScreen() {
               Ainda não há histórico suficiente. Volte aqui depois de alguns dias de uso.
             </div>
           )}
+        </div>
+      )}
+
+      {diaDetalhe && (
+        <div style={estilos.fundoModal} onClick={() => setDiaDetalhe(null)}>
+          <div style={estilos.folhaModal} onClick={(e) => e.stopPropagation()}>
+            <div style={estilos.topoModal}>
+              <span style={estilos.tituloModal}>{formatarDataExibicao(diaDetalhe.data)}</span>
+              <button onClick={() => setDiaDetalhe(null)} style={estilos.botaoFecharModal}>
+                <X size={18} />
+              </button>
+            </div>
+
+            {diaDetalhe.itens.length === 0 ? (
+              <div style={estilos.vazioTexto}>Nenhuma dose agendada nesse dia.</div>
+            ) : (
+              diaDetalhe.itens.map((item, i) => (
+                <div key={i} style={estilos.linhaDetalheItem}>
+                  <div
+                    style={{
+                      ...estilos.bolinhaDetalhe,
+                      backgroundColor: item.tomado ? CORES.sucesso : CORES.perigo,
+                    }}
+                  >
+                    {item.tomado && <Check size={12} strokeWidth={3} color="#fff" />}
+                  </div>
+                  <span style={estilos.horarioDetalhe}>{item.horario}</span>
+                  <span style={estilos.nomeDetalhe}>{item.nome}</span>
+                  <span
+                    style={{
+                      ...estilos.statusDetalhe,
+                      color: item.tomado ? CORES.sucesso : CORES.perigo,
+                    }}
+                  >
+                    {item.tomado ? 'Tomado' : 'Não tomado'}
+                  </span>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
     </div>
@@ -292,9 +369,10 @@ function criarEstilos(CORES) {
       marginBottom: 12,
     },
     mapaCalorScroll: { overflowX: 'auto', paddingBottom: 4 },
-    mapaCalorGrid: { display: 'flex', gap: 3, width: 'max-content' },
-    colunaSemana: { display: 'flex', flexDirection: 'column', gap: 3 },
-    quadradoDia: { width: 12, height: 12, borderRadius: 3 },
+    mapaCalorGrid: { display: 'flex', gap: 4, width: 'max-content' },
+    colunaSemana: { display: 'flex', flexDirection: 'column', gap: 4 },
+    quadradoDia: { width: 16, height: 16, borderRadius: 4, border: 'none', padding: 0 },
+    dicaClicar: { fontSize: 11, color: CORES.textoSecundario, marginTop: 8, fontStyle: 'italic' },
     legenda: { display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 10 },
     legendaItem: {
       display: 'inline-flex',
@@ -333,5 +411,50 @@ function criarEstilos(CORES) {
       marginTop: 30,
       lineHeight: 1.5,
     },
+    fundoModal: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.45)',
+      display: 'flex',
+      alignItems: 'flex-end',
+      justifyContent: 'center',
+      zIndex: 500,
+    },
+    folhaModal: {
+      width: '100%',
+      maxWidth: 480,
+      backgroundColor: CORES.fundoCard,
+      borderRadius: '18px 18px 0 0',
+      padding: 20,
+      maxHeight: '70vh',
+      overflowY: 'auto',
+    },
+    topoModal: {
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 14,
+    },
+    tituloModal: { fontSize: 17, fontWeight: 700, color: CORES.textoPrincipal },
+    botaoFecharModal: { background: 'none', border: 'none', color: CORES.textoSecundario, padding: 4 },
+    linhaDetalheItem: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '10px 0',
+      borderBottom: `1px solid ${CORES.borda}`,
+    },
+    bolinhaDetalhe: {
+      width: 22,
+      height: 22,
+      borderRadius: RAIO.pill,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      flexShrink: 0,
+    },
+    horarioDetalhe: { fontSize: 13, color: CORES.textoSecundario, width: 42, flexShrink: 0 },
+    nomeDetalhe: { fontSize: 14, fontWeight: 600, color: CORES.textoPrincipal, flex: 1 },
+    statusDetalhe: { fontSize: 12, fontWeight: 700 },
   };
 }
