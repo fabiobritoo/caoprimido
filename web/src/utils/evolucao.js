@@ -15,22 +15,30 @@ function dataMaisAntigaComRegistro(remedioId, registros) {
   return maisAntiga;
 }
 
-// Descobre a partir de qual data um remédio "existe" pra fins de cálculo.
-// Usa o menor entre: a data de criação salva (ou hoje, se não tiver) e a
-// data do registro mais antigo encontrado — assim, mesmo que dataCriacao
-// esteja errada/desatualizada por algum motivo, uma dose realmente
-// confirmada no passado nunca fica de fora do cálculo.
+// Descobre a partir de qual data um remédio "existe" pra fins de cálculo, e
+// se aquela data de piso deve ser incluída ou não na contagem.
+//
+// - Se existe um registro de dose CONFIRMADA anterior à dataCriacao salva,
+//   isso é prova concreta de uso — inclui esse dia normalmente.
+// - Caso contrário, usa a própria dataCriacao como piso, mas EXCLUI esse dia
+//   específico da contagem: a pessoa pode ter cadastrado o remédio no meio
+//   ou fim do dia, depois do horário de alguma dose já ter passado, então
+//   não é justo contar esse dia como "perdido" sem nenhuma prova de que o
+//   remédio já estava em uso desde a manhã daquele dia.
 function dataInicioDoRemedio(remedio, hojeStr, registros) {
-  const piso = remedio.dataCriacao || hojeStr;
+  const dataCriacao = remedio.dataCriacao || hojeStr;
   const maisAntigaComRegistro = dataMaisAntigaComRegistro(remedio.id, registros);
-  if (maisAntigaComRegistro && maisAntigaComRegistro < piso) return maisAntigaComRegistro;
-  return piso;
+  if (maisAntigaComRegistro && maisAntigaComRegistro < dataCriacao) {
+    return { piso: maisAntigaComRegistro, incluiPiso: true };
+  }
+  return { piso: dataCriacao, incluiPiso: false };
 }
 
 export function dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros) {
   const doses = [];
   for (const remedio of remedios) {
-    if (dataStr < dataInicioDoRemedio(remedio, hojeStr, registros)) continue;
+    const { piso, incluiPiso } = dataInicioDoRemedio(remedio, hojeStr, registros);
+    if (incluiPiso ? dataStr < piso : dataStr <= piso) continue;
     // pra fins de ADESÃO HISTÓRICA, propositalmente NÃO passamos
     // remedio.dataInicio aqui — esse campo é pra decidir o que aparece na
     // agenda/notificações daqui pra frente, não pra reescrever o passado.
@@ -144,7 +152,8 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
     if (dataStr === hojeStr) continue;
 
     for (const remedio of remedios) {
-      if (dataStr < dataInicioDoRemedio(remedio, hojeStr, registros)) continue;
+      const { piso, incluiPiso } = dataInicioDoRemedio(remedio, hojeStr, registros);
+      if (incluiPiso ? dataStr < piso : dataStr <= piso) continue;
       if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
         contadores[remedio.id].agendadas++;

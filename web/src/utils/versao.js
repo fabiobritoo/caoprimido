@@ -1,4 +1,4 @@
 // Atualizo esse número toda vez que envio uma mudança —
 // serve pra você confirmar se o app realmente atualizou no celular.
-export const VERSAO = '1.37.6';
-export const VERSAO_DESCRICAO = 'Corrige painel de detalhe do dia mostrando remedios que ainda nao existiam + aumenta quadrados';
+export const VERSAO = '1.37.7';
+export const VERSAO_DESCRICAO = 'Exclui o dia da criacao do remedio do calculo de adesao, quando nao ha prova de uso naquele dia especifico';
