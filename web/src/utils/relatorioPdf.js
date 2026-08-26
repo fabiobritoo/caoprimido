@@ -48,6 +48,16 @@ function primeiraDoseDoRemedio(remedioId, registros) {
   return maisAntiga;
 }
 
+function ultimaDoseDoRemedio(remedioId, registros) {
+  let maisRecente = null;
+  for (const chave in registros) {
+    const [id, data] = chave.split('|');
+    if (id !== remedioId) continue;
+    if (!maisRecente || data > maisRecente) maisRecente = data;
+  }
+  return maisRecente;
+}
+
 
 // Carrega uma imagem do /public e devolve como data URL base64,
 // pro jsPDF conseguir desenhar ela na página
@@ -245,8 +255,19 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
     y = tituloSecao('Remédios parados', y);
     autoTable(doc, {
       startY: y,
-      head: [['Remédio', 'Dose', 'Frequência', 'Horários', '1ª dose', 'Adesão']],
-      body: remediosParados.map(montarLinhaRemedio),
+      head: [['Remédio', 'Dose', '1ª dose', 'Última dose', 'Parou em']],
+      body: remediosParados.map((r) => {
+        const unidadeTexto = rotuloUnidade(r.unidade).toLowerCase();
+        const primeiraDose = primeiraDoseDoRemedio(r.id, registros);
+        const ultimaDose = ultimaDoseDoRemedio(r.id, registros);
+        return [
+          r.nome,
+          `${r.quantidadePorDose} ${unidadeTexto}`,
+          primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
+          ultimaDose ? formatarDataExtenso(ultimaDose) : '—',
+          r.dataTermino ? formatarDataExtenso(r.dataTermino) : '—',
+        ];
+      }),
       theme: 'plain',
       headStyles: {
         fillColor: TEXTO_SECUNDARIO,

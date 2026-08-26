@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { listarRemedios } from './storage.js';
+import { listarRemedios, obterRegistros } from './storage.js';
 import { obterTodasCompras } from './compras.js';
 import { rotuloUnidade, remedioEstaAtivo, formatarData } from './constantes.js';
 
@@ -38,6 +38,16 @@ function formatarDataExtenso(dataStr) {
 
 function formatarPreco(valor) {
   return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+}
+
+function ultimaDoseDoRemedio(remedioId, registros) {
+  let maisRecente = null;
+  for (const chave in registros) {
+    const [id, data] = chave.split('|');
+    if (id !== remedioId) continue;
+    if (!maisRecente || data > maisRecente) maisRecente = data;
+  }
+  return maisRecente;
 }
 
 // Calcula a média de doses por dia considerando a frequência real do
@@ -114,6 +124,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     paleta;
 
   const remedios = await listarRemedios();
+  const registros = await obterRegistros();
   const todasCompras = await obterTodasCompras();
 
   const [logoBase64, mascoteBase64] = await Promise.all([
@@ -290,6 +301,20 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.text(linhasFrequencia, 14, y);
     doc.setFont('helvetica', 'normal');
     y += linhasFrequencia.length * 4.2 + 2;
+
+    if (!remedioEstaAtivo(remedio, hojeStrRelatorio)) {
+      const ultimaDose = ultimaDoseDoRemedio(remedio.id, registros);
+      doc.setFontSize(8.5);
+      doc.setTextColor(...TEXTO_SECUNDARIO);
+      doc.text(
+        `Última dose: ${ultimaDose ? formatarDataExtenso(ultimaDose) : '—'}   ·   Parou em: ${
+          remedio.dataTermino ? formatarDataExtenso(remedio.dataTermino) : '—'
+        }`,
+        14,
+        y
+      );
+      y += 6;
+    }
 
     if (variacaoDesdeInicio != null && Math.abs(variacaoDesdeInicio) >= 0.5) {
       const subiu = variacaoDesdeInicio > 0;
