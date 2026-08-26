@@ -87,29 +87,33 @@ export default function ManageMedicinesScreen() {
           const unidadeTexto = rotuloUnidade(item.unidade).toLowerCase();
           return (
             <div key={item.id} style={estilos.card}>
-              <div style={estilos.iconeRemedio}>
-                <Pill size={20} color={CORES.primaria} strokeWidth={2} />
-              </div>
-
-              <div style={{ flex: 1 }}>
-                <div style={estilos.nome}>{item.nome}</div>
-
-                <div style={estilos.linhaDetalhe}>
-                  <Clock size={13} color={CORES.textoSecundario} />
-                  <span style={estilos.detalhe}>
-                    {(item.horarios || []).join(', ')} · {item.quantidadePorDose} {unidadeTexto}
-                  </span>
+              <div style={estilos.linhaConteudo}>
+                <div style={estilos.iconeRemedio}>
+                  <Pill size={20} color={CORES.primaria} strokeWidth={2} />
                 </div>
 
-                <div style={estilos.detalhe}>{descreverFrequencia(item.frequencia)}</div>
+                <div style={{ flex: 1 }}>
+                  <div style={estilos.nome}>{item.nome}</div>
 
-                <div style={estilos.linhaDetalhe}>
-                  <Package size={13} color={CORES.textoSecundario} />
-                  <span style={estilos.detalhe}>
-                    Estoque: {item.quantidadeAtual} {unidadeTexto}
-                  </span>
+                  <div style={estilos.linhaDetalhe}>
+                    <Clock size={13} color={CORES.textoSecundario} />
+                    <span style={estilos.detalhe}>
+                      {(item.horarios || []).join(', ')} · {item.quantidadePorDose} {unidadeTexto}
+                    </span>
+                  </div>
+
+                  <div style={estilos.detalhe}>{descreverFrequencia(item.frequencia)}</div>
+
+                  <div style={estilos.linhaDetalhe}>
+                    <Package size={13} color={CORES.textoSecundario} />
+                    <span style={estilos.detalhe}>
+                      Estoque: {item.quantidadeAtual} {unidadeTexto}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <div style={estilos.divisorCard} />
 
               <div style={estilos.acoes}>
                 <button
@@ -117,28 +121,28 @@ export default function ManageMedicinesScreen() {
                   style={estilos.botaoIconePreco}
                   aria-label="Histórico de preços"
                 >
-                  <Tag size={16} strokeWidth={2.2} />
+                  <Tag size={17} strokeWidth={2.2} />
                 </button>
                 <button
                   onClick={() => navigate(`/editar/${item.id}`)}
                   style={estilos.botaoIconeEditar}
                   aria-label="Editar"
                 >
-                  <Pencil size={16} strokeWidth={2.2} />
+                  <Pencil size={17} strokeWidth={2.2} />
                 </button>
                 <button
                   onClick={() => pararDeTomar(item)}
                   style={estilos.botaoIconeParar}
                   aria-label="Parei de tomar"
                 >
-                  <Archive size={16} strokeWidth={2.2} />
+                  <Archive size={17} strokeWidth={2.2} />
                 </button>
                 <button
                   onClick={() => excluir(item)}
                   style={estilos.botaoIconeExcluir}
                   aria-label="Excluir"
                 >
-                  <Trash2 size={16} strokeWidth={2.2} />
+                  <Trash2 size={17} strokeWidth={2.2} />
                 </button>
               </div>
             </div>
@@ -220,10 +224,17 @@ function criarEstilos(CORES) {
       borderRadius: RAIO.medio,
       padding: 16,
       marginBottom: 12,
+      boxShadow: SOMBRA.card,
+    },
+    linhaConteudo: {
       display: 'flex',
       alignItems: 'flex-start',
       gap: 12,
-      boxShadow: SOMBRA.card,
+    },
+    divisorCard: {
+      height: 1,
+      backgroundColor: CORES.borda,
+      margin: '14px 0 10px',
     },
     iconeRemedio: {
       width: 40,
@@ -238,10 +249,10 @@ function criarEstilos(CORES) {
     nome: { fontSize: 17, fontWeight: 700, color: CORES.textoPrincipal, marginBottom: 4 },
     linhaDetalhe: { display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 },
     detalhe: { color: CORES.textoSecundario, fontSize: 13 },
-    acoes: { display: 'flex', flexDirection: 'column', gap: 8 },
+    acoes: { display: 'flex', gap: 10, justifyContent: 'flex-end' },
     botaoIconePreco: {
-      width: 34,
-      height: 34,
+      width: 40,
+      height: 40,
       borderRadius: RAIO.pill,
       border: 'none',
       backgroundColor: CORES.fundo,
@@ -251,8 +262,8 @@ function criarEstilos(CORES) {
       justifyContent: 'center',
     },
     botaoIconeEditar: {
-      width: 34,
-      height: 34,
+      width: 40,
+      height: 40,
       borderRadius: RAIO.pill,
       border: 'none',
       backgroundColor: CORES.primariaClara,
@@ -262,8 +273,8 @@ function criarEstilos(CORES) {
       justifyContent: 'center',
     },
     botaoIconeParar: {
-      width: 34,
-      height: 34,
+      width: 40,
+      height: 40,
       borderRadius: RAIO.pill,
       border: 'none',
       backgroundColor: CORES.fundo,
@@ -273,8 +284,8 @@ function criarEstilos(CORES) {
       justifyContent: 'center',
     },
     botaoIconeExcluir: {
-      width: 34,
-      height: 34,
+      width: 40,
+      height: 40,
       borderRadius: RAIO.pill,
       border: 'none',
       backgroundColor: CORES.perigoFundo,
