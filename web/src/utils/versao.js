@@ -1,4 +1,4 @@
 // Atualizo esse número toda vez que envio uma mudança —
 // serve pra você confirmar se o app realmente atualizou no celular.
-export const VERSAO = '1.37.7';
-export const VERSAO_DESCRICAO = 'Exclui o dia da criacao do remedio do calculo de adesao, quando nao ha prova de uso naquele dia especifico';
+export const VERSAO = '1.38.0';
+export const VERSAO_DESCRICAO = 'Adiciona "Parei de tomar" (remedios antigos) e coluna de 1a dose no relatorio';

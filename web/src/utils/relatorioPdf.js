@@ -36,6 +36,18 @@ function formatarDataExtenso(dataStr) {
   return `${dia}/${mes}/${ano}`;
 }
 
+// Acha a data mais antiga com uma dose confirmada pra um remédio específico
+// — usado pra mostrar "desde quando" ele realmente começou a ser tomado
+function primeiraDoseDoRemedio(remedioId, registros) {
+  let maisAntiga = null;
+  for (const chave in registros) {
+    const [id, data] = chave.split('|');
+    if (id !== remedioId) continue;
+    if (!maisAntiga || data < maisAntiga) maisAntiga = data;
+  }
+  return maisAntiga;
+}
+
 
 // Carrega uma imagem do /public e devolve como data URL base64,
 // pro jsPDF conseguir desenhar ela na página
@@ -185,15 +197,17 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
   if (remedios.length > 0) {
     autoTable(doc, {
       startY: y,
-      head: [['Remédio', 'Dose', 'Frequência', 'Horários', 'Adesão']],
+      head: [['Remédio', 'Dose', 'Frequência', 'Horários', '1ª dose', 'Adesão']],
       body: remedios.map((r) => {
         const adesao = adesaoPorRemedio.find((a) => a.nome === r.nome);
         const unidadeTexto = rotuloUnidade(r.unidade).toLowerCase();
+        const primeiraDose = primeiraDoseDoRemedio(r.id, registros);
         return [
           r.nome,
           `${r.quantidadePorDose} ${unidadeTexto}`,
           descreverFrequencia(r.frequencia),
           (r.horarios || []).join(', '),
+          primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
           adesao ? `${adesao.percentual}%` : '—',
         ];
       }),
@@ -202,12 +216,12 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
         fillColor: ROSA,
         textColor: BRANCO,
         fontStyle: 'bold',
-        fontSize: 9.5,
+        fontSize: 8.5,
       },
-      bodyStyles: { fontSize: 9, textColor: TEXTO_PRINCIPAL },
+      bodyStyles: { fontSize: 8, textColor: TEXTO_PRINCIPAL },
       alternateRowStyles: { fillColor: CREME },
       margin: { left: 14, right: 14 },
-      styles: { cellPadding: 4 },
+      styles: { cellPadding: 3.5 },
     });
     y = doc.lastAutoTable.finalY + 14;
   } else {

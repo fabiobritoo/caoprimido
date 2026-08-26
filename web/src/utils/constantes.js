@@ -59,6 +59,16 @@ function diferencaEmDias(dataInicioStr, dataFimStr) {
 }
 
 // Diz se um remédio deve ser tomado numa determinada data, de acordo com sua frequência
+// Decide se um remédio ainda está "ativo" pra fins de exibição (lista
+// principal vs. lista de remédios antigos). É considerado antigo se a
+// pessoa marcou explicitamente "parei de tomar", ou se tem uma data de
+// término já passada.
+export function remedioEstaAtivo(remedio, hojeStr) {
+  if (remedio.ativo === false) return false;
+  if (remedio.dataTermino && remedio.dataTermino < hojeStr) return false;
+  return true;
+}
+
 export function remedioAplicavelNoDia(frequencia, dataStr, dataInicio, dataTermino) {
   if (dataInicio && dataStr < dataInicio) return false;
   if (dataTermino && dataStr > dataTermino) return false;
