@@ -6,8 +6,9 @@ import {
   calcularAdesaoGeral,
   calcularMelhorSequencia,
   calcularAdesaoPorRemedio,
+  dosesAgendadasNoDia,
 } from '../utils/evolucao.js';
-import { remedioAplicavelNoDia, formatarData } from '../utils/constantes.js';
+import { formatarData } from '../utils/constantes.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { RAIO, SOMBRA, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
@@ -82,17 +83,13 @@ export default function EvolucaoScreen() {
   // se cada uma foi tomada ou não — usado no painel de detalhe ao clicar
   // num quadradinho do mapa de calor
   function montarDetalheDoDia(dataStr) {
-    const itens = [];
-    for (const remedio of remedios) {
-      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
-      for (const horario of remedio.horarios || []) {
-        itens.push({
-          nome: remedio.nome,
-          horario,
-          tomado: doseTomada(registros, remedio.id, dataStr, horario),
-        });
-      }
-    }
+    const hojeStr = formatarData(new Date());
+    const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros);
+    const itens = agendadas.map((d) => ({
+      nome: d.nome,
+      horario: d.horario,
+      tomado: doseTomada(registros, d.remedioId, dataStr, d.horario),
+    }));
     itens.sort((a, b) => a.horario.localeCompare(b.horario));
     return itens;
   }
@@ -369,9 +366,9 @@ function criarEstilos(CORES) {
       marginBottom: 12,
     },
     mapaCalorScroll: { overflowX: 'auto', paddingBottom: 4 },
-    mapaCalorGrid: { display: 'flex', gap: 4, width: 'max-content' },
-    colunaSemana: { display: 'flex', flexDirection: 'column', gap: 4 },
-    quadradoDia: { width: 16, height: 16, borderRadius: 4, border: 'none', padding: 0 },
+    mapaCalorGrid: { display: 'flex', gap: 5, width: 'max-content' },
+    colunaSemana: { display: 'flex', flexDirection: 'column', gap: 5 },
+    quadradoDia: { width: 22, height: 22, borderRadius: 5, border: 'none', padding: 0 },
     dicaClicar: { fontSize: 11, color: CORES.textoSecundario, marginTop: 8, fontStyle: 'italic' },
     legenda: { display: 'flex', flexWrap: 'wrap', gap: 12, marginTop: 10 },
     legendaItem: {

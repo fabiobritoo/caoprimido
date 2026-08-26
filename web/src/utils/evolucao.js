@@ -27,7 +27,7 @@ function dataInicioDoRemedio(remedio, hojeStr, registros) {
   return piso;
 }
 
-function dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros) {
+export function dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros) {
   const doses = [];
   for (const remedio of remedios) {
     if (dataStr < dataInicioDoRemedio(remedio, hojeStr, registros)) continue;
