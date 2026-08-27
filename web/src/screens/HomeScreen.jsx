@@ -941,6 +941,7 @@ function criarEstilos(CORES) {
       backgroundColor: CORES.primariaClara,
       border: `2px solid ${CORES.fundoCard}`,
       boxShadow: SOMBRA.flutuante,
+      zIndex: 50,
     },
     botaoAdicionar: {
       position: 'fixed',
