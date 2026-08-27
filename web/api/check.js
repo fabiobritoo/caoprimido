@@ -1,10 +1,35 @@
 import { kv } from '@vercel/kv';
 import webpush from 'web-push';
-import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso, nomeResumido } from './_logica.js';
+import { obterDataHoraBrasil, remedioAplicavelNoDia, remedioEstaAtivo, minutosDeAtraso, nomeResumido } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
 const JANELA_MAXIMA_MS = 30 * 60 * 1000;
 const LIMIAR_AVISO_CUIDADOR_MS = 15 * 60 * 1000;
+const TTL_AVISO_ESTOQUE_SEGUNDOS = 3 * 24 * 60 * 60; // não repete o mesmo aviso por 3 dias
+
+async function avisarEstoqueBaixo(subscription, deviceId, remedio) {
+  const chave = `avisoEstoque:${deviceId}:${remedio.id}`;
+  const jaAvisou = await kv.get(chave);
+  if (jaAvisou) return false;
+
+  const unidadeTexto = remedio.unidade === 'comprimido' ? 'comprimido(s)' : remedio.unidade;
+  try {
+    await webpush.sendNotification(
+      subscription,
+      JSON.stringify({
+        tipo: 'estoque_baixo',
+        titulo: `📦 Estoque baixo: ${remedio.nome}`,
+        corpo: `Restam ${remedio.quantidadeAtual} ${unidadeTexto}. Hora de comprar mais.`,
+        remedioId: remedio.id,
+      })
+    );
+    await kv.set(chave, true, { ex: TTL_AVISO_ESTOQUE_SEGUNDOS });
+    return true;
+  } catch (erroEnvio) {
+    console.error('Falha ao avisar estoque baixo para', deviceId, erroEnvio.message);
+    return false;
+  }
+}
 
 async function avisarCuidador(config, nomeRemedio, horario, perfil) {
   if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
@@ -85,6 +110,16 @@ export default async function handler(req, res) {
       if (!dadosDispositivo || !dadosDispositivo.subscription) continue;
 
       const { remedios = [], subscription, configuracoes, perfil } = dadosDispositivo;
+
+      // Checa estoque baixo de cada remédio ativo, independente de ter dose
+      // agendada agora — o aviso é lançado no máximo uma vez a cada 3 dias
+      // por remédio, pra não virar spam
+      for (const remedio of remedios) {
+        if (!remedioEstaAtivo(remedio, hoje)) continue;
+        if (!remedio.quantidadeMinima || remedio.quantidadeMinima <= 0) continue;
+        if (remedio.quantidadeAtual > remedio.quantidadeMinima) continue;
+        await avisarEstoqueBaixo(subscription, deviceId, remedio);
+      }
 
       // Primeiro: descobre todas as doses de hoje já vencidas e não confirmadas
       // (usado tanto pro selo/contador quanto pra decidir o que reenviar)

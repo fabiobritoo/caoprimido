@@ -10,22 +10,29 @@ self.addEventListener('push', (evento) => {
     // mantém o padrão se não vier JSON
   }
 
+  const ehEstoqueBaixo = dados.tipo === 'estoque_baixo';
+
   evento.waitUntil(
     (async () => {
       await self.registration.showNotification(dados.titulo, {
         body: dados.corpo,
         icon: '/icon-192.png',
         badge: '/icon-192.png',
-        vibrate: [300, 150, 300, 150, 300, 150, 300],
-        requireInteraction: true,
-        tag: `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}-${dados.tentativa || Date.now()}`,
+        vibrate: ehEstoqueBaixo ? [200] : [300, 150, 300, 150, 300, 150, 300],
+        requireInteraction: !ehEstoqueBaixo,
+        tag: ehEstoqueBaixo
+          ? `estoque-${dados.remedioId}`
+          : `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}-${dados.tentativa || Date.now()}`,
         data: dados,
         // Em navegadores que suportam, aparecem como botões direto na notificação
         // (sem precisar abrir o app). Onde não suportar, o toque normal continua funcionando.
-        actions: [
-          { action: 'tomei', title: '✅ Já tomei' },
-          { action: 'adiar', title: '⏰ Adiar 5 min' },
-        ],
+        // O aviso de estoque baixo não tem "já tomei/adiar" — não faz sentido pra esse caso.
+        actions: ehEstoqueBaixo
+          ? []
+          : [
+              { action: 'tomei', title: '✅ Já tomei' },
+              { action: 'adiar', title: '⏰ Adiar 5 min' },
+            ],
       });
 
       if ('setAppBadge' in self.registration && typeof dados.badge === 'number') {
@@ -54,6 +61,17 @@ function abrirTelaAlarme(dados) {
   });
   const urlAlvo = `/?${parametros.toString()}`;
 
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
+    for (const cliente of listaClientes) {
+      cliente.navigate(urlAlvo);
+      return cliente.focus();
+    }
+    return self.clients.openWindow(urlAlvo);
+  });
+}
+
+function abrirTelaMeusRemedios() {
+  const urlAlvo = '/meus-remedios';
   return self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((listaClientes) => {
     for (const cliente of listaClientes) {
       cliente.navigate(urlAlvo);
@@ -114,6 +132,11 @@ self.addEventListener('notificationclick', (evento) => {
   evento.notification.close();
   const dados = evento.notification.data || {};
 
+  if (dados.tipo === 'estoque_baixo') {
+    evento.waitUntil(abrirTelaMeusRemedios());
+    return;
+  }
+
   if (evento.action === 'tomei') {
     evento.waitUntil(confirmarTomeiViaNotificacao(dados));
   } else if (evento.action === 'adiar') {
@@ -126,9 +149,11 @@ self.addEventListener('notificationclick', (evento) => {
 
 // Usuário limpou/dispensou a notificação sem tocar (ex: "limpar tudo")
 self.addEventListener('notificationclose', (evento) => {
+  const dados = evento.notification.data || {};
+  if (dados.tipo === 'estoque_baixo') return; // dispensar um aviso de estoque não deve abrir o app sozinho
   // só tenta abrir a tela se não foi um botão de ação que já resolveu o problema
   if (!evento.action) {
-    evento.waitUntil(abrirTelaAlarme(evento.notification.data || {}));
+    evento.waitUntil(abrirTelaAlarme(dados));
   }
 });
 

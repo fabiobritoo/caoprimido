@@ -50,6 +50,12 @@ function diferencaEmDias(dataInicioStr, dataFimStr) {
   return Math.round((b - a) / 86400000);
 }
 
+export function remedioEstaAtivo(remedio, hojeStr) {
+  if (remedio.ativo === false) return false;
+  if (remedio.dataTermino && remedio.dataTermino < hojeStr) return false;
+  return true;
+}
+
 export function remedioAplicavelNoDia(frequencia, dataStr, dataInicio, dataTermino) {
   if (dataInicio && dataStr < dataInicio) return false;
   if (dataTermino && dataStr > dataTermino) return false;

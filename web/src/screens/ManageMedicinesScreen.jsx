@@ -105,9 +105,24 @@ export default function ManageMedicinesScreen() {
                   <div style={estilos.detalhe}>{descreverFrequencia(item.frequencia)}</div>
 
                   <div style={estilos.linhaDetalhe}>
-                    <Package size={13} color={CORES.textoSecundario} />
-                    <span style={estilos.detalhe}>
+                    <Package
+                      size={13}
+                      color={
+                        item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima
+                          ? CORES.perigo
+                          : CORES.textoSecundario
+                      }
+                    />
+                    <span
+                      style={{
+                        ...estilos.detalhe,
+                        ...(item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima
+                          ? { color: CORES.perigo, fontWeight: 700 }
+                          : {}),
+                      }}
+                    >
                       Estoque: {item.quantidadeAtual} {unidadeTexto}
+                      {item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima && ' · baixo!'}
                     </span>
                   </div>
                 </div>
