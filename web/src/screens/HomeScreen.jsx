@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database, Download, Package,
+  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database, Download,
   ChevronLeft,
 } from 'lucide-react';
 import {
@@ -622,9 +622,11 @@ export default function HomeScreen() {
       {avisoEstoque && (
         <div style={estilos.fundoAvisoEstoque} onClick={() => setAvisoEstoque(null)}>
           <div style={estilos.folhaAvisoEstoque} onClick={(e) => e.stopPropagation()}>
-            <div style={estilos.iconeAvisoEstoque}>
-              <Package size={28} color={CORES.perigo} strokeWidth={2} />
-            </div>
+            <img
+              src={`/${pastaMascote}/mascote-standby.png`}
+              alt=""
+              style={estilos.mascoteAvisoEstoque}
+            />
             <div style={estilos.tituloAvisoEstoque}>Estoque acabando</div>
             <div style={estilos.textoAvisoEstoque}>
               <strong>{avisoEstoque.nome}</strong> está com só{' '}
@@ -977,15 +979,11 @@ function criarEstilos(CORES) {
       textAlign: 'center',
       boxShadow: SOMBRA.botao,
     },
-    iconeAvisoEstoque: {
-      width: 56,
-      height: 56,
-      borderRadius: RAIO.pill,
-      backgroundColor: CORES.perigoFundo,
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      margin: '0 auto 14px',
+    mascoteAvisoEstoque: {
+      width: 96,
+      height: 96,
+      margin: '0 auto 10px',
+      display: 'block',
     },
     tituloAvisoEstoque: {
       fontSize: 18,
