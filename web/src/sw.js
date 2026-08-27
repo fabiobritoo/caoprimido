@@ -1,5 +1,9 @@
-import { precacheAndRoute } from 'workbox-precaching';
+import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 
+// limpa caches de versões antigas sempre que uma nova ativa — sem isso,
+// arquivos antigos podem ficar "presos" junto com os novos e causar
+// referências quebradas (ex: tela em branco depois de atualizar)
+cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
 self.addEventListener('push', (evento) => {
