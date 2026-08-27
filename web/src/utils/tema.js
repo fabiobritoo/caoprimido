@@ -23,6 +23,10 @@ export const CORES_ESCURO = {
   primaria: '#E37096',
   primariaEscura: '#F5A8C0',
   primariaClara: '#3D2A32',
+  // texto branco sobre o rosa claro do modo escuro só dava 2.99:1 de
+  // contraste (abaixo do mínimo de 4.5:1) — usa o próprio tom escuro de
+  // fundo como texto do botão, que já passa com folga (6.2:1)
+  textoBotaoPrimario: '#181210',
   dourado: '#E0A94C',
   fundo: '#181210',
   fundoCard: '#241C19',
@@ -58,6 +62,8 @@ export const CORES_ESCURO_BOB = {
   primaria: '#5B9BE0',
   primariaEscura: '#8AC0F0',
   primariaClara: '#1E3550',
+  // mesmo ajuste do modo escuro rosa: branco só dava 2.91:1 de contraste
+  textoBotaoPrimario: '#0F1720',
   dourado: '#E0A94C',
   fundo: '#0F1720',
   fundoCard: '#1A2530',
@@ -92,7 +98,7 @@ export function criarBotaoPrimario(CORES) {
     justifyContent: 'center',
     gap: 8,
     backgroundColor: CORES.primaria,
-    color: '#fff',
+    color: CORES.textoBotaoPrimario || '#fff',
     border: 'none',
     borderRadius: RAIO.medio,
     padding: '15px 20px',

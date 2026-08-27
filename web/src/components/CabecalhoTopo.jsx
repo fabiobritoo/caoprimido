@@ -30,7 +30,7 @@ function criarEstilos(CORES) {
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: CORES.primaria,
-      color: '#fff',
+      color: CORES.textoBotaoPrimario || '#fff',
       padding: '14px 10px',
       paddingTop: 'max(14px, env(safe-area-inset-top))',
       position: 'sticky',
@@ -42,7 +42,7 @@ function criarEstilos(CORES) {
     botaoVoltar: {
       background: 'rgba(255,255,255,0.15)',
       border: 'none',
-      color: '#fff',
+      color: CORES.textoBotaoPrimario || '#fff',
       borderRadius: 999,
       width: 36,
       height: 36,

@@ -772,7 +772,7 @@ function criarEstilos(CORES) {
       width: 36,
       height: 36,
       backgroundColor: CORES.primaria,
-      color: '#fff',
+      color: CORES.textoBotaoPrimario || '#fff',
     },
     diaCirculoHoje: { border: `2px solid ${CORES.primaria}` },
     faixaStreak: {

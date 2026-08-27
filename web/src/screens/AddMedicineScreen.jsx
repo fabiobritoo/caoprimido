@@ -461,7 +461,11 @@ function criarEstilos(CORES) {
     color: CORES.textoPrincipal,
     fontSize: 14,
   },
-  chipSelecionado: { backgroundColor: CORES.primaria, borderColor: CORES.primaria, color: '#fff' },
+  chipSelecionado: {
+    backgroundColor: CORES.primaria,
+    borderColor: CORES.primaria,
+    color: CORES.textoBotaoPrimario || '#fff',
+  },
   chipHorario: {
     display: 'inline-flex',
     alignItems: 'center',
@@ -511,7 +515,11 @@ function criarEstilos(CORES) {
     color: CORES.textoPrincipal,
     fontWeight: 600,
   },
-  diaCirculoSelecionado: { backgroundColor: CORES.primaria, borderColor: CORES.primaria, color: '#fff' },
+  diaCirculoSelecionado: {
+    backgroundColor: CORES.primaria,
+    borderColor: CORES.primaria,
+    color: CORES.textoBotaoPrimario || '#fff',
+  },
   botaoSalvar: {
     ...criarBotaoPrimario(CORES),
     width: '100%',

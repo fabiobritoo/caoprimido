@@ -86,7 +86,7 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
   return (
     <div style={estilos.container}>
       <div style={estilos.iconeAlarme}>
-        <AlarmClock size={64} strokeWidth={1.8} color="#fff" />
+        <AlarmClock size={64} strokeWidth={1.8} color={CORES.textoBotaoPrimario || '#fff'} />
       </div>
       <div style={estilos.titulo}>{titulo}</div>
       {corpo && <div style={estilos.corpo}>{corpo}</div>}
@@ -129,8 +129,8 @@ function criarEstilos(CORES) {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  titulo: { color: '#fff', fontSize: 24, fontWeight: 700, marginBottom: 10 },
-  corpo: { color: '#fff', fontSize: 16, opacity: 0.9, marginBottom: 40 },
+  titulo: { color: CORES.textoBotaoPrimario || '#fff', fontSize: 24, fontWeight: 700, marginBottom: 10 },
+  corpo: { color: CORES.textoBotaoPrimario || '#fff', fontSize: 16, opacity: 0.9, marginBottom: 40 },
   botaoParar: {
     display: 'flex',
     alignItems: 'center',
@@ -149,8 +149,8 @@ function criarEstilos(CORES) {
     alignItems: 'center',
     gap: 8,
     backgroundColor: 'transparent',
-    color: '#fff',
-    border: '2px solid rgba(255,255,255,0.6)',
+    color: CORES.textoBotaoPrimario || '#fff',
+    border: `2px solid ${CORES.textoBotaoPrimario || 'rgba(255,255,255,0.6)'}`,
     borderRadius: RAIO.medio,
     padding: '14px 28px',
     fontSize: 15,
