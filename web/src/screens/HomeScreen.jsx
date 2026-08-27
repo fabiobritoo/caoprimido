@@ -936,6 +936,9 @@ function criarEstilos(CORES) {
       height: 64,
       borderRadius: RAIO.pill,
       overflow: 'hidden',
+      // fundo sólido (não só a borda) — sem isso, o gif com fundo
+      // transparente deixava o texto de versão atrás "vazando" por trás
+      backgroundColor: CORES.primariaClara,
       border: `2px solid ${CORES.fundoCard}`,
       boxShadow: SOMBRA.flutuante,
     },
