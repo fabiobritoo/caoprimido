@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database, Download,
+  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database, Download, Package,
   ChevronLeft,
 } from 'lucide-react';
 import {
@@ -60,6 +60,7 @@ export default function HomeScreen() {
   const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [idConfirmando, setIdConfirmando] = useState(null);
   const [idRecemRegistrado, setIdRecemRegistrado] = useState(null);
+  const [avisoEstoque, setAvisoEstoque] = useState(null);
   const [lembrarBackup, setLembrarBackup] = useState(false);
   const [jaInstalado, setJaInstalado] = useState(true); // começa true pra não "piscar" o banner à toa
   const [promptInstalacao, setPromptInstalacao] = useState(null);
@@ -271,6 +272,16 @@ export default function HomeScreen() {
     if (resultado.tomadoAgora) {
       setIdRecemRegistrado(chave);
       setTimeout(() => setIdRecemRegistrado(null), 500);
+
+      // se essa confirmação deixou o estoque no limite (ou abaixo), avisa na
+      // hora — não depende de notificação push, que só repete a cada 3 dias
+      const remedioAtualizado = resultado.remedios.find((r) => r.id === item.remedio.id);
+      if (
+        remedioAtualizado?.quantidadeMinima > 0 &&
+        remedioAtualizado.quantidadeAtual <= remedioAtualizado.quantidadeMinima
+      ) {
+        setAvisoEstoque(remedioAtualizado);
+      }
 
       fetch('/api/reconhecer', {
         method: 'POST',
@@ -607,6 +618,38 @@ export default function HomeScreen() {
           aoEscolherDia={aoEscolherDiaNoCalendario}
         />
       )}
+
+      {avisoEstoque && (
+        <div style={estilos.fundoAvisoEstoque} onClick={() => setAvisoEstoque(null)}>
+          <div style={estilos.folhaAvisoEstoque} onClick={(e) => e.stopPropagation()}>
+            <div style={estilos.iconeAvisoEstoque}>
+              <Package size={28} color={CORES.perigo} strokeWidth={2} />
+            </div>
+            <div style={estilos.tituloAvisoEstoque}>Estoque acabando</div>
+            <div style={estilos.textoAvisoEstoque}>
+              <strong>{avisoEstoque.nome}</strong> está com só{' '}
+              <strong>
+                {avisoEstoque.quantidadeAtual} {rotuloUnidade(avisoEstoque.unidade).toLowerCase()}
+              </strong>{' '}
+              restantes. Bom já pensar em comprar mais.
+            </div>
+            <div style={estilos.botoesAvisoEstoque}>
+              <button
+                onClick={() => {
+                  navigate(`/remedio/${avisoEstoque.id}/compras`);
+                  setAvisoEstoque(null);
+                }}
+                style={estilos.botaoAvisoEstoqueSecundario}
+              >
+                Ver preços
+              </button>
+              <button onClick={() => setAvisoEstoque(null)} style={estilos.botaoAvisoEstoquePrimario}>
+                Entendi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -914,6 +957,68 @@ function criarEstilos(CORES) {
       color: CORES.textoSecundario,
       opacity: 0.65,
       padding: '20px 0 10px',
+    },
+    fundoAvisoEstoque: {
+      position: 'fixed',
+      inset: 0,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      zIndex: 600,
+      padding: 24,
+    },
+    folhaAvisoEstoque: {
+      width: '100%',
+      maxWidth: 340,
+      backgroundColor: CORES.fundoCard,
+      borderRadius: RAIO.medio,
+      padding: 24,
+      textAlign: 'center',
+      boxShadow: SOMBRA.botao,
+    },
+    iconeAvisoEstoque: {
+      width: 56,
+      height: 56,
+      borderRadius: RAIO.pill,
+      backgroundColor: CORES.perigoFundo,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      margin: '0 auto 14px',
+    },
+    tituloAvisoEstoque: {
+      fontSize: 18,
+      fontWeight: 700,
+      color: CORES.textoPrincipal,
+      marginBottom: 8,
+    },
+    textoAvisoEstoque: {
+      fontSize: 14,
+      color: CORES.textoSecundario,
+      lineHeight: 1.5,
+      marginBottom: 20,
+    },
+    botoesAvisoEstoque: { display: 'flex', gap: 10 },
+    botaoAvisoEstoqueSecundario: {
+      flex: 1,
+      backgroundColor: CORES.fundo,
+      color: CORES.textoSecundario,
+      border: `1px solid ${CORES.borda}`,
+      borderRadius: RAIO.medio,
+      padding: '12px 10px',
+      fontWeight: 600,
+      fontSize: 13,
+    },
+    botaoAvisoEstoquePrimario: {
+      flex: 1,
+      backgroundColor: CORES.primaria,
+      color: '#fff',
+      border: 'none',
+      borderRadius: RAIO.medio,
+      padding: '12px 10px',
+      fontWeight: 700,
+      fontSize: 13,
     },
   };
 }
