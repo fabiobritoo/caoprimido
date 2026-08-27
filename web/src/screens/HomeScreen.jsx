@@ -623,7 +623,7 @@ export default function HomeScreen() {
         <div style={estilos.fundoAvisoEstoque} onClick={() => setAvisoEstoque(null)}>
           <div style={estilos.folhaAvisoEstoque} onClick={(e) => e.stopPropagation()}>
             <img
-              src={`/${pastaMascote}/mascote-standby.png`}
+              src={`/${pastaMascote}/mascote-atencao.png`}
               alt=""
               style={estilos.mascoteAvisoEstoque}
             />
