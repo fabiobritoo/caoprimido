@@ -18,7 +18,8 @@ import {
 } from 'lucide-react';
 import { adicionarRemedio, atualizarRemedio, listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { UNIDADES, DIAS_SEMANA, formatarData, somarDias } from '../utils/constantes.js';
+import { UNIDADES, DIAS_SEMANA, formatarData, somarDias, rotuloUnidade } from '../utils/constantes.js';
+import { adicionarCompra } from '../utils/compras.js';
 import { RAIO, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -73,6 +74,9 @@ export default function AddMedicineScreen() {
   const [dataTermino, setDataTermino] = useState(formatarData(new Date()));
   const [modoTermino, setModoTermino] = useState('dias'); // 'dias' ou 'data'
   const [quantidadeDias, setQuantidadeDias] = useState('7');
+  const [precoInicial, setPrecoInicial] = useState('');
+  const [localInicial, setLocalInicial] = useState('');
+  const [quantidadeInicialCompra, setQuantidadeInicialCompra] = useState('');
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -190,7 +194,22 @@ export default function AddMedicineScreen() {
     if (modoEdicao) {
       await atualizarRemedio(remedioIdEdicao, dadosRemedio);
     } else {
-      await adicionarRemedio({ id: Date.now().toString(), ...dadosRemedio });
+      const novoId = Date.now().toString();
+      await adicionarRemedio({ id: novoId, ...dadosRemedio });
+
+      // se a pessoa já preencheu o preço na hora do cadastro, registra a
+      // primeira compra automaticamente — evita ter que ir numa segunda
+      // tela só pra isso logo depois de criar o remédio
+      if (precoInicial && Number(precoInicial) > 0) {
+        await adicionarCompra({
+          remedioId: novoId,
+          data: dataInicio,
+          preco: Number(precoInicial),
+          local: localInicial.trim() || null,
+          quantidade: quantidadeInicialCompra ? Number(quantidadeInicialCompra) : null,
+          anotacoes: null,
+        });
+      }
     }
 
     const listaAtualizada = await listarRemedios();
@@ -215,7 +234,7 @@ export default function AddMedicineScreen() {
             style={estilos.linkPrecos}
           >
             <Tag size={15} strokeWidth={2.3} />
-            Registrar/ver preços deste remédio
+            Ver histórico de preços deste remédio
           </button>
         )}
 
@@ -449,6 +468,50 @@ export default function AddMedicineScreen() {
           value={quantidadeMinima}
           onChange={(e) => setQuantidadeMinima(e.target.value)}
         />
+
+        {!modoEdicao && (
+          <>
+            <div style={estilos.divisor} />
+            <label style={estilos.label}>
+              <Tag size={14} /> Já sabe o preço? (opcional)
+            </label>
+            <div style={estilos.subLabel}>
+              Se preencher, já salva como a primeira compra no histórico de preços.
+            </div>
+
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={estilos.subLabel}>Preço pago (R$)</label>
+                <input
+                  style={estilos.input}
+                  type="number"
+                  step="0.01"
+                  placeholder="Ex: 45.90"
+                  value={precoInicial}
+                  onChange={(e) => setPrecoInicial(e.target.value)}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={estilos.subLabel}>Quantidade comprada</label>
+                <input
+                  style={estilos.input}
+                  type="number"
+                  placeholder={`Ex: 30 (${rotuloUnidade(unidade).toLowerCase()})`}
+                  value={quantidadeInicialCompra}
+                  onChange={(e) => setQuantidadeInicialCompra(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <label style={estilos.subLabel}>Local / farmácia</label>
+            <input
+              style={estilos.input}
+              placeholder="Ex: Drogasil, Amazon..."
+              value={localInicial}
+              onChange={(e) => setLocalInicial(e.target.value)}
+            />
+          </>
+        )}
 
         <button onClick={salvar} disabled={salvando} style={estilos.botaoSalvar}>
           <Save size={18} strokeWidth={2.3} />
