@@ -14,10 +14,11 @@ import {
   Repeat,
   CalendarClock,
   Save,
+  Tag,
 } from 'lucide-react';
 import { adicionarRemedio, atualizarRemedio, listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { UNIDADES, DIAS_SEMANA, formatarData } from '../utils/constantes.js';
+import { UNIDADES, DIAS_SEMANA, formatarData, somarDias } from '../utils/constantes.js';
 import { RAIO, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -70,6 +71,8 @@ export default function AddMedicineScreen() {
   const [dataInicioTocada, setDataInicioTocada] = useState(false);
   const [terminoAtivo, setTerminoAtivo] = useState(false);
   const [dataTermino, setDataTermino] = useState(formatarData(new Date()));
+  const [modoTermino, setModoTermino] = useState('dias'); // 'dias' ou 'data'
+  const [quantidadeDias, setQuantidadeDias] = useState('7');
   const [salvando, setSalvando] = useState(false);
 
   useEffect(() => {
@@ -100,6 +103,7 @@ export default function AddMedicineScreen() {
         if (encontrado.dataTermino) {
           setTerminoAtivo(true);
           setDataTermino(encontrado.dataTermino);
+          setModoTermino('data'); // ao editar um remédio já salvo, mostra a data exata em vez de recalcular por dias
         }
       }
       setCarregando(false);
@@ -121,6 +125,17 @@ export default function AddMedicineScreen() {
       atual.includes(dia) ? atual.filter((d) => d !== dia) : [...atual, dia].sort()
     );
   }
+
+  // quando o modo é "por quantidade de dias", recalcula a data de término
+  // automaticamente sempre que a quantidade ou a data de início mudar —
+  // "tomar por 7 dias" a partir de hoje termina 6 dias depois (conta o
+  // próprio dia de início como o 1º dia)
+  useEffect(() => {
+    if (!terminoAtivo || modoTermino !== 'dias') return;
+    const dias = Number(quantidadeDias);
+    if (!dias || dias < 1) return;
+    setDataTermino(somarDias(dataInicio, dias - 1));
+  }, [terminoAtivo, modoTermino, quantidadeDias, dataInicio]);
 
   function montarFrequencia() {
     if (tipoFrequencia === 'diaria') return { tipo: 'diaria' };
@@ -194,6 +209,16 @@ export default function AddMedicineScreen() {
       <CabecalhoTopo titulo={modoEdicao ? 'Editar Remédio' : 'Novo Remédio'} mostrarVoltar />
 
       <div style={{ padding: 20 }}>
+        {modoEdicao && (
+          <button
+            onClick={() => navigate(`/remedio/${remedioIdEdicao}/compras`)}
+            style={estilos.linkPrecos}
+          >
+            <Tag size={15} strokeWidth={2.3} />
+            Registrar/ver preços deste remédio
+          </button>
+        )}
+
         <label style={estilos.label}>Nome do remédio</label>
         <input
           style={estilos.input}
@@ -354,13 +379,53 @@ export default function AddMedicineScreen() {
         </div>
 
         {terminoAtivo ? (
-          <input
-            type="date"
-            value={dataTermino}
-            min={dataInicio}
-            onChange={(e) => setDataTermino(e.target.value)}
-            style={estilos.input}
-          />
+          <>
+            <div style={estilos.seletorModoTermino}>
+              <button
+                onClick={() => setModoTermino('dias')}
+                style={{
+                  ...estilos.botaoModoTermino,
+                  ...(modoTermino === 'dias' ? estilos.botaoModoTerminoAtivo : {}),
+                }}
+              >
+                Por dias
+              </button>
+              <button
+                onClick={() => setModoTermino('data')}
+                style={{
+                  ...estilos.botaoModoTermino,
+                  ...(modoTermino === 'data' ? estilos.botaoModoTerminoAtivo : {}),
+                }}
+              >
+                Data específica
+              </button>
+            </div>
+
+            {modoTermino === 'dias' ? (
+              <>
+                <div style={estilos.subLabel}>Tomar por quantos dias?</div>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="Ex: 7"
+                  value={quantidadeDias}
+                  onChange={(e) => setQuantidadeDias(e.target.value)}
+                  style={estilos.input}
+                />
+                <div style={estilos.subLabel}>
+                  Termina em {formatarDataExibicao(dataTermino)}
+                </div>
+              </>
+            ) : (
+              <input
+                type="date"
+                value={dataTermino}
+                min={dataInicio}
+                onChange={(e) => setDataTermino(e.target.value)}
+                style={estilos.input}
+              />
+            )}
+          </>
         ) : (
           <div style={estilos.subLabel}>
             Início em {formatarDataExibicao(dataInicio)}, sem data de término.
@@ -427,6 +492,42 @@ function criarEstilos(CORES) {
     borderRadius: 10,
     backgroundColor: '#fff',
     transition: 'transform 0.2s',
+  },
+  seletorModoTermino: {
+    display: 'flex',
+    gap: 8,
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  botaoModoTermino: {
+    flex: 1,
+    padding: '9px 0',
+    borderRadius: RAIO.pill,
+    border: `1.5px solid ${CORES.borda}`,
+    backgroundColor: CORES.fundoCard,
+    color: CORES.textoSecundario,
+    fontWeight: 600,
+    fontSize: 13,
+  },
+  botaoModoTerminoAtivo: {
+    borderColor: CORES.primaria,
+    backgroundColor: CORES.primariaClara,
+    color: CORES.primariaEscura,
+  },
+  linkPrecos: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    width: '100%',
+    backgroundColor: CORES.primariaClara,
+    color: CORES.primariaEscura,
+    border: 'none',
+    borderRadius: RAIO.medio,
+    padding: '10px 14px',
+    fontSize: 13,
+    fontWeight: 700,
+    marginBottom: 18,
   },
   input: {
     width: '100%',
