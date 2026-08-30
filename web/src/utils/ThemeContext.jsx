@@ -5,6 +5,18 @@ const CHAVE_MODO_ESCURO = '@caoprimido:modoEscuro';
 const CHAVE_MODO_BOB = '@caoprimido:modoBob';
 const ContextoTema = createContext(null);
 
+// Em vez de só chamar setAttribute (que em alguns Android/Chrome não força
+// o navegador a repintar a barra de status do PWA instalado), remove a tag
+// antiga e cria uma nova do zero — é um workaround conhecido pra um bug já
+// registrado no rastreador do Chromium sobre esse comportamento.
+function aplicarCorDaBarra(cor) {
+  document.querySelectorAll('meta[name="theme-color"]').forEach((tag) => tag.remove());
+  const novaTag = document.createElement('meta');
+  novaTag.setAttribute('name', 'theme-color');
+  novaTag.setAttribute('content', cor);
+  document.head.appendChild(novaTag);
+}
+
 export function ProvedorTema({ children }) {
   const [modoEscuro, setModoEscuro] = useState(() => {
     try {
@@ -33,10 +45,23 @@ export function ProvedorTema({ children }) {
     const paleta = modoBob
       ? (modoEscuro ? CORES_ESCURO_BOB : CORES_CLARO_BOB)
       : (modoEscuro ? CORES_ESCURO : CORES_CLARO);
+    const corBarra = modoEscuro ? paleta.fundo : paleta.primaria;
 
     document.body.style.backgroundColor = paleta.fundo;
-    const meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.setAttribute('content', modoEscuro ? paleta.fundo : paleta.primaria);
+    aplicarCorDaBarra(corBarra);
+
+    // em alguns Android/Chrome, o PWA instalado só relê a cor da barra do
+    // sistema quando o app volta a ficar em primeiro plano — reforça nesses
+    // momentos também, não só quando o tema muda
+    const aoVoltarVisivel = () => {
+      if (document.visibilityState === 'visible') aplicarCorDaBarra(corBarra);
+    };
+    document.addEventListener('visibilitychange', aoVoltarVisivel);
+    window.addEventListener('focus', aoVoltarVisivel);
+    return () => {
+      document.removeEventListener('visibilitychange', aoVoltarVisivel);
+      window.removeEventListener('focus', aoVoltarVisivel);
+    };
   }, [modoEscuro, modoBob]);
 
   const CORES = modoBob
