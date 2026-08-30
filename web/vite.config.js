@@ -19,8 +19,15 @@ export default defineConfig({
         name: 'Cãoprimido',
         short_name: 'Cãoprimido',
         description: 'Controle de remédios com alarmes e estoque',
-        theme_color: '#D9527A',
-        background_color: '#FAF3E7',
+        // Confirmado na prática: pra um PWA instalado (standalone), o
+        // Android pinta a barra do sistema (relógio/bateria) usando ESSE
+        // valor fixo do manifest, gravado na hora da instalação — mesmo
+        // desinstalando e reinstalando, ele não reflete o Modo Bob (que só
+        // é sabido em runtime, depois que o JS carrega). Usa um tom neutro
+        // que não destoa muito nem do rosa nem do azul, já que não dá pra
+        // fazer ele acompanhar o modo de verdade.
+        theme_color: '#2B2320',
+        background_color: '#F5F5F5',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
