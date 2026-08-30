@@ -19,12 +19,8 @@ export default defineConfig({
         name: 'Cãoprimido',
         short_name: 'Cãoprimido',
         description: 'Controle de remédios com alarmes e estoque',
-        // usa um tom neutro (nem rosa nem azul) — esse valor é fixo no
-        // arquivo do PWA e não consegue mudar em tempo real conforme o
-        // Modo Bob é ativado, então evitamos deixar fixo numa cor que vai
-        // destoar da metade das vezes
-        theme_color: '#1A1A1A',
-        background_color: '#F5F5F5',
+        theme_color: '#D9527A',
+        background_color: '#FAF3E7',
         display: 'standalone',
         orientation: 'portrait',
         start_url: '/',
