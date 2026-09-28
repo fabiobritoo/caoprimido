@@ -15,44 +15,6 @@ const TTL_AVISO_ESTOQUE_SEGUNDOS = 3 * 24 * 60 * 60;
 const TTL_AVISO_CUIDADOR_SEGUNDOS = 172800;
 const TTL_ESTADO_SEGUNDOS = 3600;
 
-async function avisarEstoqueBaixo(subscription, deviceId, remedio) {
-  const chave = `avisoEstoque:${deviceId}:${remedio.id}`;
-
-  const jaAvisou = await kv.get(chave);
-  if (jaAvisou) return false;
-
-  const unidadeTexto =
-    remedio.unidade === 'comprimido'
-      ? 'comprimido(s)'
-      : remedio.unidade;
-
-  try {
-    await webpush.sendNotification(
-      subscription,
-      JSON.stringify({
-        tipo: 'estoque_baixo',
-        titulo: `📦 Estoque baixo: ${remedio.nome}`,
-        corpo: `Restam ${remedio.quantidadeAtual} ${unidadeTexto}. Hora de comprar mais.`,
-        remedioId: remedio.id,
-      })
-    );
-
-    await kv.set(chave, true, {
-      ex: TTL_AVISO_ESTOQUE_SEGUNDOS,
-    });
-
-    return true;
-  } catch (erroEnvio) {
-    console.error(
-      'Falha ao avisar estoque baixo para',
-      deviceId,
-      erroEnvio.message
-    );
-
-    return false;
-  }
-}
-
 async function avisarCuidador(config, nomeRemedio, horario, perfil) {
   if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
