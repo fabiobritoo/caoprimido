@@ -386,7 +386,7 @@ function GraficoPeso({ pontos, CORES }) {
           style={{
             ...estiloResumoVariacao,
             backgroundColor: perdeu ? CORES.sucessoFundo : CORES.perigoFundo,
-            color: perdeu ? CORES.sucesso : CORES.perigo,
+            color: perdeu ? CORES.sucessoTexto : CORES.perigoTexto,
           }}
         >
           {perdeu ? '▼' : '▲'} {Math.abs(variacaoAbsoluta).toFixed(1)} kg (
@@ -561,7 +561,7 @@ function criarEstilos(CORES) {
       background: CORES.perigoFundo,
       border: 'none',
       borderRadius: RAIO.pill,
-      color: CORES.perigo,
+      color: CORES.perigoTexto,
       padding: 6,
       display: 'flex',
     },

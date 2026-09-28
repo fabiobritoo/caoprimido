@@ -42,7 +42,7 @@ export default function DiagnosticoScreen() {
         </button>
 
         {carregando && <div style={estilos.texto}>Carregando...</div>}
-        {erro && <div style={{ ...estilos.texto, color: CORES.perigo }}>Erro: {erro}</div>}
+        {erro && <div style={{ ...estilos.texto, color: CORES.perigoTexto }}>Erro: {erro}</div>}
 
         {dados && (
           <>

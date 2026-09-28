@@ -109,7 +109,7 @@ export default function ManageMedicinesScreen() {
                       size={13}
                       color={
                         item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima
-                          ? CORES.perigo
+                          ? CORES.perigoTexto
                           : CORES.textoSecundario
                       }
                     />
@@ -117,7 +117,7 @@ export default function ManageMedicinesScreen() {
                       style={{
                         ...estilos.detalhe,
                         ...(item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima
-                          ? { color: CORES.perigo, fontWeight: 700 }
+                          ? { color: CORES.perigoTexto, fontWeight: 700 }
                           : {}),
                       }}
                     >
@@ -304,7 +304,7 @@ function criarEstilos(CORES) {
       borderRadius: RAIO.pill,
       border: 'none',
       backgroundColor: CORES.perigoFundo,
-      color: CORES.perigo,
+      color: CORES.perigoTexto,
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

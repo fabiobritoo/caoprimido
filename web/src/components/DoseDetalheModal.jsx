@@ -121,7 +121,7 @@ function criarEstilos(CORES) {
     statusBox: {
       textAlign: 'center',
       fontSize: 13,
-      color: CORES.sucesso,
+      color: CORES.sucessoTexto,
       fontWeight: 600,
       margin: '14px 0 18px',
     },
@@ -132,7 +132,7 @@ function criarEstilos(CORES) {
       justifyContent: 'center',
       gap: 8,
       backgroundColor: CORES.perigoFundo,
-      color: CORES.perigo,
+      color: CORES.perigoTexto,
       border: 'none',
       borderRadius: RAIO.medio,
       padding: '14px 20px',

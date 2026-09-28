@@ -259,7 +259,7 @@ function criarEstilos(CORES) {
     cartaoTopo: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' },
     dataBox: { display: 'flex', alignItems: 'center', gap: 6 },
     dataTexto: { fontWeight: 700, color: CORES.textoPrincipal, fontSize: 14 },
-    botaoExcluir: { background: 'none', border: 'none', color: CORES.perigo, padding: 4 },
+    botaoExcluir: { background: 'none', border: 'none', color: CORES.perigoTexto, padding: 4 },
     linhaInfo: {
       display: 'flex',
       alignItems: 'center',

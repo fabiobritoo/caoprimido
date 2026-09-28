@@ -913,7 +913,7 @@ function criarEstilos(CORES) {
     horaRegistrada: {
       fontSize: 13,
       fontWeight: 700,
-      color: CORES.sucesso,
+      color: CORES.sucessoTexto,
       marginRight: 10,
     },
     doseStatus: {

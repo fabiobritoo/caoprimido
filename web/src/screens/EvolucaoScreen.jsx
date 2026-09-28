@@ -296,7 +296,7 @@ export default function EvolucaoScreen() {
                   <span
                     style={{
                       ...estilos.statusDetalhe,
-                      color: item.tomado ? CORES.sucesso : CORES.perigo,
+                      color: item.tomado ? CORES.sucessoTexto : CORES.perigoTexto,
                     }}
                   >
                     {item.tomado ? 'Tomado' : 'Não tomado'}

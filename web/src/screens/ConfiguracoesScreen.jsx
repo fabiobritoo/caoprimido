@@ -390,7 +390,7 @@ export default function ConfiguracoesScreen() {
             {cuidadorChatId ? (
               <>
                 <div style={estilos.conectadoBox}>
-                  <Check size={18} color={CORES.sucesso} strokeWidth={2.5} />
+                  <Check size={18} color={CORES.sucessoTexto} strokeWidth={2.5} />
                   <span>
                     Conectado com <strong>{cuidadorNome || 'cuidador'}</strong>
                   </span>
@@ -541,7 +541,7 @@ function criarEstilos(CORES) {
       width: '100%',
       marginTop: 12,
     },
-    erroTexto: { color: CORES.perigo, fontSize: 13, marginTop: 10 },
+    erroTexto: { color: CORES.perigoTexto, fontSize: 13, marginTop: 10 },
     conectadoBox: {
       display: 'flex',
       alignItems: 'center',

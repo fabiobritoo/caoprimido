@@ -216,7 +216,7 @@ export default function ComprasRemedioScreen() {
                   <span
                     style={{
                       ...estilos.variacaoBadge,
-                      color: c.variacao > 0 ? CORES.perigo : CORES.sucesso,
+                      color: c.variacao > 0 ? CORES.perigoTexto : CORES.sucessoTexto,
                       backgroundColor: c.variacao > 0 ? CORES.perigoFundo : CORES.sucessoFundo,
                     }}
                   >
@@ -327,7 +327,7 @@ function criarEstilos(CORES) {
       background: CORES.perigoFundo,
       border: 'none',
       borderRadius: RAIO.pill,
-      color: CORES.perigo,
+      color: CORES.perigoTexto,
       padding: 6,
       display: 'flex',
     },
