@@ -21,6 +21,10 @@ export const CORES_CLARO = {
   // só pra usar em `color:` de texto/ícone - 4.5:1+ tanto sobre o
   // fundo tingido (sucessoFundo/perigoFundo) quanto sobre branco.
   sucessoTexto: '#377C3B',
+  // fundo do círculo de "dose tomada" (tem um ícone de check branco
+  // dentro) - o verde puro só dava 2.24:1 com branco. Reaproveita o
+  // mesmo tom de sucessoTexto, que já resolve isso (5.11:1).
+  sucessoBadge: '#377C3B',
   atencao: '#F0A63A',
   perigo: '#D9534F',
   perigoFundo: '#FBEAEA',
@@ -50,6 +54,11 @@ export const CORES_ESCURO = {
   // sucessoTexto/perigoTexto aqui são as mesmas cores (só existem
   // pra manter o mesmo nome de token em qualquer tema).
   sucessoTexto: '#7FCB82',
+  // aqui o verde já dava só 1.95:1 com o check branco (pior ainda que
+  // no claro) - precisa de um verde mais escuro/saturado específico
+  // pra essa função, diferente do sucessoTexto (que é claro de
+  // propósito, pra funcionar como texto sobre fundo escuro).
+  sucessoBadge: '#43A647',
   atencao: '#F0B85C',
   perigo: '#E7807A',
   perigoFundo: '#3A2222',
@@ -71,6 +80,7 @@ export const CORES_CLARO_BOB = {
   sucesso: '#6FBF73',
   sucessoFundo: '#E8F5E9',
   sucessoTexto: '#377C3B',
+  sucessoBadge: '#377C3B',
   atencao: '#F0A63A',
   perigo: '#D9534F',
   perigoFundo: '#FBEAEA',
@@ -93,6 +103,7 @@ export const CORES_ESCURO_BOB = {
   sucesso: '#7FCB82',
   sucessoFundo: '#1B2E20',
   sucessoTexto: '#7FCB82',
+  sucessoBadge: '#43A647',
   atencao: '#F0B85C',
   perigo: '#E7807A',
   perigoFundo: '#332020',

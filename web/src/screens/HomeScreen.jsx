@@ -926,7 +926,7 @@ function criarEstilos(CORES) {
       justifyContent: 'center',
       flexShrink: 0,
     },
-    doseStatusTomado: { backgroundColor: CORES.sucesso, borderColor: CORES.sucesso },
+    doseStatusTomado: { backgroundColor: CORES.sucessoBadge, borderColor: CORES.sucessoBadge },
     doseStatusAtrasado: { borderColor: CORES.perigo },
     gifCanto: {
       position: 'fixed',

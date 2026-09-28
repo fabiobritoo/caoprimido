@@ -286,7 +286,7 @@ export default function EvolucaoScreen() {
                   <div
                     style={{
                       ...estilos.bolinhaDetalhe,
-                      backgroundColor: item.tomado ? CORES.sucesso : CORES.perigo,
+                      backgroundColor: item.tomado ? CORES.sucessoBadge : CORES.perigo,
                     }}
                   >
                     {item.tomado && <Check size={12} strokeWidth={3} color="#fff" />}
