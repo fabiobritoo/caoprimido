@@ -229,16 +229,30 @@ export default async function handler(req, res) {
 
       // ==========================================================
       // 3. IDENTIFICA REMÉDIOS COM ESTOQUE BAIXO
+      //
+      // O aviso em si já é limitado a 1x a cada 3 dias (TTL da
+      // chave avisoEstoque), então não faz sentido reconsultar o
+      // Redis todo santo minuto enquanto o estoque continuar baixo
+      // - só verificamos isso 2x por hora (minuto múltiplo de 30).
+      // Enquanto um remédio estiver com estoque baixo por dias
+      // seguidos, isso sozinho evitava até 1440 requests/dia por
+      // dispositivo virarem só 48.
       // ==========================================================
 
-      const remediosEstoqueBaixo = remedios.filter(
-        (remedio) =>
-          remedioEstaAtivo(remedio, hoje) &&
-          remedio.quantidadeMinima &&
-          remedio.quantidadeMinima > 0 &&
-          remedio.quantidadeAtual <=
-            remedio.quantidadeMinima
-      );
+      const minutoAtual = agora.getMinutes();
+      const éHoraDeCheckarEstoque =
+        minutoAtual % 30 === 0;
+
+      const remediosEstoqueBaixo = éHoraDeCheckarEstoque
+        ? remedios.filter(
+            (remedio) =>
+              remedioEstaAtivo(remedio, hoje) &&
+              remedio.quantidadeMinima &&
+              remedio.quantidadeMinima > 0 &&
+              remedio.quantidadeAtual <=
+                remedio.quantidadeMinima
+          )
+        : [];
 
       // Busca todos os avisos de estoque em uma única operação.
       if (remediosEstoqueBaixo.length > 0) {
@@ -305,6 +319,19 @@ export default async function handler(req, res) {
       // IMPORTANTE:
       // Aqui NÃO fazemos mais GET individual de "reconhecido".
       // Primeiro montamos todas as chaves.
+      //
+      // FILTRO DA JANELA MÁXIMA JÁ AQUI (e não só depois, como
+      // antes): depois de JANELA_MAXIMA_MS (30 min) sem confirmar,
+      // o app já para de reenviar push (ver passo 7) e o aviso ao
+      // cuidador (que dispara aos 15 min) já aconteceu ou não vai
+      // mais acontecer. Ou seja, uma dose esquecida há mais de 30
+      // min não serve mais pra nada - mas, antes desse ajuste, ela
+      // continuava entrando nas buscas de "reconhecido"/"estado"/
+      // "cuidador" A CADA MINUTO até virar o dia. Descartando aqui
+      // na origem, um dispositivo com alguma dose atrasada demais
+      // volta a ficar com candidatos.length === 0 e pula esses
+      // MGETs completamente pelo resto do dia, em vez de continuar
+      // gastando requisições à toa.
       // ==========================================================
 
       const candidatos = [];
@@ -324,14 +351,19 @@ export default async function handler(req, res) {
         for (const horario of remedio.horarios || []) {
           if (horario > horaAtual) continue;
 
-          const chaveBase =
-            `${deviceId}:${remedio.id}:${hoje}:${horario}`;
-
           const atrasoMs =
             minutosDeAtraso(
               horario,
               horaAtual
             ) * 60000;
+
+          // Dose muito atrasada: não vai mais gerar push nem
+          // aviso novo ao cuidador, então nem vale a pena
+          // continuar checando ela a cada minuto.
+          if (atrasoMs > JANELA_MAXIMA_MS) continue;
+
+          const chaveBase =
+            `${deviceId}:${remedio.id}:${hoje}:${horario}`;
 
           candidatos.push({
             remedio,
