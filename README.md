@@ -33,9 +33,11 @@ passar por loja de aplicativos.
   sachê, unidade), dose, horários, frequência (diária / dias específicos da
   semana / a cada X dias), estoque com aviso de quantidade mínima
 - Data de início (padrão hoje) e data de término opcional
-- Edição e exclusão
-- Histórico de preços/compras por remédio (opcional, discreto — ícone de
-  etiqueta em "Meus Remédios"), com comparação de variação percentual entre compras
+- Edição, arquivamento (some da lista ativa sem perder histórico) e
+  reativação de remédios arquivados
+- Tela de histórico de preços/compras por remédio (ícone de etiqueta em
+  "Meus Remédios") — cadastro completo (adicionar, editar, excluir compras),
+  com badge de variação percentual em relação à compra anterior
 
 ### Tela inicial
 - Agenda por dia, navegável por semana (arrasta com o dedo, segue o gesto em
@@ -50,9 +52,12 @@ passar por loja de aplicativos.
   precisa estar instalado na tela inicial — limitação da Apple)
 - Reenvio escalonado a cada 3 minutos por até 30 min, com mensagens que ficam
   mais urgentes com o tempo, acumulando na central de notificações
-- Botões de ação direto na notificação ("Já tomei" / "Adiar 10 min")
+- Botões de ação direto na notificação ("Já tomei" / "Adiar 5 min")
 - Aviso a um cuidador via Telegram se a dose ficar 15+ min sem confirmar, com
-  segunda mensagem de alívio quando finalmente for confirmada
+  segunda mensagem de alívio quando finalmente for confirmada, e link para o
+  cuidador trocar/reiniciar seu próprio vínculo se precisar
+- Comando `/status` (ou `/pendentes`) no bot do Telegram, pra o cuidador
+  puxar na hora um resumo das doses pendentes, sem esperar um aviso automático
 
 ### Evolução (duas abas)
 - **Remédios:** % de adesão geral, sequência atual/melhor, mapa de calor das
@@ -62,15 +67,25 @@ passar por loja de aplicativos.
   editável por data
 
 ### Outros
-- Consultas médicas (data, médico, local, anotações)
-- Exportação de relatório em PDF (remédios + adesão + saúde + dados pessoais),
-  com logo e cores da marca
-- Backup/restauração completa dos dados (exporta/importa um `.json`)
-- Modo escuro
+- Consultas médicas (data, médico, local, anotações), separadas em abas de
+  "Próximas" e "Anteriores"
+- Perfil pessoal (nome, idade, altura), usado tanto no relatório em PDF
+  quanto nas mensagens enviadas ao cuidador pelo Telegram
+- Exportação de relatório em PDF: um relatório geral (remédios + adesão +
+  saúde + dados pessoais, acessível pelas duas abas da tela de Evolução) e,
+  separadamente, um relatório de histórico de preços (só pela aba
+  "Remédios", com o histórico de compras de cada remédio) — ambos com logo
+  e cores da marca
+- Backup/restauração completa dos dados (`.json`): baixar o arquivo
+  diretamente, ou (em navegadores compatíveis) escolher uma pasta no
+  aparelho pra salvar, via File System Access API
+- Modo escuro — alternado manualmente pelo usuário (não segue a preferência
+  do sistema operacional)
 - **Modo Bob**: troca a mascote e a paleta de cores (rosa → azul) pra quem
   também cuida de outro cachorro no mesmo app
-- Verificação de atualização manual (útil quando o Service Worker demora a
-  detectar uma versão nova sozinho)
+- Verificação de atualização manual, com três resultados possíveis: já está
+  na versão mais recente, encontrou e aplicou uma atualização, ou não
+  conseguiu verificar (ex: sem internet)
 
 ---
 
