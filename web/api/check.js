@@ -28,11 +28,16 @@ const TTL_ESTADO_SEGUNDOS = 3600;
 // começa vazio de novo e funciona exatamente como antes -
 // nenhum risco, só um bônus quando dá certo.
 //
-// TTL curto o suficiente pra não atrasar percepção de novos
-// remédios/dispositivos por mais que o próprio ciclo do cron já
-// atrasaria (1 minuto).
+// IMPORTANTE: o cron roda a cada 60s, então um TTL menor que isso
+// (ex: 50s) nunca seria reaproveitado de verdade - a próxima
+// chamada sempre chegaria depois do cache já ter expirado. Usamos
+// 3 minutos: dá margem real pra pegar instâncias quentes mesmo
+// com alguma variação no intervalo do cron-job.org, ao custo de
+// um dispositivo/remédio novo poder demorar até ~3 min a mais pra
+// ser percebido (aceitável, já que o próprio ciclo de checagem já
+// tem granularidade de minutos).
 // ============================================================
-const TTL_CACHE_DISPOSITIVOS_MS = 50 * 1000;
+const TTL_CACHE_DISPOSITIVOS_MS = 3 * 60 * 1000;
 
 let cacheDispositivos = null; // { idsDispositivos, dadosDispositivos, buscadoEm }
 
