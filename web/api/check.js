@@ -15,6 +15,56 @@ const TTL_AVISO_ESTOQUE_SEGUNDOS = 3 * 24 * 60 * 60;
 const TTL_AVISO_CUIDADOR_SEGUNDOS = 172800;
 const TTL_ESTADO_SEGUNDOS = 3600;
 
+// ============================================================
+// CACHE EM MEMÓRIA (entre execuções do cron, só dentro da mesma
+// instância "quente" da função serverless)
+//
+// A Vercel às vezes reaproveita a mesma instância entre uma
+// chamada do cron e outra (executa a cada 1 minuto). Quando isso
+// acontece, essa variável de módulo sobrevive entre as chamadas.
+// Guardamos a lista de dispositivos + seus dados por alguns
+// segundos pra evitar repetir o SMEMBERS + MGET quando nada
+// mudou. Se a instância for reciclada (cold start), o cache
+// começa vazio de novo e funciona exatamente como antes -
+// nenhum risco, só um bônus quando dá certo.
+//
+// TTL curto o suficiente pra não atrasar percepção de novos
+// remédios/dispositivos por mais que o próprio ciclo do cron já
+// atrasaria (1 minuto).
+// ============================================================
+const TTL_CACHE_DISPOSITIVOS_MS = 50 * 1000;
+
+let cacheDispositivos = null; // { idsDispositivos, dadosDispositivos, buscadoEm }
+
+async function buscarDispositivosComCache() {
+  const agoraMs = Date.now();
+
+  if (
+    cacheDispositivos &&
+    agoraMs - cacheDispositivos.buscadoEm < TTL_CACHE_DISPOSITIVOS_MS
+  ) {
+    return cacheDispositivos;
+  }
+
+  const idsDispositivos = (await kv.smembers('dispositivos')) || [];
+
+  let dadosDispositivos = [];
+  if (idsDispositivos.length > 0) {
+    const chavesDispositivos = idsDispositivos.map(
+      (deviceId) => `dispositivo:${deviceId}`
+    );
+    dadosDispositivos = await kv.mget(...chavesDispositivos);
+  }
+
+  cacheDispositivos = {
+    idsDispositivos,
+    dadosDispositivos,
+    buscadoEm: agoraMs,
+  };
+
+  return cacheDispositivos;
+}
+
 async function avisarCuidador(config, nomeRemedio, horario, perfil) {
   if (!config?.cuidadorAtivo || !config.cuidadorChatId) return;
   if (!process.env.TELEGRAM_BOT_TOKEN) return;
@@ -134,13 +184,15 @@ export default async function handler(req, res) {
     const agoraMs = agora.getTime();
 
     // ============================================================
-    // 1. BUSCA TODOS OS DISPOSITIVOS
+    // 1 e 2. BUSCA TODOS OS DISPOSITIVOS + SEUS DADOS
     //
-    // SMEMBERS continua sendo apenas 1 request.
+    // Usa o cache em memória (buscarDispositivosComCache) quando a
+    // instância da função continua "quente" de uma execução do
+    // cron pra outra - evita repetir SMEMBERS + MGET sem necessidade.
     // ============================================================
 
-    const idsDispositivos =
-      (await kv.smembers('dispositivos')) || [];
+    const { idsDispositivos, dadosDispositivos } =
+      await buscarDispositivosComCache();
 
     if (idsDispositivos.length === 0) {
       return res.status(200).json({
@@ -150,24 +202,6 @@ export default async function handler(req, res) {
         horaServidor: horaAtual,
       });
     }
-
-    // ============================================================
-    // 2. BUSCA TODOS OS DISPOSITIVOS COM UM ÚNICO MGET
-    //
-    // ANTES:
-    //   1 GET por dispositivo
-    //
-    // AGORA:
-    //   1 MGET para todos
-    // ============================================================
-
-    const chavesDispositivos =
-      idsDispositivos.map(
-        (deviceId) => `dispositivo:${deviceId}`
-      );
-
-    const dadosDispositivos =
-      await kv.mget(...chavesDispositivos);
 
     let notificacoesEnviadas = 0;
 
