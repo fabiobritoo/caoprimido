@@ -132,6 +132,10 @@ as variáveis de ambiente na Vercel: chaves VAPID, `CRON_SECRET`,
 `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME`, e a integração do Upstash Redis
 (`@vercel/kv`).
 
+Se o Redis estourar o limite gratuito e as notificações pararem de chegar,
+veja [`docs/REDIS-RUNBOOK.md`](docs/REDIS-RUNBOOK.md) — passo a passo pra
+trocar de banco sem mexer em código.
+
 ## Versão atual
 
 Consulte `web/src/utils/versao.js` — o número e a descrição da última mudança
