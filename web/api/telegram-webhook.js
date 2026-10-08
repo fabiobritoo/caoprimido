@@ -1,7 +1,19 @@
 import { kv } from '@vercel/kv';
-import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso, nomeResumido } from './_logica.js';
+import {
+  obterDataHoraBrasil,
+  remedioAplicavelNoDia,
+  remedioEstaAtivo,
+  minutosDeAtraso,
+  nomeResumido,
+  rotuloUnidade,
+  descreverFrequenciaTexto,
+  diasRestantesDeEstoque,
+  dataFuturaCurta,
+} from './_logica.js';
 
-const COMANDOS_STATUS = ['/status', '/pendentes', 'status', 'pendentes'];const COMANDOS_AJUDA = ['/start', '/help', '/ajuda', 'ajuda'];
+const COMANDOS_STATUS = ['/status', '/pendentes', 'status', 'pendentes'];
+const COMANDOS_REMEDIOS = ['/remedios', '/remédios', '/resumo', '/estoque', 'remedios', 'remédios', 'resumo', 'estoque'];
+const COMANDOS_AJUDA = ['/start', '/help', '/ajuda', 'ajuda'];
 
 const MENSAGEM_AJUDA = `🐶💊 *Cãoprimido Alertas*
 
@@ -9,6 +21,7 @@ Eu aviso quando uma dose de remédio ficar atrasada, e ajudo você a acompanhar 
 
 *Comandos disponíveis:*
 /status — Ver quem está com dose atrasada hoje
+/remedios — Resumo dos remédios: horários, estoque e quantos dias duram
 /help — Ver essa mensagem de novo
 
 Pra eu te avisar sobre alguém, essa pessoa precisa ativar a opção "Avisar um cuidador" nas Configurações do app dela e usar o código que aparece lá pra se conectar com esse chat.`;
@@ -34,9 +47,17 @@ export default async function handler(req, res) {
     const ehComandoStatus = COMANDOS_STATUS.some((c) => texto === c || texto.startsWith(`${c}@`));
     const ehComandoAjuda = COMANDOS_AJUDA.some((c) => texto === c || texto.startsWith(`${c}@`));
 
+    const ehComandoRemedios = COMANDOS_REMEDIOS.some((c) => texto === c || texto.startsWith(`${c}@`));
+
     if (ehComandoStatus) {
       const resposta = await montarResumoPendencias(String(chatId));
       await enviarMensagemTelegram(String(chatId), resposta);
+    } else if (ehComandoRemedios) {
+      const resposta = await montarResumoRemedios(String(chatId));
+      // Telegram limita cada mensagem a 4096 caracteres
+      for (const parte of dividirMensagem(resposta)) {
+        await enviarMensagemTelegram(String(chatId), parte);
+      }
     } else if (ehComandoAjuda) {
       await enviarMensagemTelegram(String(chatId), MENSAGEM_AJUDA, true);
     }
@@ -108,6 +129,91 @@ async function montarResumoPendencias(chatId) {
   }
 
   return linhas.join('\n').trim();
+}
+
+// Dispositivos que têm este chat como cuidador ativo
+async function buscarDispositivosDoCuidador(chatId) {
+  const ids = (await kv.smembers('dispositivos')) || [];
+  const encontrados = [];
+  for (const deviceId of ids) {
+    const dados = await kv.get(`dispositivo:${deviceId}`);
+    if (!dados) continue;
+    if (String(dados.configuracoes?.cuidadorChatId || '') !== chatId) continue;
+    if (!dados.configuracoes?.cuidadorAtivo) continue;
+    encontrados.push({ deviceId, dados });
+  }
+  return encontrados;
+}
+
+function montarLinhasRemedio(remedio, hoje) {
+  const dose = `${remedio.quantidadePorDose || 1} ${rotuloUnidade(remedio.unidade)}`;
+  const horarios = [...(remedio.horarios || [])].sort().join(', ') || 'sem horário';
+  const freq = descreverFrequenciaTexto(remedio.frequencia);
+  const dias = diasRestantesDeEstoque(remedio);
+  const estoqueBaixo =
+    remedio.quantidadeMinima > 0 && remedio.quantidadeAtual != null && remedio.quantidadeAtual <= remedio.quantidadeMinima;
+
+  let linhaEstoque;
+  if (remedio.quantidadeAtual == null || remedio.quantidadeAtual === '') {
+    linhaEstoque = '📦 Estoque não informado';
+  } else {
+    const estoque = `${remedio.quantidadeAtual} ${rotuloUnidade(remedio.unidade)}`;
+    if (dias === null) linhaEstoque = `📦 Estoque: ${estoque}`;
+    else if (dias <= 0) linhaEstoque = `📦 Estoque: ${estoque} — acaba hoje ou já não cobre uma dose`;
+    else linhaEstoque = `📦 Estoque: ${estoque} — dura ~${dias} ${dias === 1 ? 'dia' : 'dias'} (até ${dataFuturaCurta(hoje, dias)})`;
+  }
+
+  const alerta = estoqueBaixo || (dias !== null && dias <= 7) ? '⚠️ ' : '';
+  return {
+    dias,
+    linhas: [`${alerta}💊 ${remedio.nome} — ${dose}`, `   🕐 ${horarios} · ${freq}`, `   ${linhaEstoque}`],
+  };
+}
+
+async function montarResumoRemedios(chatId) {
+  const dispositivos = await buscarDispositivosDoCuidador(chatId);
+  if (dispositivos.length === 0) {
+    return 'Você ainda não está configurado como cuidador de ninguém no Cãoprimido. Peça pra pessoa ativar o aviso em Configurações > Avisar um cuidador.';
+  }
+
+  const { hoje } = obterDataHoraBrasil(new Date());
+  const linhas = [];
+
+  for (const { dados } of dispositivos) {
+    const nome = dados.perfil?.nome?.trim() ? nomeResumido(dados.perfil.nome) : 'Sem nome cadastrado';
+    const ativos = (dados.remedios || []).filter((r) => remedioEstaAtivo(r, hoje));
+
+    linhas.push(`📋 Remédios de ${nome}`, '');
+    if (ativos.length === 0) {
+      linhas.push('Nenhum remédio ativo cadastrado.', '');
+      continue;
+    }
+
+    // mais urgentes (menos dias de estoque) primeiro; sem estoque informado vão pro fim
+    const itens = ativos.map((r) => montarLinhasRemedio(r, hoje));
+    itens.sort((a, b) => (a.dias ?? Infinity) - (b.dias ?? Infinity));
+    for (const item of itens) linhas.push(...item.linhas, '');
+  }
+
+  linhas.push('Duração estimada pelo estoque atual e pelo ritmo de uso cadastrado (considera a frequência de cada remédio).');
+  return linhas.join('\n').trim();
+}
+
+// Quebra em pedaços de até ~4000 caracteres, sempre entre remédios (linha em branco)
+function dividirMensagem(texto, limite = 4000) {
+  if (texto.length <= limite) return [texto];
+  const partes = [];
+  let atual = '';
+  for (const bloco of texto.split('\n\n')) {
+    if (atual && (atual + '\n\n' + bloco).length > limite) {
+      partes.push(atual);
+      atual = bloco;
+    } else {
+      atual = atual ? `${atual}\n\n${bloco}` : bloco;
+    }
+  }
+  if (atual) partes.push(atual);
+  return partes;
 }
 
 async function enviarMensagemTelegram(chatId, texto, comFormatacao = false) {

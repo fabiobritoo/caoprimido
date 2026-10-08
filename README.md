@@ -58,6 +58,12 @@ passar por loja de aplicativos.
   cuidador trocar/reiniciar seu próprio vínculo se precisar
 - Comando `/status` (ou `/pendentes`) no bot do Telegram, pra o cuidador
   puxar na hora um resumo das doses pendentes, sem esperar um aviso automático
+- Comando `/remedios` (ou `/resumo`, `/estoque`): lista cada remédio ativo com
+  dose, horários, frequência, estoque atual e **quantos dias o estoque dura**
+  (com a data estimada de término), calculado pelo ritmo real de uso — conta
+  a quantidade por dose, os horários e a frequência (diária, dias da semana ou
+  a cada X dias). Os mais urgentes aparecem primeiro, com ⚠️ quando o estoque
+  está no mínimo ou dura 7 dias ou menos
 
 ### Evolução (duas abas)
 - **Remédios:** % de adesão geral, sequência atual/melhor, mapa de calor das
