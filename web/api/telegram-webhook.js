@@ -37,11 +37,22 @@ export default async function handler(req, res) {
 
   try {
     const mensagem = req.body?.message;
-    const texto = mensagem?.text?.trim().toLowerCase();
+    const textoOriginal = mensagem?.text?.trim();
+    const texto = textoOriginal?.toLowerCase();
     const chatId = mensagem?.chat?.id;
 
     if (!texto || !chatId) {
       return res.status(200).json({ ok: true }); // nada a fazer, mas confirma recebimento pro Telegram
+    }
+
+    // Código de vínculo do app (6 caracteres, ver Configurações). Com o webhook
+    // ativo o Telegram não deixa usar getUpdates, então é aqui que o código
+    // é capturado: guarda por 1h e o app confirma depois em /api/telegram-obter-chat-id.
+    if (/^[A-HJ-NP-Z2-9]{6}$/i.test(textoOriginal)) {
+      const nome = mensagem.chat.first_name || mensagem.chat.username || 'Telegram';
+      await kv.set(`vinculoTelegram:${textoOriginal.toUpperCase()}`, { chatId, nome }, { ex: 3600 });
+      await enviarMensagemTelegram(String(chatId), '✅ Código recebido! Volte ao app Cãoprimido e toque em "Já mandei — Verificar".');
+      return res.status(200).json({ ok: true });
     }
 
     const ehComandoStatus = COMANDOS_STATUS.some((c) => texto === c || texto.startsWith(`${c}@`));

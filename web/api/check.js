@@ -8,6 +8,7 @@ import {
   remedioEstaAtivo,
   minutosDeAtraso,
   nomeResumido,
+  rotuloUnidade,
 } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
@@ -16,6 +17,14 @@ const LIMIAR_AVISO_CUIDADOR_MS = 15 * 60 * 1000;
 const TTL_AVISO_ESTOQUE_SEGUNDOS = 3 * 24 * 60 * 60;
 const TTL_AVISO_CUIDADOR_SEGUNDOS = 172800;
 const TTL_ESTADO_SEGUNDOS = 3600;
+
+// Lembrete extra pelo Telegram (canal reserva, pra quando o Android suspende
+// o Chrome e o push atrasa): 1ª mensagem na hora, depois a cada 9 min, no
+// máximo 4 por dose. Controlado à parte do push de propósito, pra não
+// duplicar nem repetir a cada minuto se o push falhar.
+const INTERVALO_TELEGRAM_MS = 9 * 60 * 1000;
+const MAX_MENSAGENS_TELEGRAM = 4;
+const URL_APP = 'https://caoprimido.vercel.app';
 
 // ============================================================
 // OPÇÕES DE ENTREGA DO PUSH
@@ -132,6 +141,45 @@ async function avisarCuidador(config, nomeRemedio, horario, perfil) {
       'Falha ao avisar cuidador:',
       e.message
     );
+  }
+}
+
+// Manda o lembrete da dose pro Telegram do próprio usuário. O botão abre o
+// app na tela de alarme (confirmar lá mantém histórico e estoque corretos).
+async function avisarTelegramProprio(config, remedio, horario, dia, titulo, corpo) {
+  if (!process.env.TELEGRAM_BOT_TOKEN) return { ok: false, erro: 'sem token' };
+
+  const dose = `${remedio.quantidadePorDose || 1} ${rotuloUnidade(remedio.unidade)}`;
+  const texto = [titulo, corpo, `💊 ${dose} · 🕐 ${horario}`].filter(Boolean).join('\n');
+
+  const parametros = new URLSearchParams({
+    alarme: '1',
+    titulo,
+    corpo: corpo || '',
+    remedioId: remedio.id,
+    dia,
+    horario,
+  });
+
+  try {
+    const resposta = await fetch(
+      `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/sendMessage`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id: config.telegramProprioChatId,
+          text: texto,
+          reply_markup: {
+            inline_keyboard: [[{ text: '✅ Abrir e confirmar', url: `${URL_APP}/?${parametros.toString()}` }]],
+          },
+        }),
+      }
+    );
+    const dados = await resposta.json();
+    return { ok: !!dados.ok, erro: dados.ok ? undefined : String(dados.description || '').slice(0, 120) };
+  } catch (e) {
+    return { ok: false, erro: String(e.message).slice(0, 120) };
   }
 }
 
@@ -621,6 +669,61 @@ export default async function handler(req, res) {
         const estado =
           estados[i];
 
+        // --------------------------------------------------------
+        // LEMBRETE EXTRA PELO TELEGRAM DO PRÓPRIO USUÁRIO
+        // (respeita soneca; independe do resultado do push)
+        // --------------------------------------------------------
+
+        let tgEnvios = estado?.tgEnvios || 0;
+        let tgUltimoEnvio = estado?.tgUltimoEnvio || 0;
+
+        const emSoneca =
+          estado?.proximoEnvioForcado &&
+          agoraMs < estado.proximoEnvioForcado;
+
+        if (
+          configuracoes?.telegramProprioAtivo &&
+          configuracoes.telegramProprioChatId &&
+          !emSoneca &&
+          tgEnvios < MAX_MENSAGENS_TELEGRAM &&
+          (tgEnvios === 0 ||
+            agoraMs - tgUltimoEnvio >= INTERVALO_TELEGRAM_MS)
+        ) {
+          const { titulo, corpo } = montarMensagemEscalonada(
+            remedio.nome,
+            remedio.dosagem,
+            atrasoMs
+          );
+
+          const resultadoTg = await avisarTelegramProprio(
+            configuracoes,
+            remedio,
+            horario,
+            hoje,
+            titulo,
+            corpo
+          );
+
+          tgEnvios += 1;
+          tgUltimoEnvio = agoraMs;
+
+          // grava já, pra valer mesmo que o push abaixo não rode neste minuto
+          await kv.set(
+            `estado:${chaveBase}`,
+            { ...(estado || {}), tgEnvios, tgUltimoEnvio },
+            { ex: TTL_ESTADO_SEGUNDOS }
+          );
+
+          await registrarEnvio(deviceId, {
+            tipo: 'telegram',
+            rem: remedio.nome,
+            hor: horario,
+            tent: tgEnvios,
+            status: resultadoTg.ok ? 200 : null,
+            erro: resultadoTg.erro,
+          });
+        }
+
         // Respeita uma soneca manual.
         if (
           estado?.proximoEnvioForcado &&
@@ -697,6 +800,8 @@ export default async function handler(req, res) {
             {
               ultimoEnvio: agoraMs,
               tentativas: novaTentativa,
+              tgEnvios,
+              tgUltimoEnvio,
             },
             {
               ex: TTL_ESTADO_SEGUNDOS,

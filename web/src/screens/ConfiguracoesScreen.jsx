@@ -39,6 +39,14 @@ export default function ConfiguracoesScreen() {
   const [cuidadorChatId, setCuidadorChatId] = useState('');
   const [cuidadorNome, setCuidadorNome] = useState('');
   const [codigo] = useState(gerarCodigo);
+  const [codigoProprio] = useState(gerarCodigo);
+  const [proprioAtivo, setProprioAtivo] = useState(false);
+  const [proprioChatId, setProprioChatId] = useState('');
+  const [proprioNome, setProprioNome] = useState('');
+  const [verificandoProprio, setVerificandoProprio] = useState(false);
+  const [erroProprio, setErroProprio] = useState('');
+  const [enviandoTesteProprio, setEnviandoTesteProprio] = useState(false);
+  const [resultadoTesteProprio, setResultadoTesteProprio] = useState('');
   const [botUsername, setBotUsername] = useState(null);
   const [verificando, setVerificando] = useState(false);
   const [erroVerificacao, setErroVerificacao] = useState('');
@@ -55,6 +63,9 @@ export default function ConfiguracoesScreen() {
       setCuidadorAtivo(config.cuidadorAtivo);
       setCuidadorChatId(config.cuidadorChatId || '');
       setCuidadorNome(config.cuidadorNome || '');
+      setProprioAtivo(!!config.telegramProprioAtivo);
+      setProprioChatId(config.telegramProprioChatId || '');
+      setProprioNome(config.telegramProprioNome || '');
     })();
 
     (async () => {
@@ -137,6 +148,69 @@ export default function ConfiguracoesScreen() {
     }
   }
 
+  // configuração completa atual (inclui o Telegram próprio, pra nenhum
+  // "salvar" apagar o vínculo do outro)
+  function configAtual() {
+    return {
+      cuidadorAtivo,
+      cuidadorChatId,
+      cuidadorNome,
+      telegramProprioAtivo: proprioAtivo,
+      telegramProprioChatId: proprioChatId,
+      telegramProprioNome: proprioNome,
+    };
+  }
+
+  async function verificarCodigoProprio() {
+    setVerificandoProprio(true);
+    setErroProprio('');
+    try {
+      const resposta = await fetch(
+        `/api/telegram-obter-chat-id?codigo=${codigoProprio}&_=${Date.now()}`,
+        { cache: 'no-store' }
+      );
+      const dados = await resposta.json();
+      if (!resposta.ok) {
+        setErroProprio(dados.erro || 'Ainda não recebi a mensagem.');
+      } else {
+        setProprioChatId(String(dados.chatId));
+        setProprioNome(dados.nome);
+        setProprioAtivo(true);
+        const configAtualizada = {
+          ...configAtual(),
+          telegramProprioAtivo: true,
+          telegramProprioChatId: String(dados.chatId),
+          telegramProprioNome: dados.nome,
+        };
+        await salvarConfiguracoes(configAtualizada);
+        const remedios = await listarRemedios();
+        await sincronizarNotificacoesServidor(obterIdDispositivo(), remedios, configAtualizada);
+      }
+    } catch (e) {
+      setErroProprio('Falha ao verificar. Tente de novo.');
+    }
+    setVerificandoProprio(false);
+  }
+
+  async function enviarTesteProprio() {
+    setEnviandoTesteProprio(true);
+    setResultadoTesteProprio('');
+    try {
+      const resposta = await fetch('/api/telegram-teste', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId: obterIdDispositivo(), chatId: proprioChatId, proprio: true }),
+      });
+      const dados = await resposta.json();
+      setResultadoTesteProprio(
+        resposta.ok ? '✓ Mensagem de teste enviada! Confira o Telegram.' : `Erro: ${dados.erro}`
+      );
+    } catch (e) {
+      setResultadoTesteProprio('Falha ao enviar. Tente de novo.');
+    }
+    setEnviandoTesteProprio(false);
+  }
+
   async function verificarCodigo() {
     setVerificando(true);
     setErroVerificacao('');
@@ -155,6 +229,7 @@ export default function ConfiguracoesScreen() {
 
         // salva na hora, pra não depender de um segundo clique em "Salvar"
         const configAtualizada = {
+          ...configAtual(),
           cuidadorAtivo: true,
           cuidadorChatId: String(dados.chatId),
           cuidadorNome: dados.nome,
@@ -190,7 +265,7 @@ export default function ConfiguracoesScreen() {
 
   async function salvar() {
     setSalvando(true);
-    const config = { cuidadorAtivo, cuidadorChatId, cuidadorNome };
+    const config = configAtual();
     await salvarConfiguracoes(config);
 
     const remedios = await listarRemedios();
@@ -370,6 +445,93 @@ export default function ConfiguracoesScreen() {
           Restaurar backup
         </button>
         {statusBackup && <div style={estilos.statusAtualizacaoTexto}>{statusBackup}</div>}
+
+        <div style={estilos.divisor} />
+
+        <div style={estilos.secaoTitulo}>
+          <Send size={20} color={CORES.primaria} />
+          Lembretes no meu Telegram
+        </div>
+        <div style={estilos.explicacao}>
+          Um segundo aviso, direto no seu Telegram, caso a notificação do celular
+          atrase (alguns Androids suspendem o navegador com a tela bloqueada).
+          Chega na hora, repete a cada 9 minutos se você não confirmar, e o botão
+          da mensagem abre o app pra confirmar.
+        </div>
+
+        <div style={estilos.linhaToggle}>
+          <span style={estilos.label}>Receber também no Telegram</span>
+          <button
+            onClick={() => setProprioAtivo(!proprioAtivo)}
+            style={{
+              ...estilos.toggle,
+              backgroundColor: proprioAtivo ? CORES.primaria : CORES.borda,
+            }}
+          >
+            <div
+              style={{
+                ...estilos.toggleBolinha,
+                transform: proprioAtivo ? 'translateX(20px)' : 'translateX(0)',
+              }}
+            />
+          </button>
+        </div>
+
+        {proprioAtivo && (
+          <>
+            {proprioChatId ? (
+              <>
+                <div style={estilos.conectadoBox}>
+                  <Check size={18} color={CORES.sucessoTexto} strokeWidth={2.5} />
+                  <span>
+                    Conectado como <strong>{proprioNome || 'você'}</strong>
+                  </span>
+                  <button
+                    onClick={() => {
+                      setProprioChatId('');
+                      setProprioNome('');
+                    }}
+                    style={estilos.linkTrocar}
+                  >
+                    trocar
+                  </button>
+                </div>
+
+                <button onClick={enviarTesteProprio} disabled={enviandoTesteProprio} style={estilos.botaoTeste}>
+                  <TestTube2 size={16} strokeWidth={2.3} />
+                  {enviandoTesteProprio ? 'Enviando...' : 'Enviar mensagem de teste'}
+                </button>
+                {resultadoTesteProprio && <div style={estilos.resultadoTeste}>{resultadoTesteProprio}</div>}
+              </>
+            ) : (
+              <div style={estilos.instrucoes}>
+                <strong>Como conectar (leva 1 minuto, é grátis):</strong>
+                <ol style={{ paddingLeft: 20, margin: '10px 0' }}>
+                  <li>
+                    No <strong>seu</strong> Telegram, procure por{' '}
+                    <strong>{botUsername ? `@${botUsername}` : '(configurando...)'}</strong>
+                  </li>
+                  <li>
+                    Mande exatamente este código pro bot:
+                    <div style={estilos.codigoBox}>{codigoProprio}</div>
+                  </li>
+                  <li>Depois, toque no botão abaixo pra confirmar</li>
+                </ol>
+
+                <button
+                  onClick={verificarCodigoProprio}
+                  disabled={verificandoProprio || !botUsername}
+                  style={estilos.botaoVerificar}
+                >
+                  <Send size={16} strokeWidth={2.3} />
+                  {verificandoProprio ? 'Verificando...' : 'Já mandei — Verificar'}
+                </button>
+
+                {erroProprio && <div style={estilos.erroTexto}>{erroProprio}</div>}
+              </div>
+            )}
+          </>
+        )}
 
         <div style={estilos.divisor} />
 

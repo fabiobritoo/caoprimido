@@ -1,3 +1,5 @@
+import { kv } from '@vercel/kv';
+
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store, max-age=0');
 
@@ -10,12 +12,23 @@ export default async function handler(req, res) {
       return res.status(500).json({ erro: 'TELEGRAM_BOT_TOKEN não configurado no servidor' });
     }
 
+    // 1) caminho principal: o webhook do bot guardou o código no Redis
+    const vinculo = await kv.get(`vinculoTelegram:${codigo.trim().toUpperCase()}`);
+    if (vinculo?.chatId) {
+      return res.status(200).json({ ok: true, chatId: vinculo.chatId, nome: vinculo.nome });
+    }
+
+    // 2) alternativa (quando não há webhook configurado): getUpdates
     const url = `https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getUpdates?limit=100`;
     const resposta = await fetch(url, { cache: 'no-store' });
     const dados = await resposta.json();
 
     if (!dados.ok) {
-      return res.status(500).json({ erro: 'Erro ao consultar o Telegram', detalhe: dados.description });
+      // com webhook ativo o getUpdates responde 409; nesse caso só o caminho 1 vale
+      return res.status(404).json({
+        erro: 'Ainda não recebi essa mensagem. Confirme que o código foi enviado pro bot certo e tente de novo em alguns segundos.',
+        detalhe: dados.description,
+      });
     }
 
     const atualizacoes = dados.result || [];

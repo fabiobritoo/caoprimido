@@ -56,6 +56,14 @@ passar por loja de aplicativos.
 - Aviso a um cuidador via Telegram se a dose ficar 15+ min sem confirmar, com
   segunda mensagem de alívio quando finalmente for confirmada, e link para o
   cuidador trocar/reiniciar seu próprio vínculo se precisar
+- **Lembretes no seu próprio Telegram** (Configurações > "Lembretes no meu
+  Telegram"): canal reserva pra quando o Android suspende o navegador com a tela
+  bloqueada e o push atrasa. Manda a mensagem na hora, repete a cada 9 min (até
+  4x) enquanto a dose não for confirmada, e o botão da mensagem abre o app na tela
+  de confirmação. O vínculo usa um código enviado ao bot, igual ao do cuidador
+- Tela de **Diagnóstico de notificações** (Configurações): testes de envio, log dos
+  pushes enviados pelo servidor e recebidos no aparelho (com atraso), e relatório
+  copiável
 - Comando `/status` (ou `/pendentes`) no bot do Telegram, pra o cuidador
   puxar na hora um resumo das doses pendentes, sem esperar um aviso automático
 - Comando `/remedios` (ou `/resumo`, `/estoque`): lista cada remédio ativo com

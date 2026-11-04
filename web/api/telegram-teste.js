@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { deviceId, chatId: chatIdDireto } = req.body;
+    const { deviceId, chatId: chatIdDireto, proprio } = req.body;
     if (!deviceId) {
       return res.status(400).json({ erro: 'Faltou deviceId' });
     }
@@ -29,7 +29,9 @@ export default async function handler(req, res) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         chat_id: chatId,
-        text: '🐶💊 Teste do Cãoprimido! Se você recebeu essa mensagem, o aviso ao cuidador está funcionando certinho.',
+        text: proprio
+          ? '🐶💊 Teste do Cãoprimido! Se você recebeu essa mensagem, os lembretes dos seus remédios também vão chegar aqui no Telegram.'
+          : '🐶💊 Teste do Cãoprimido! Se você recebeu essa mensagem, o aviso ao cuidador está funcionando certinho.',
       }),
     });
     const dados = await resposta.json();
