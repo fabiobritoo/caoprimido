@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell,
+import { Bell, CalendarClock,
   HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud,
   Database, Upload, User, FolderOpen,
 } from 'lucide-react';
@@ -11,6 +11,7 @@ import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { verificarAtualizacao } from '../utils/atualizacao.js';
+import { exportarAlarmesCalendario } from '../utils/calendario.js';
 import { exportarBackup, salvarBackupEmLocalEscolhido, lerArquivoBackup, aplicarBackup } from '../utils/backup.js';
 import { obterPerfil, salvarPerfil } from '../utils/perfil.js';
 import { VERSAO } from '../utils/versao.js';
@@ -56,6 +57,7 @@ export default function ConfiguracoesScreen() {
   const [resultadoTeste, setResultadoTeste] = useState('');
   const [verificandoAtualizacao, setVerificandoAtualizacao] = useState(false);
   const [statusAtualizacao, setStatusAtualizacao] = useState('');
+  const [statusCalendario, setStatusCalendario] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -159,6 +161,21 @@ export default function ConfiguracoesScreen() {
       telegramProprioChatId: proprioChatId,
       telegramProprioNome: proprioNome,
     };
+  }
+
+  async function gerarAlarmesCalendario() {
+    setStatusCalendario('');
+    try {
+      const resultado = await exportarAlarmesCalendario(await listarRemedios());
+      if (resultado.cancelado) return;
+      setStatusCalendario(
+        resultado.ok
+          ? `✓ Arquivo com ${resultado.total} alarme(s) ${resultado.via === 'compartilhar' ? 'pronto: escolha "Calendário" na lista que abriu.' : 'baixado: abra o arquivo (toque nele em Downloads) pra adicionar ao Calendário.'}`
+          : resultado.motivo || 'Não foi possível gerar o arquivo.'
+      );
+    } catch (e) {
+      setStatusCalendario('Não foi possível gerar o arquivo neste navegador.');
+    }
   }
 
   async function verificarCodigoProprio() {
@@ -393,6 +410,31 @@ export default function ConfiguracoesScreen() {
           {verificandoAtualizacao ? 'Verificando...' : 'Verificar atualização'}
         </button>
         {statusAtualizacao && <div style={estilos.statusAtualizacaoTexto}>{statusAtualizacao}</div>}
+
+        <div style={estilos.divisor} />
+
+        <div style={estilos.secaoTitulo}>
+          <CalendarClock size={20} color={CORES.primaria} />
+          Alarmes no Calendário do celular
+        </div>
+        <div style={estilos.explicacao}>
+          Os alertas do app de Calendário tocam no horário exato, mesmo sem
+          internet, com a tela bloqueada e com o navegador suspenso — no iPhone e
+          no Android. Funciona como reserva da notificação do app.
+          <br />
+          <strong>iPhone:</strong> escolha "Calendário" na lista e toque em "Adicionar tudo".
+          <br />
+          <strong>Android:</strong> abra o arquivo baixado com o Google Calendar. Se o
+          alerta não tocar, nas configurações do calendário ligue a notificação "no horário do evento".
+          <br />
+          O Calendário não atualiza sozinho: se mudar remédios ou horários, gere o arquivo de
+          novo (os mesmos alarmes são substituídos, não duplicados). Ele não registra a dose como tomada.
+        </div>
+        <button onClick={gerarAlarmesCalendario} style={estilos.botaoVerificarAtualizacao}>
+          <CalendarClock size={16} strokeWidth={2.3} />
+          Gerar alarmes pro Calendário
+        </button>
+        {statusCalendario && <div style={estilos.statusAtualizacaoTexto}>{statusCalendario}</div>}
 
         <div style={estilos.divisor} />
 

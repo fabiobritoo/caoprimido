@@ -61,6 +61,11 @@ passar por loja de aplicativos.
   bloqueada e o push atrasa. Manda a mensagem na hora, repete a cada 9 min (até
   4x) enquanto a dose não for confirmada, e o botão da mensagem abre o app na tela
   de confirmação. O vínculo usa um código enviado ao bot, igual ao do cuidador
+- **Alarmes no Calendário do celular** (Configurações): gera um arquivo `.ics` com um
+  evento recorrente + alerta por horário de cada remédio ativo (respeitando diária,
+  dias da semana e a cada X dias). Quem toca é o app de Calendário do aparelho
+  (iPhone e Android), no horário exato e sem depender de internet ou de push. Não
+  atualiza sozinho (gerar de novo após mudar remédios) e não marca a dose como tomada
 - Tela de **Diagnóstico de notificações** (Configurações): testes de envio, log dos
   pushes enviados pelo servidor e recebidos no aparelho (com atraso), e relatório
   copiável
