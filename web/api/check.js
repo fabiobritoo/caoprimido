@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv';
 import webpush from 'web-push';
+import { createHash } from 'node:crypto';
 import {
   obterDataHoraBrasil,
   remedioAplicavelNoDia,
@@ -14,6 +15,31 @@ const LIMIAR_AVISO_CUIDADOR_MS = 15 * 60 * 1000;
 const TTL_AVISO_ESTOQUE_SEGUNDOS = 3 * 24 * 60 * 60;
 const TTL_AVISO_CUIDADOR_SEGUNDOS = 172800;
 const TTL_ESTADO_SEGUNDOS = 3600;
+
+// ============================================================
+// OPÇÕES DE ENTREGA DO PUSH
+//
+// Sem essas opções o push vai com urgência "normal": o Android,
+// com a tela apagada / em economia de bateria (Doze), ADIA a
+// entrega até o aparelho acordar - por isso o lembrete chegava
+// horas depois ou nem chegava.
+//
+// - urgency 'high': o FCM entrega na hora, mesmo em Doze.
+// - TTL curto: um lembrete de dose velho não serve pra nada
+//   (passada a janela de 30 min já não enviamos mais). Sem isso,
+//   mensagens ficavam enfileiradas por até 4 semanas e chegavam
+//   todas juntas quando o aparelho voltava.
+// - topic: mensagens da MESMA dose se substituem na fila do push
+//   service, então se o aparelho estava offline só a mais
+//   recente é entregue, em vez de uma rajada.
+// ============================================================
+const TTL_PUSH_DOSE_SEGUNDOS = 20 * 60;
+const TTL_PUSH_ESTOQUE_SEGUNDOS = 24 * 60 * 60;
+
+// topic: até 32 caracteres base64url
+function topicoDaDose(chaveBase) {
+  return createHash('sha256').update(chaveBase).digest('base64url').slice(0, 32);
+}
 
 // ============================================================
 // CACHE EM MEMÓRIA (entre execuções do cron, só dentro da mesma
@@ -209,6 +235,7 @@ export default async function handler(req, res) {
     }
 
     let notificacoesEnviadas = 0;
+    let falhasEnvio = 0;
 
     // ============================================================
     // PROCESSA CADA DISPOSITIVO
@@ -298,7 +325,8 @@ export default async function handler(req, res) {
                 corpo:
                   `Restam ${remedio.quantidadeAtual} ${unidadeTexto}. Hora de comprar mais.`,
                 remedioId: remedio.id,
-              })
+              }),
+              { TTL: TTL_PUSH_ESTOQUE_SEGUNDOS }
             );
 
             await kv.set(
@@ -592,7 +620,12 @@ export default async function handler(req, res) {
               deviceId,
               badge: contadorPendente,
               tentativa: novaTentativa,
-            })
+            }),
+            {
+              TTL: TTL_PUSH_DOSE_SEGUNDOS,
+              urgency: 'high',
+              topic: topicoDaDose(chaveBase),
+            }
           );
 
           notificacoesEnviadas++;
@@ -608,9 +641,12 @@ export default async function handler(req, res) {
             }
           );
         } catch (erroEnvio) {
+          falhasEnvio++;
           console.error(
             'Falha ao enviar push para',
             deviceId,
+            'status:',
+            erroEnvio.statusCode,
             erroEnvio.message
           );
 
@@ -647,6 +683,7 @@ export default async function handler(req, res) {
       ok: true,
       checados: idsDispositivos.length,
       notificacoesEnviadas,
+      falhasEnvio,
       horaServidor: horaAtual,
     });
   } catch (erroGeral) {
