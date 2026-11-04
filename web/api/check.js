@@ -1,6 +1,5 @@
 import { kv } from '@vercel/kv';
 import webpush from 'web-push';
-import { createHash } from 'node:crypto';
 import { registrarEnvio } from './_diag.js';
 import {
   obterDataHoraBrasil,
@@ -39,17 +38,14 @@ const URL_APP = 'https://caoprimido.vercel.app';
 //   (passada a janela de 30 min já não enviamos mais). Sem isso,
 //   mensagens ficavam enfileiradas por até 4 semanas e chegavam
 //   todas juntas quando o aparelho voltava.
-// - topic: mensagens da MESMA dose se substituem na fila do push
-//   service, então se o aparelho estava offline só a mais
-//   recente é entregue, em vez de uma rajada.
+//
+// (Sem "topic" de propósito: ele faz o serviço de push DESCARTAR as
+// mensagens intermediárias da mesma dose quando o aparelho demora a
+// receber, e o usuário prefere ver todos os avisos acumulados.)
 // ============================================================
 const TTL_PUSH_DOSE_SEGUNDOS = 20 * 60;
 const TTL_PUSH_ESTOQUE_SEGUNDOS = 24 * 60 * 60;
 
-// topic: até 32 caracteres base64url
-function topicoDaDose(chaveBase) {
-  return createHash('sha256').update(chaveBase).digest('base64url').slice(0, 32);
-}
 
 // ============================================================
 // CACHE EM MEMÓRIA (entre execuções do cron, só dentro da mesma
@@ -781,7 +777,6 @@ export default async function handler(req, res) {
             {
               TTL: TTL_PUSH_DOSE_SEGUNDOS,
               urgency: 'high',
-              topic: topicoDaDose(chaveBase),
             }
           );
 
