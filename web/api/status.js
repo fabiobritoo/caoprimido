@@ -1,10 +1,25 @@
 import { kv } from '@vercel/kv';
 import { obterDataHoraBrasil, remedioAplicavelNoDia, minutosDeAtraso } from './_logica.js';
+import { montarDiagnostico, executarTestePush } from './_diag.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
 const JANELA_MAXIMA_MS = 30 * 60 * 1000;
 
 export default async function handler(req, res) {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+
+  // POST = teste de notificação da tela Diagnóstico (fica aqui pra não passar
+  // de 12 funções serverless, o limite do plano gratuito da Vercel)
+  if (req.method === 'POST') {
+    try {
+      const { codigo, corpo } = await executarTestePush(req.body || {});
+      return res.status(codigo).json(corpo);
+    } catch (erro) {
+      console.error('Erro no teste de push:', erro);
+      return res.status(500).json({ erro: 'Falha no teste', detalhe: erro.message });
+    }
+  }
+
   try {
     const { deviceId } = req.query;
     if (!deviceId) {
@@ -13,6 +28,10 @@ export default async function handler(req, res) {
 
     const dados = await kv.get(`dispositivo:${deviceId}`);
     if (!dados) {
+      // no modo diagnóstico, "não registrado" é justamente a informação útil
+      if (req.query.diagnostico === '1') {
+        return res.status(200).json({ doses: [], diagnostico: await montarDiagnostico(deviceId) });
+      }
       return res.status(404).json({ erro: 'Dispositivo não encontrado no servidor' });
     }
 
@@ -59,7 +78,9 @@ export default async function handler(req, res) {
       }
     }
 
-    res.status(200).json({ horaServidor: horaAtual, doses });
+    const diagnostico = req.query.diagnostico === '1' ? await montarDiagnostico(deviceId) : undefined;
+
+    res.status(200).json({ horaServidor: horaAtual, doses, diagnostico });
   } catch (erro) {
     console.error('Erro em /api/status:', erro);
     res.status(500).json({ erro: 'Falha ao consultar status', detalhe: erro.message });

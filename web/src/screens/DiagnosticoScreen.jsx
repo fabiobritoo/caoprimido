@@ -198,17 +198,13 @@ export default function DiagnosticoScreen() {
     const deviceId = obterIdDispositivo();
     try {
       const t0 = Date.now();
-      const [rDiag, rStatus] = await Promise.all([
-        fetch(`/api/diagnostico-push?deviceId=${deviceId}`, { cache: 'no-store' }),
-        fetch(`/api/status?deviceId=${deviceId}`, { cache: 'no-store' }),
-      ]);
+      const resposta = await fetch(`/api/status?deviceId=${deviceId}&diagnostico=1`, { cache: 'no-store' });
       const t1 = Date.now();
-      const jDiag = await rDiag.json();
-      if (!rDiag.ok) throw new Error(jDiag.erro || `HTTP ${rDiag.status}`);
-      setServidor(jDiag);
-      setOffsetRelogioMs(jDiag.agoraMs - (t0 + t1) / 2);
-      if (rStatus.ok) setDoses((await rStatus.json()).doses);
-      else setDoses([]);
+      const json = await resposta.json();
+      if (!resposta.ok) throw new Error(json.erro || `HTTP ${resposta.status}`);
+      setServidor(json.diagnostico);
+      setOffsetRelogioMs(json.diagnostico.agoraMs - (t0 + t1) / 2);
+      setDoses(json.doses || []);
     } catch (e) {
       setErroServidor(e.message);
     }
@@ -222,7 +218,7 @@ export default function DiagnosticoScreen() {
   const testarAgora = async () => {
     setOcupado(true);
     try {
-      const r = await fetch('/api/teste-push', {
+      const r = await fetch('/api/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deviceId: obterIdDispositivo(), urgency: urgencia }),
@@ -241,7 +237,7 @@ export default function DiagnosticoScreen() {
   const agendarTeste = async () => {
     setOcupado(true);
     try {
-      const r = await fetch('/api/teste-push', {
+      const r = await fetch('/api/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ deviceId: obterIdDispositivo(), urgency: urgencia, aposSegundos: 120 }),
