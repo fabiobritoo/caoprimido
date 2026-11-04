@@ -80,8 +80,9 @@ async function coletarLocal() {
 
   try {
     const cache = await caches.open('caoprimido-pushlog');
-    const resposta = await cache.match('/__pushlog');
-    info.logRecebidos = resposta ? await resposta.json() : [];
+    const pedidos = (await cache.keys()).filter((r) => new URL(r.url).pathname.startsWith('/__pushlog/'));
+    const itens = await Promise.all(pedidos.map(async (r) => (await cache.match(r)).json()));
+    info.logRecebidos = itens.sort((a, b) => b.recebidoEm - a.recebidoEm).slice(0, 30);
   } catch {
     // ignora
   }

@@ -11,6 +11,9 @@ import {
 } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
+// O cron roda a cada 60s com alguns segundos de variação. Sem tolerância, uma
+// checagem que cai 14s antes dos 3 min cravados é pulada e o reenvio vira 4 min.
+const TOLERANCIA_CRON_MS = 20 * 1000;
 const JANELA_MAXIMA_MS = 30 * 60 * 1000;
 const LIMIAR_AVISO_CUIDADOR_MS = 15 * 60 * 1000;
 const TTL_AVISO_ESTOQUE_SEGUNDOS = 3 * 24 * 60 * 60;
@@ -683,7 +686,7 @@ export default async function handler(req, res) {
           !emSoneca &&
           tgEnvios < MAX_MENSAGENS_TELEGRAM &&
           (tgEnvios === 0 ||
-            agoraMs - tgUltimoEnvio >= INTERVALO_TELEGRAM_MS)
+            agoraMs - tgUltimoEnvio >= INTERVALO_TELEGRAM_MS - TOLERANCIA_CRON_MS)
         ) {
           const { titulo, corpo } = montarMensagemEscalonada(
             remedio.nome,
@@ -738,7 +741,7 @@ export default async function handler(req, res) {
 
           if (
             agoraMs - ultimoEnvio <
-            INTERVALO_REENVIO_MS
+            INTERVALO_REENVIO_MS - TOLERANCIA_CRON_MS
           ) {
             continue;
           }

@@ -13,21 +13,32 @@ precacheAndRoute(self.__WB_MANIFEST);
 async function registrarPushRecebido(dados, erro) {
   try {
     const cache = await caches.open('caoprimido-pushlog');
-    const resposta = await cache.match('/__pushlog');
-    const lista = resposta ? await resposta.json() : [];
-    lista.unshift({
-      recebidoEm: Date.now(),
-      enviadoEm: dados.enviadoEm || null,
-      tipo: dados.tipo || 'dose',
-      titulo: dados.titulo || '',
-      horario: dados.horario || null,
-      tentativa: dados.tentativa || null,
-      erro: erro || null,
-    });
+    // um arquivo por push: vários pushes chegando juntos não se sobrescrevem
+    const agora = Date.now();
+    const chave = `/__pushlog/${String(agora).padStart(15, '0')}-${Math.random().toString(36).slice(2, 8)}`;
     await cache.put(
-      '/__pushlog',
-      new Response(JSON.stringify(lista.slice(0, 30)), { headers: { 'Content-Type': 'application/json' } })
+      chave,
+      new Response(
+        JSON.stringify({
+          recebidoEm: agora,
+          enviadoEm: dados.enviadoEm || null,
+          tipo: dados.tipo || 'dose',
+          titulo: dados.titulo || '',
+          horario: dados.horario || null,
+          tentativa: dados.tentativa || null,
+          erro: erro || null,
+        }),
+        { headers: { 'Content-Type': 'application/json' } }
+      )
     );
+    // mantém só os 40 mais recentes
+    const caminhos = (await cache.keys())
+      .map((r) => new URL(r.url).pathname)
+      .filter((c) => c.startsWith('/__pushlog/'))
+      .sort();
+    for (const c of caminhos.slice(0, Math.max(0, caminhos.length - 40))) {
+      await cache.delete(c);
+    }
   } catch (e) {
     // diagnóstico nunca pode atrapalhar a notificação
   }
