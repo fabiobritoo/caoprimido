@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
+import { Bell,
   HeartHandshake, Save, RefreshCw, Moon, Sun, Send, Check, TestTube2, DownloadCloud,
   Database, Upload, User, FolderOpen,
 } from 'lucide-react';
@@ -318,6 +318,21 @@ export default function ConfiguracoesScreen() {
           {verificandoAtualizacao ? 'Verificando...' : 'Verificar atualização'}
         </button>
         {statusAtualizacao && <div style={estilos.statusAtualizacaoTexto}>{statusAtualizacao}</div>}
+
+        <div style={estilos.divisor} />
+
+        <div style={estilos.secaoTitulo}>
+          <Bell size={20} color={CORES.primaria} />
+          Diagnóstico de notificações
+        </div>
+        <div style={estilos.explicacao}>
+          Se os lembretes estiverem atrasando ou não chegando, abra essa tela: ela
+          testa o envio e gera um relatório que dá pra copiar.
+        </div>
+        <button onClick={() => navigate('/diagnostico')} style={estilos.botaoVerificarAtualizacao}>
+          <Bell size={16} strokeWidth={2.3} />
+          Abrir diagnóstico
+        </button>
 
         <div style={estilos.divisor} />
 

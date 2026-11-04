@@ -58,3 +58,37 @@ export async function sincronizarNotificacoesServidor(deviceId, remedios, config
     console.error('Falha ao sincronizar notificações com o servidor', e);
   }
 }
+
+// Usado pela tela Diagnóstico: descarta a inscrição push atual e cria uma
+// nova (resolve inscrições "zumbis" que o serviço de push já não entrega),
+// depois reenvia tudo pro servidor. Devolve o que aconteceu, pra mostrar na tela.
+export async function renovarInscricaoPush(deviceId, remedios) {
+  if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+    return { ok: false, erro: 'Este navegador não suporta push' };
+  }
+  try {
+    const permitido = await pedirPermissaoNotificacao();
+    if (!permitido) return { ok: false, erro: 'Permissão de notificação negada' };
+
+    const registro = await navigator.serviceWorker.ready;
+    const antiga = await registro.pushManager.getSubscription();
+    if (antiga) await antiga.unsubscribe();
+
+    const nova = await registro.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: base64ParaUint8Array(CHAVE_PUBLICA_VAPID),
+    });
+
+    const { obterPerfil } = await import('./perfil.js');
+    const perfil = await obterPerfil();
+    const resposta = await fetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId, subscription: nova, remedios, configuracoes: null, perfil }),
+    });
+    if (!resposta.ok) return { ok: false, erro: `Servidor recusou (HTTP ${resposta.status})` };
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, erro: e.message || String(e) };
+  }
+}

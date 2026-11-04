@@ -1,6 +1,7 @@
 import { kv } from '@vercel/kv';
 import webpush from 'web-push';
 import { createHash } from 'node:crypto';
+import { registrarEnvio } from './_diag.js';
 import {
   obterDataHoraBrasil,
   remedioAplicavelNoDia,
@@ -258,6 +259,58 @@ export default async function handler(req, res) {
         configuracoes,
         perfil,
       } = dadosDispositivo;
+
+      // ==========================================================
+      // TESTE AGENDADO PELA TELA DIAGNÓSTICO
+      //
+      // Sai pelo mesmo caminho dos lembretes reais (cron -> push),
+      // por isso serve pra investigar atrasos. A chave NX garante
+      // que um teste só seja enviado uma vez, mesmo com várias
+      // instâncias rodando ao mesmo tempo.
+      // ==========================================================
+      const teste = dadosDispositivo.testePush;
+      if (
+        teste?.enviarApos &&
+        agoraMs >= teste.enviarApos &&
+        agoraMs - teste.enviarApos < 10 * 60 * 1000
+      ) {
+        const reservou = await kv.set(
+          `testeEnviado:${deviceId}:${teste.enviarApos}`,
+          1,
+          { nx: true, ex: 900 }
+        );
+        if (reservou) {
+          let statusTeste = null;
+          let erroTeste;
+          try {
+            const r = await webpush.sendNotification(
+              subscription,
+              JSON.stringify({
+                tipo: 'teste',
+                titulo: '🧪 Teste agendado do Cãoprimido',
+                corpo: `Enviado pelo cron (urgência ${teste.urgency})`,
+                enviadoEm: agoraMs,
+                dia: 'teste',
+                horario: 'teste',
+                remedioId: 'teste',
+                tentativa: agoraMs,
+              }),
+              { TTL: 300, urgency: teste.urgency || 'high' }
+            );
+            statusTeste = r.statusCode;
+          } catch (e) {
+            statusTeste = e.statusCode || null;
+            erroTeste = String(e.body || e.message).slice(0, 120);
+          }
+          await registrarEnvio(deviceId, {
+            tipo: 'teste-agendado',
+            urg: teste.urgency,
+            status: statusTeste,
+            erro: erroTeste,
+            previsto: teste.enviarApos,
+          });
+        }
+      }
 
       // ==========================================================
       // 3. IDENTIFICA REMÉDIOS COM ESTOQUE BAIXO
@@ -609,7 +662,7 @@ export default async function handler(req, res) {
           const novaTentativa =
             (estado?.tentativas || 0) + 1;
 
-          await webpush.sendNotification(
+          const respostaPush = await webpush.sendNotification(
             subscription,
             JSON.stringify({
               titulo,
@@ -620,6 +673,7 @@ export default async function handler(req, res) {
               deviceId,
               badge: contadorPendente,
               tentativa: novaTentativa,
+              enviadoEm: agoraMs,
             }),
             {
               TTL: TTL_PUSH_DOSE_SEGUNDOS,
@@ -629,6 +683,14 @@ export default async function handler(req, res) {
           );
 
           notificacoesEnviadas++;
+
+          await registrarEnvio(deviceId, {
+            tipo: 'dose',
+            rem: remedio.nome,
+            hor: horario,
+            tent: novaTentativa,
+            status: respostaPush.statusCode,
+          });
 
           await kv.set(
             `estado:${chaveBase}`,
@@ -642,6 +704,13 @@ export default async function handler(req, res) {
           );
         } catch (erroEnvio) {
           falhasEnvio++;
+          await registrarEnvio(deviceId, {
+            tipo: 'dose',
+            rem: remedio.nome,
+            hor: horario,
+            status: erroEnvio.statusCode || null,
+            erro: String(erroEnvio.body || erroEnvio.message).slice(0, 120),
+          });
           console.error(
             'Falha ao enviar push para',
             deviceId,

@@ -6,6 +6,33 @@ import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
 cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 
+// Registro dos últimos pushes recebidos neste aparelho, só pra diagnóstico
+// (tela Diagnóstico). Guarda no Cache Storage porque o Service Worker não
+// tem acesso ao localStorage. Mostra QUANDO o aparelho recebeu cada push,
+// pra comparar com a hora em que o servidor enviou.
+async function registrarPushRecebido(dados, erro) {
+  try {
+    const cache = await caches.open('caoprimido-pushlog');
+    const resposta = await cache.match('/__pushlog');
+    const lista = resposta ? await resposta.json() : [];
+    lista.unshift({
+      recebidoEm: Date.now(),
+      enviadoEm: dados.enviadoEm || null,
+      tipo: dados.tipo || 'dose',
+      titulo: dados.titulo || '',
+      horario: dados.horario || null,
+      tentativa: dados.tentativa || null,
+      erro: erro || null,
+    });
+    await cache.put(
+      '/__pushlog',
+      new Response(JSON.stringify(lista.slice(0, 30)), { headers: { 'Content-Type': 'application/json' } })
+    );
+  } catch (e) {
+    // diagnóstico nunca pode atrapalhar a notificação
+  }
+}
+
 self.addEventListener('push', (evento) => {
   let dados = { titulo: 'Cãoprimido', corpo: 'Hora de um remédio!' };
   try {
@@ -15,15 +42,17 @@ self.addEventListener('push', (evento) => {
   }
 
   const ehEstoqueBaixo = dados.tipo === 'estoque_baixo';
+  const ehTeste = dados.tipo === 'teste';
 
   evento.waitUntil(
     (async () => {
+      try {
       await self.registration.showNotification(dados.titulo, {
         body: dados.corpo,
         icon: '/icon-192.png',
         badge: '/icon-192.png',
         vibrate: ehEstoqueBaixo ? [200] : [300, 150, 300, 150, 300, 150, 300],
-        requireInteraction: !ehEstoqueBaixo,
+        requireInteraction: !ehEstoqueBaixo && !ehTeste,
         tag: ehEstoqueBaixo
           ? `estoque-${dados.remedioId}`
           : `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}-${dados.tentativa || Date.now()}`,
@@ -31,13 +60,18 @@ self.addEventListener('push', (evento) => {
         // Em navegadores que suportam, aparecem como botões direto na notificação
         // (sem precisar abrir o app). Onde não suportar, o toque normal continua funcionando.
         // O aviso de estoque baixo não tem "já tomei/adiar" — não faz sentido pra esse caso.
-        actions: ehEstoqueBaixo
+        actions: ehEstoqueBaixo || ehTeste
           ? []
           : [
               { action: 'tomei', title: '✅ Já tomei' },
               { action: 'adiar', title: '⏰ Adiar 5 min' },
             ],
       });
+      } catch (erroExibir) {
+        await registrarPushRecebido(dados, String(erroExibir?.message || erroExibir));
+        throw erroExibir;
+      }
+      await registrarPushRecebido(dados, null);
 
       if ('setAppBadge' in self.registration && typeof dados.badge === 'number') {
         try {
@@ -141,6 +175,11 @@ self.addEventListener('notificationclick', (evento) => {
     return;
   }
 
+  if (dados.tipo === 'teste') {
+    evento.waitUntil(self.clients.openWindow('/#/diagnostico'));
+    return;
+  }
+
   if (evento.action === 'tomei') {
     evento.waitUntil(confirmarTomeiViaNotificacao(dados));
   } else if (evento.action === 'adiar') {
@@ -154,7 +193,7 @@ self.addEventListener('notificationclick', (evento) => {
 // Usuário limpou/dispensou a notificação sem tocar (ex: "limpar tudo")
 self.addEventListener('notificationclose', (evento) => {
   const dados = evento.notification.data || {};
-  if (dados.tipo === 'estoque_baixo') return; // dispensar um aviso de estoque não deve abrir o app sozinho
+  if (dados.tipo === 'estoque_baixo' || dados.tipo === 'teste') return; // dispensar um aviso de estoque não deve abrir o app sozinho
   // só tenta abrir a tela se não foi um botão de ação que já resolveu o problema
   if (!evento.action) {
     evento.waitUntil(abrirTelaAlarme(dados));
