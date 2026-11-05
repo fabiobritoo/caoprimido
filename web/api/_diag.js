@@ -69,6 +69,7 @@ export async function montarDiagnostico(deviceId) {
     subscription: resumirSubscription(dados?.subscription),
     quantidadeRemedios: dados?.remedios?.length || 0,
     cuidadorAtivo: !!dados?.configuracoes?.cuidadorAtivo,
+    telegramProprioAtivo: !!dados?.configuracoes?.telegramProprioAtivo,
     testeAgendado: dados?.testePush || null,
     log,
   };

@@ -280,6 +280,27 @@ export default function ConfiguracoesScreen() {
     setEnviandoTeste(false);
   }
 
+  // Os interruptores salvam e sincronizam com o servidor na hora. Antes só
+  // mudavam a tela e dependiam de apertar "Salvar": quem desligava e saía
+  // continuava recebendo os avisos, porque o servidor nunca era informado.
+  async function alternarEnvio(campo, novoValor) {
+    if (campo === 'proprio') setProprioAtivo(novoValor);
+    else setCuidadorAtivo(novoValor);
+    const config = {
+      ...configAtual(),
+      ...(campo === 'proprio'
+        ? { telegramProprioAtivo: novoValor }
+        : { cuidadorAtivo: novoValor }),
+    };
+    try {
+      await salvarConfiguracoes(config);
+      const remedios = await listarRemedios();
+      await sincronizarNotificacoesServidor(obterIdDispositivo(), remedios, config);
+    } catch (e) {
+      console.error('Falha ao salvar o interruptor', e);
+    }
+  }
+
   async function salvar() {
     setSalvando(true);
     const config = configAtual();
@@ -504,7 +525,7 @@ export default function ConfiguracoesScreen() {
         <div style={estilos.linhaToggle}>
           <span style={estilos.label}>Receber também no Telegram</span>
           <button
-            onClick={() => setProprioAtivo(!proprioAtivo)}
+            onClick={() => alternarEnvio('proprio', !proprioAtivo)}
             style={{
               ...estilos.toggle,
               backgroundColor: proprioAtivo ? CORES.primaria : CORES.borda,
@@ -589,7 +610,7 @@ export default function ConfiguracoesScreen() {
         <div style={estilos.linhaToggle}>
           <span style={estilos.label}>Ativar aviso ao cuidador</span>
           <button
-            onClick={() => setCuidadorAtivo(!cuidadorAtivo)}
+            onClick={() => alternarEnvio('cuidador', !cuidadorAtivo)}
             style={{
               ...estilos.toggle,
               backgroundColor: cuidadorAtivo ? CORES.primaria : CORES.borda,

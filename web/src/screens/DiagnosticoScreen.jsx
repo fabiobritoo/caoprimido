@@ -122,7 +122,7 @@ function montarRelatorio({ local, servidor, doses, offsetRelogioMs, erroServidor
     L.push(`Diferença de relógio aparelho↔servidor: ${offsetRelogioMs != null ? `${(offsetRelogioMs / 1000).toFixed(1)}s` : 'n/d'}`);
     L.push(`Dispositivo registrado: ${servidor.registrado ? 'sim' : 'NÃO'} | No conjunto de dispositivos: ${servidor.noConjuntoDeDispositivos ? 'sim' : 'NÃO'}`);
     L.push(`Último sync do app: ${servidor.atualizadoEm ? new Date(servidor.atualizadoEm).toString() : 'nunca'}`);
-    L.push(`Remédios no servidor: ${servidor.quantidadeRemedios} | Cuidador ativo: ${servidor.cuidadorAtivo}`);
+    L.push(`Remédios no servidor: ${servidor.quantidadeRemedios} | Cuidador ativo: ${servidor.cuidadorAtivo} | Telegram próprio ativo: ${servidor.telegramProprioAtivo}`);
     L.push(
       `Inscrição push no servidor: ${
         servidor.subscription ? `${servidor.subscription.servico} …${servidor.subscription.final}` : 'NENHUMA'
