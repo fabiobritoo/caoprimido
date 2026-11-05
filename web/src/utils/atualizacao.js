@@ -6,6 +6,48 @@
 // 'ja_atualizado' -> já está na versão mais recente
 // 'atualizando'   -> encontrou uma versão nova e está trocando (a página vai recarregar sozinha)
 // 'erro'          -> algo deu errado ao verificar
+import { VERSAO } from './versao.js';
+
+const CHAVE_TENTATIVA = 'caoprimido_tentativa_atualizacao';
+
+function lerTentativa() {
+  try {
+    return sessionStorage.getItem(CHAVE_TENTATIVA);
+  } catch (e) {
+    return null;
+  }
+}
+
+function gravarTentativa(valor) {
+  try {
+    sessionStorage.setItem(CHAVE_TENTATIVA, valor);
+  } catch (e) {
+    // sem sessionStorage: segue sem a marcação
+  }
+}
+
+// Última alternativa: apaga os arquivos guardados (cache do app) e recarrega.
+// NÃO remove o Service Worker, então a inscrição de notificações é mantida.
+// Usada quando uma tentativa anterior de atualizar recarregou a página e a
+// versão continuou a mesma (troca de Service Worker travada).
+async function limparCacheERecarregar() {
+  try {
+    const nomes = await caches.keys();
+    await Promise.all(
+      nomes.filter((n) => n !== 'caoprimido-pushlog').map((n) => caches.delete(n))
+    );
+  } catch (e) {
+    // segue mesmo assim
+  }
+  try {
+    const registro = await navigator.serviceWorker.getRegistration();
+    if (registro) await registro.update();
+  } catch (e) {
+    // segue mesmo assim
+  }
+  window.location.reload();
+}
+
 export function verificarAtualizacao() {
   return new Promise((resolve) => {
     if (!('serviceWorker' in navigator)) {
@@ -20,10 +62,36 @@ export function verificarAtualizacao() {
       resolve(resultado);
     };
 
-    // se a nova versão assumir o controle, recarrega a página automaticamente
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
+    // A tentativa anterior (nesta mesma versão) já mandou trocar e recarregou,
+    // mas continua na mesma versão: a troca normal está travada. Limpa o cache.
+    if (lerTentativa() === VERSAO) {
+      gravarTentativa('');
+      finalizar('atualizando');
+      limparCacheERecarregar();
+      return;
+    }
+
+    let recarregando = false;
+    const recarregar = () => {
+      if (recarregando) return;
+      recarregando = true;
       window.location.reload();
-    });
+    };
+
+    // Manda o worker novo assumir e garante o reload mesmo se o navegador
+    // não disparar "controllerchange" (acontece em alguns Androids/WebAPK).
+    const ativar = (worker) => {
+      gravarTentativa(VERSAO);
+      worker.addEventListener('statechange', () => {
+        if (worker.state === 'activated') setTimeout(recarregar, 300);
+      });
+      worker.postMessage({ tipo: 'PULAR_ESPERA' });
+      setTimeout(recarregar, 3500);
+      finalizar('atualizando');
+    };
+
+    // se a nova versão assumir o controle, recarrega a página automaticamente
+    navigator.serviceWorker.addEventListener('controllerchange', recarregar);
 
     navigator.serviceWorker
       .getRegistration()
@@ -36,8 +104,7 @@ export function verificarAtualizacao() {
         // se já tem uma versão esperando (baixada antes mas ainda não ativada),
         // ativa ela direto
         if (registro.waiting) {
-          registro.waiting.postMessage({ tipo: 'PULAR_ESPERA' });
-          finalizar('atualizando');
+          ativar(registro.waiting);
           return;
         }
 
@@ -48,8 +115,7 @@ export function verificarAtualizacao() {
           novoWorker.addEventListener('statechange', () => {
             if (novoWorker.state === 'installed' && navigator.serviceWorker.controller) {
               // encontrou e já baixou uma versão nova
-              novoWorker.postMessage({ tipo: 'PULAR_ESPERA' });
-              finalizar('atualizando');
+              ativar(novoWorker);
             }
           });
         });
