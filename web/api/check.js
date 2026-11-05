@@ -5,9 +5,11 @@ import {
   obterDataHoraBrasil,
   remedioAplicavelNoDia,
   remedioEstaAtivo,
+  remedioNoDia,
   minutosDeAtraso,
   nomeResumido,
   rotuloUnidade,
+  formatarQuantidade,
 } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
@@ -148,7 +150,7 @@ async function avisarCuidador(config, nomeRemedio, horario, perfil) {
 async function avisarTelegramProprio(config, remedio, horario, dia, titulo, corpo) {
   if (!process.env.TELEGRAM_BOT_TOKEN) return { ok: false, erro: 'sem token' };
 
-  const dose = `${remedio.quantidadePorDose || 1} ${rotuloUnidade(remedio.unidade)}`;
+  const dose = `${formatarQuantidade(remedio.quantidadePorDose || 1)} ${rotuloUnidade(remedio.unidade)}`;
   const texto = [titulo, corpo, `💊 ${dose} · 🕐 ${horario}`].filter(Boolean).join('\n');
 
   const parametros = new URLSearchParams({
@@ -499,7 +501,8 @@ export default async function handler(req, res) {
             `${deviceId}:${remedio.id}:${hoje}:${horario}`;
 
           candidatos.push({
-            remedio,
+            // com fases de dose, usa a dose que vale HOJE (push, Telegram e texto)
+            remedio: remedioNoDia(remedio, hoje),
             horario,
             chaveBase,
             atrasoMs,

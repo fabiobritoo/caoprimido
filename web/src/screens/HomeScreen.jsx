@@ -16,6 +16,8 @@ import {
   rotuloUnidade,
   diasDaSemanaContendo,
   remedioAplicavelNoDia,
+  remedioNoDia,
+  formatarQuantidade,
   formatarData,
   formatarDataPorExtenso,
   somarDias,
@@ -207,7 +209,8 @@ export default function HomeScreen() {
     if (!remedioAplicavelNoDia(remedio.frequencia, diaSelecionado, remedio.dataInicio, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
       dosesDoDia.push({
-        remedio,
+        // com fases de dose, usa a dose que valia naquele dia
+        remedio: remedioNoDia(remedio, diaSelecionado),
         horario,
         tomado: doseTomada(registros, remedio.id, diaSelecionado, horario),
         tomadoEm: horarioRegistrado(registros, remedio.id, diaSelecionado, horario),
@@ -530,7 +533,10 @@ export default function HomeScreen() {
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <div style={estilos.doseNome}>{item.remedio.nome}</div>
                     <div style={estilos.doseDetalhe}>
-                      Tomar {item.remedio.quantidadePorDose} {unidadeTexto}
+                      Tomar {formatarQuantidade(item.remedio.quantidadePorDose)} {unidadeTexto}
+                      {item.remedio.faseDoDia
+                        ? ` · fase ${item.remedio.faseDoDia.indice + 1}/${item.remedio.faseDoDia.total}`
+                        : ''}
                     </div>
                   </div>
                   <div
@@ -574,7 +580,7 @@ export default function HomeScreen() {
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <div style={estilos.doseNome}>{item.remedio.nome}</div>
                     <div style={estilos.doseDetalhe}>
-                      {item.remedio.quantidadePorDose} {unidadeTexto} · agendado {item.horario}
+                      {formatarQuantidade(item.remedio.quantidadePorDose)} {unidadeTexto} · agendado {item.horario}
                     </div>
                   </div>
                   <div style={estilos.horaRegistrada}>{formatarHora(item.tomadoEm)}</div>

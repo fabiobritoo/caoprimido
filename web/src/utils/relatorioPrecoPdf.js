@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { listarRemedios, obterRegistros } from './storage.js';
 import { obterTodasCompras } from './compras.js';
-import { rotuloUnidade, remedioEstaAtivo, formatarData } from './constantes.js';
+import { rotuloUnidade, remedioEstaAtivo, formatarData, doseDoDia } from './constantes.js';
 
 function obterPaletaPdf(modoBob) {
   if (modoBob) {
@@ -74,7 +74,7 @@ function calcularMediaDosesPorDia(remedio) {
 function descreverFrequenciaResumo(remedio) {
   const freq = remedio.frequencia;
   const horariosPorDia = remedio.horarios?.length || 1;
-  const dose = `${remedio.quantidadePorDose || 1} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
+  const dose = `${doseDoDia(remedio, formatarData(new Date()))} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
   const sufixo = ` · ${horariosPorDia}x ao dia · ${dose} por dose`;
 
   if (!freq || freq.tipo === 'diaria') return `todos os dias${sufixo}`;
@@ -199,7 +199,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     if (maisRecente.quantidade > 0) {
       const precoPorUnidade = maisRecente.preco / maisRecente.quantidade;
       const mediaDosesPorDia = calcularMediaDosesPorDia(remedio);
-      custoDiarioEstimado = precoPorUnidade * (remedio.quantidadePorDose || 1) * mediaDosesPorDia;
+      custoDiarioEstimado = precoPorUnidade * doseDoDia(remedio, formatarData(new Date())) * mediaDosesPorDia;
     }
 
     const locais = [...new Set(compras.filter((c) => c.local).map((c) => c.local))];

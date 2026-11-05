@@ -5,7 +5,7 @@ import { listarRegistrosSaude } from './saude.js';
 import { calcularAdesaoPorRemedio, calcularAdesaoGeral } from './evolucao.js';
 import { calcularSequenciaDias } from './streak.js';
 import { obterPerfil } from './perfil.js';
-import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData } from './constantes.js';
+import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData, doseDoDia } from './constantes.js';
 
 // Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
 function obterPaletaPdf(modoBob) {
@@ -214,7 +214,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
     const primeiraDose = primeiraDoseDoRemedio(r.id, registros);
     return [
       r.nome,
-      `${r.quantidadePorDose} ${unidadeTexto}`,
+      `${doseDoDia(r, hojeStrRelatorio)} ${unidadeTexto}${Array.isArray(r.fases) && r.fases.length > 1 ? ' (atual)' : ''}`,
       descreverFrequencia(r.frequencia),
       (r.horarios || []).join(', '),
       primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
@@ -262,7 +262,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
         const ultimaDose = ultimaDoseDoRemedio(r.id, registros);
         return [
           r.nome,
-          `${r.quantidadePorDose} ${unidadeTexto}`,
+          `${doseDoDia(r, hojeStrRelatorio)} ${unidadeTexto}`,
           descreverFrequencia(r.frequencia),
           (r.horarios || []).join(', '),
           primeiraDose ? formatarDataExtenso(primeiraDose) : '—',

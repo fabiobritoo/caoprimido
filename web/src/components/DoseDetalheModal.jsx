@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pill, Undo2, X } from 'lucide-react';
 import { RAIO, SOMBRA } from '../utils/tema.js';
-import { rotuloUnidade } from '../utils/constantes.js';
+import { rotuloUnidade, formatarQuantidade } from '../utils/constantes.js';
 
 function formatarHora(timestamp) {
   if (!timestamp) return '--:--';
@@ -29,7 +29,7 @@ export default function DoseDetalheModal({ item, CORES, aoFechar, aoDesfazer }) 
           </div>
           <div style={estilos.nome}>{item.remedio.nome}</div>
           <div style={estilos.subtitulo}>
-            Agendado para {item.horario} · Tomar {item.remedio.quantidadePorDose} {unidadeTexto}
+            Agendado para {item.horario} · Tomar {formatarQuantidade(item.remedio.quantidadePorDose)} {unidadeTexto}
           </div>
           <div style={estilos.subtitulo}>
             Restante: {item.remedio.quantidadeAtual} {unidadeTexto}
@@ -39,7 +39,7 @@ export default function DoseDetalheModal({ item, CORES, aoFechar, aoDesfazer }) 
         <div style={estilos.linha}>
           <span style={estilos.linhaLabel}>Dose</span>
           <span style={estilos.linhaValor}>
-            {item.remedio.quantidadePorDose} {unidadeTexto}
+            {formatarQuantidade(item.remedio.quantidadePorDose)} {unidadeTexto}
           </span>
         </div>
 

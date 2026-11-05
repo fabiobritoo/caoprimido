@@ -1,4 +1,4 @@
-import { formatarData } from './constantes.js';
+import { formatarData, doseDoDia } from './constantes.js';
 
 const CHAVE_REMEDIOS = '@caoprimido:lista';
 const CHAVE_REGISTROS = '@caoprimido:registros';
@@ -84,7 +84,8 @@ export async function alternarDose(remedio, data, horario) {
   const registros = await obterRegistros();
   const chave = chaveRegistro(remedio.id, data, horario);
   const estavaTomado = !!registros[chave];
-  const porDose = remedio.quantidadePorDose || 1;
+  // com fases de dose, desconta a dose que valia NAQUELE dia
+  const porDose = doseDoDia(remedio, data);
 
   const novosRegistros = { ...registros };
   if (estavaTomado) {

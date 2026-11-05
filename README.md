@@ -33,6 +33,18 @@ passar por loja de aplicativos.
   sachê, unidade), dose, horários, frequência (diária / dias específicos da
   semana / a cada X dias), estoque com aviso de quantidade mínima
 - Data de início (padrão hoje) e data de término opcional
+- **Fases de dose** (esquema escalonado): num único cadastro, a dose muda com
+  o tempo — ex.: 0,25 por 2 semanas → 0,5 por 4 semanas → 1 daí em diante.
+  Liga em "Dose muda com o tempo (fases)" ao cadastrar/editar. As fases contam
+  em dias de calendário a partir da data de início; a última fase não tem
+  duração. O app usa a dose do dia na tela inicial, nos alarmes/push/Telegram,
+  no desconto do estoque (cada dose tomada desconta a dose daquele dia), na
+  estimativa de dias de estoque (simula as mudanças de fase) e nos alarmes do
+  Calendário (um evento recorrente por fase). Dados: `remedio.fases =
+  [{ quantidadePorDose, dias }]` (última com `dias: null`); a lógica fica em
+  `src/utils/constantes.js` e `api/_logica.js` (manter as duas iguais).
+  A dose é na unidade do estoque (ex.: se cada comprimido tem 0,25 mg, use 1 → 2
+  → 4 comprimidos).
 - Edição, arquivamento (some da lista ativa sem perder histórico) e
   reativação de remédios arquivados
 - Tela de histórico de preços/compras por remédio (ícone de etiqueta em

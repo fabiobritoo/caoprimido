@@ -15,10 +15,19 @@ import {
   CalendarClock,
   Save,
   Tag,
+  TrendingUp,
 } from 'lucide-react';
 import { adicionarRemedio, atualizarRemedio, listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { UNIDADES, DIAS_SEMANA, formatarData, somarDias, rotuloUnidade } from '../utils/constantes.js';
+import {
+  UNIDADES,
+  DIAS_SEMANA,
+  formatarData,
+  somarDias,
+  rotuloUnidade,
+  doseDoDia,
+  calcularFasesComDatas,
+} from '../utils/constantes.js';
 import { adicionarCompra } from '../utils/compras.js';
 import { RAIO, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
@@ -41,6 +50,28 @@ const ICONE_UNIDADE = {
   unidade: Package,
 };
 
+// aceita "0,25" e "0.25"
+function paraNumero(valor) {
+  return Number(String(valor ?? '').replace(',', '.'));
+}
+
+// 0.25 -> "0,25"
+function formatarDose(n) {
+  return String(n).replace('.', ',');
+}
+
+// duração digitada na fase -> total de dias (ou null se inválida)
+function diasDaFase(fase) {
+  const n = Math.floor(paraNumero(fase.duracao));
+  if (!(n > 0)) return null;
+  return fase.tipo === 'semanas' ? n * 7 : n;
+}
+
+const FASES_PADRAO = [
+  { dose: '', duracao: '2', tipo: 'semanas' },
+  { dose: '', duracao: '', tipo: 'semanas' },
+];
+
 const FREQUENCIAS = [
   { valor: 'diaria', rotulo: 'Todos os dias', icone: CalendarDays },
   { valor: 'dias_semana', rotulo: 'Dias específicos da semana', icone: CalendarClock },
@@ -60,6 +91,9 @@ export default function AddMedicineScreen() {
   const [nome, setNome] = useState('');
   const [unidade, setUnidade] = useState('comprimido');
   const [quantidadePorDose, setQuantidadePorDose] = useState('1');
+  // fases de dose: ex. 0,25 por 2 semanas -> 0,5 por 4 semanas -> 1 daí em diante
+  const [usarFases, setUsarFases] = useState(false);
+  const [fases, setFases] = useState(FASES_PADRAO);
   const [quantidadeAtual, setQuantidadeAtual] = useState('');
   const [quantidadeMinima, setQuantidadeMinima] = useState('');
   const [horarios, setHorarios] = useState([]);
@@ -89,6 +123,18 @@ export default function AddMedicineScreen() {
         setNome(encontrado.nome);
         setUnidade(encontrado.unidade || 'comprimido');
         setQuantidadePorDose(String(encontrado.quantidadePorDose || 1));
+        if (Array.isArray(encontrado.fases) && encontrado.fases.length >= 2) {
+          setUsarFases(true);
+          setFases(
+            encontrado.fases.map((f, i, todas) => {
+              const dose = String(f.quantidadePorDose).replace('.', ',');
+              if (i === todas.length - 1 || !f.dias) return { dose, duracao: '', tipo: 'semanas' };
+              return f.dias % 7 === 0
+                ? { dose, duracao: String(f.dias / 7), tipo: 'semanas' }
+                : { dose, duracao: String(f.dias), tipo: 'dias' };
+            })
+          );
+        }
         setQuantidadeAtual(String(encontrado.quantidadeAtual ?? ''));
         setQuantidadeMinima(String(encontrado.quantidadeMinima ?? ''));
         setHorarios(encontrado.horarios || []);
@@ -141,6 +187,42 @@ export default function AddMedicineScreen() {
     setDataTermino(somarDias(dataInicio, dias - 1));
   }, [terminoAtivo, modoTermino, quantidadeDias, dataInicio]);
 
+  function alternarFases() {
+    if (!usarFases) {
+      // ao ligar, a dose já digitada vira a dose da fase 1
+      setFases((atual) =>
+        atual.map((f, i) => (i === 0 && !f.dose ? { ...f, dose: String(quantidadePorDose || '').replace('.', ',') } : f))
+      );
+    }
+    setUsarFases(!usarFases);
+  }
+
+  function atualizarFase(indice, campos) {
+    setFases((atual) => atual.map((f, i) => (i === indice ? { ...f, ...campos } : f)));
+  }
+
+  function adicionarFase() {
+    setFases((atual) => [
+      // a antiga "última fase" passa a ter duração (sugere 4 semanas)
+      ...atual.map((f, i) =>
+        i === atual.length - 1 ? { ...f, duracao: f.duracao || '4', tipo: f.tipo || 'semanas' } : f
+      ),
+      { dose: '', duracao: '', tipo: 'semanas' },
+    ]);
+  }
+
+  function removerFase(indice) {
+    setFases((atual) => (atual.length > 2 ? atual.filter((_, i) => i !== indice) : atual));
+  }
+
+  // fases no formato salvo: [{ quantidadePorDose, dias }], última com dias null
+  function fasesParaSalvar() {
+    return fases.map((f, i) => ({
+      quantidadePorDose: paraNumero(f.dose),
+      dias: i === fases.length - 1 ? null : diasDaFase(f),
+    }));
+  }
+
   function montarFrequencia() {
     if (tipoFrequencia === 'diaria') return { tipo: 'diaria' };
     if (tipoFrequencia === 'dias_semana') {
@@ -169,20 +251,38 @@ export default function AddMedicineScreen() {
     if (terminoAtivo && dataTermino < dataInicio) {
       return alert('A data de término não pode ser antes da data de início.');
     }
+    if (usarFases) {
+      if (fases.length < 2) return alert('Use pelo menos 2 fases (ou desligue as fases de dose).');
+      for (let i = 0; i < fases.length; i++) {
+        if (!(paraNumero(fases[i].dose) > 0)) return alert(`Informe a dose da fase ${i + 1}.`);
+        if (i < fases.length - 1 && !diasDaFase(fases[i])) {
+          return alert(`Informe a duração da fase ${i + 1}.`);
+        }
+      }
+    }
 
     setSalvando(true);
 
     // se a data de início era desconhecida (remédio antigo) e a pessoa não
     // mexeu nela agora, não grava "hoje" por engano — isso apagaria o
-    // histórico de adesão desse remédio sem querer
+    // histórico de adesão desse remédio sem querer. Com fases a data de início
+    // é obrigatória (é de onde as fases contam), então grava sempre.
     const dataInicioParaSalvar =
-      dataInicioEraDesconhecida && !dataInicioTocada ? null : dataInicio;
+      !usarFases && dataInicioEraDesconhecida && !dataInicioTocada ? null : dataInicio;
+
+    // com fases, "quantidade por dose" guarda a dose que vale hoje (o resto do
+    // app calcula a dose de cada dia a partir de "fases")
+    const fasesSalvas = usarFases ? fasesParaSalvar() : null;
+    const dosePrincipal = usarFases
+      ? doseDoDia({ fases: fasesSalvas, dataInicio: dataInicioParaSalvar, quantidadePorDose: 1 }, formatarData(new Date()))
+      : paraNumero(quantidadePorDose) || 1;
 
     const dadosRemedio = {
       nome: nome.trim(),
       unidade,
-      quantidadePorDose: Number(quantidadePorDose) || 1,
-      dosagem: `${quantidadePorDose} ${unidade}`,
+      quantidadePorDose: dosePrincipal,
+      dosagem: `${dosePrincipal} ${unidade}`,
+      fases: fasesSalvas,
       horarios,
       frequencia: montarFrequencia(),
       quantidadeAtual: Number(quantidadeAtual),
@@ -264,14 +364,132 @@ export default function AddMedicineScreen() {
           })}
         </div>
 
-        <label style={estilos.label}>Quantidade por dose</label>
-        <input
-          style={estilos.input}
-          type="number"
-          placeholder="Ex: 1"
-          value={quantidadePorDose}
-          onChange={(e) => setQuantidadePorDose(e.target.value)}
-        />
+        <div style={estilos.linhaToggleTermino}>
+          <span style={{ fontWeight: 600, color: CORES.textoPrincipal, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <TrendingUp size={15} strokeWidth={2.3} /> Dose muda com o tempo (fases)
+          </span>
+          <button
+            onClick={alternarFases}
+            style={{
+              ...estilos.toggle,
+              backgroundColor: usarFases ? CORES.primaria : CORES.borda,
+            }}
+          >
+            <div
+              style={{
+                ...estilos.toggleBolinha,
+                transform: usarFases ? 'translateX(20px)' : 'translateX(0)',
+              }}
+            />
+          </button>
+        </div>
+
+        {!usarFases && (
+          <>
+            <label style={estilos.label}>Quantidade por dose</label>
+            <input
+              style={estilos.input}
+              type="number"
+              step="any"
+              placeholder="Ex: 1"
+              value={quantidadePorDose}
+              onChange={(e) => setQuantidadePorDose(e.target.value)}
+            />
+          </>
+        )}
+
+        {usarFases && (
+          <div>
+            <div style={estilos.subLabel}>
+              Ex.: 0,25 por 2 semanas, depois 0,5 por 4 semanas, depois 1 daí em diante. As fases
+              contam a partir da data de início (em "Duração", abaixo):{' '}
+              <strong>{formatarDataExibicao(dataInicio)}</strong>. A dose é na unidade do estoque
+              ({rotuloUnidade(unidade).toLowerCase()}).
+            </div>
+
+            {fases.map((f, i) => {
+              const ultima = i === fases.length - 1;
+              return (
+                <div key={i} style={estilos.cartaoFase}>
+                  <div style={estilos.cabecalhoFase}>
+                    <span style={{ fontWeight: 700, color: CORES.primariaEscura }}>
+                      Fase {i + 1}
+                      {ultima ? ' · daí em diante' : ''}
+                    </span>
+                    {fases.length > 2 && (
+                      <button onClick={() => removerFase(i)} style={estilos.botaoRemoverFase} aria-label="Remover fase">
+                        <X size={15} strokeWidth={2.5} />
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={estilos.subLabel}>Dose</div>
+                      <input
+                        style={estilos.input}
+                        type="text"
+                        inputMode="decimal"
+                        placeholder="Ex: 0,25"
+                        value={f.dose}
+                        onChange={(e) => atualizarFase(i, { dose: e.target.value })}
+                      />
+                    </div>
+                    {!ultima && (
+                      <>
+                        <div style={{ flex: 1 }}>
+                          <div style={estilos.subLabel}>Duração</div>
+                          <input
+                            style={estilos.input}
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="Ex: 2"
+                            value={f.duracao}
+                            onChange={(e) => atualizarFase(i, { duracao: e.target.value.replace(/[^0-9]/g, '') })}
+                          />
+                        </div>
+                        <div style={{ flex: 1.3 }}>
+                          <div style={estilos.subLabel}>&nbsp;</div>
+                          <select
+                            style={{ ...estilos.input, paddingLeft: 8, paddingRight: 4 }}
+                            value={f.tipo}
+                            onChange={(e) => atualizarFase(i, { tipo: e.target.value })}
+                          >
+                            <option value="semanas">semanas</option>
+                            <option value="dias">dias</option>
+                          </select>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            <button onClick={adicionarFase} style={{ ...estilos.botaoSecundario, marginTop: 10, padding: '10px 16px' }}>
+              <Plus size={16} strokeWidth={2.5} />
+              Adicionar fase
+            </button>
+
+            <div style={estilos.previaFases}>
+              <div style={{ fontWeight: 700, marginBottom: 6, color: CORES.textoPrincipal }}>Resumo</div>
+              {calcularFasesComDatas(
+                fases.map((f, i) => ({
+                  quantidadePorDose: paraNumero(f.dose) || 0,
+                  dias: i === fases.length - 1 ? null : diasDaFase(f),
+                })),
+                dataInicio
+              ).map((p, i) => (
+                <div key={i} style={estilos.subLabel}>
+                  <strong>Fase {i + 1}:</strong> {p.quantidadePorDose ? formatarDose(p.quantidadePorDose) : '?'}{' '}
+                  {rotuloUnidade(unidade).toLowerCase()} ·{' '}
+                  {p.fim
+                    ? `${formatarDataExibicao(p.inicio)} a ${formatarDataExibicao(p.fim)}`
+                    : `a partir de ${formatarDataExibicao(p.inicio)}`}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <label style={estilos.label}>Horários do alarme</label>
         <div style={{ display: 'flex', gap: 8 }}>
@@ -576,6 +794,40 @@ function criarEstilos(CORES) {
     borderColor: CORES.primaria,
     backgroundColor: CORES.primariaClara,
     color: CORES.primariaEscura,
+  },
+  cartaoFase: {
+    marginTop: 10,
+    padding: 12,
+    borderRadius: RAIO.medio,
+    borderWidth: 1.5,
+    borderStyle: 'solid',
+    borderColor: CORES.borda,
+    backgroundColor: CORES.fundoCard,
+  },
+  cabecalhoFase: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+    fontSize: 14,
+  },
+  botaoRemoverFase: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 28,
+    height: 28,
+    borderRadius: RAIO.pill,
+    border: 'none',
+    backgroundColor: CORES.primariaClara,
+    color: CORES.primariaEscura,
+  },
+  previaFases: {
+    marginTop: 14,
+    padding: 12,
+    borderRadius: RAIO.medio,
+    backgroundColor: CORES.primariaClara,
+    fontSize: 13,
   },
   linkPrecos: {
     display: 'flex',

@@ -3,6 +3,8 @@ import {
   obterDataHoraBrasil,
   remedioAplicavelNoDia,
   remedioEstaAtivo,
+  remedioNoDia,
+  formatarQuantidade,
   minutosDeAtraso,
   nomeResumido,
   rotuloUnidade,
@@ -156,11 +158,26 @@ async function buscarDispositivosDoCuidador(chatId) {
   return encontrados;
 }
 
-function montarLinhasRemedio(remedio, hoje) {
-  const dose = `${remedio.quantidadePorDose || 1} ${rotuloUnidade(remedio.unidade)}`;
+// "2026-11-18" -> "18/11"
+function dataCurtaBR(dataStr) {
+  const [, mes, dia] = dataStr.split('-');
+  return `${dia}/${mes}`;
+}
+
+function montarLinhasRemedio(remedioBruto, hoje) {
+  // com fases de dose, mostra a dose que vale hoje
+  const remedio = remedioNoDia(remedioBruto, hoje);
+  const fase = remedio.faseDoDia;
+  const dose = `${formatarQuantidade(remedio.quantidadePorDose || 1)} ${rotuloUnidade(remedio.unidade)}`;
   const horarios = [...(remedio.horarios || [])].sort().join(', ') || 'sem horário';
   const freq = descreverFrequenciaTexto(remedio.frequencia);
-  const dias = diasRestantesDeEstoque(remedio);
+  const dias = diasRestantesDeEstoque(remedioBruto, hoje);
+  const linhaFase = fase
+    ? `   📈 Fase ${fase.indice + 1} de ${fase.total}` +
+      (fase.fim
+        ? ` (até ${dataCurtaBR(fase.fim)}) — depois ${formatarQuantidade(fase.proximaDose)} ${rotuloUnidade(remedio.unidade)}`
+        : ' (dose final)')
+    : null;
   const estoqueBaixo =
     remedio.quantidadeMinima > 0 && remedio.quantidadeAtual != null && remedio.quantidadeAtual <= remedio.quantidadeMinima;
 
@@ -177,7 +194,12 @@ function montarLinhasRemedio(remedio, hoje) {
   const alerta = estoqueBaixo || (dias !== null && dias <= 7) ? '⚠️ ' : '';
   return {
     dias,
-    linhas: [`${alerta}💊 ${remedio.nome} — ${dose}`, `   🕐 ${horarios} · ${freq}`, `   ${linhaEstoque}`],
+    linhas: [
+      `${alerta}💊 ${remedio.nome} — ${dose}`,
+      ...(linhaFase ? [linhaFase] : []),
+      `   🕐 ${horarios} · ${freq}`,
+      `   ${linhaEstoque}`,
+    ],
   };
 }
 

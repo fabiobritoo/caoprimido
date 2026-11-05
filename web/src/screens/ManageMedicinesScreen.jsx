@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Pill, Clock, Package, Tag, Archive, ArchiveRestore, X } from 'lucide-react';
 import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData } from '../utils/constantes.js';
+import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -85,6 +85,9 @@ export default function ManageMedicinesScreen() {
 
         {ativos.map((item) => {
           const unidadeTexto = rotuloUnidade(item.unidade).toLowerCase();
+          // com fases de dose, mostra a dose que vale hoje
+          const doseHoje = remedioNoDia(item, HOJE);
+          const fase = doseHoje.faseDoDia;
           return (
             <div key={item.id} style={estilos.card}>
               <div style={estilos.linhaConteudo}>
@@ -98,11 +101,20 @@ export default function ManageMedicinesScreen() {
                   <div style={estilos.linhaDetalhe}>
                     <Clock size={13} color={CORES.textoSecundario} />
                     <span style={estilos.detalhe}>
-                      {(item.horarios || []).join(', ')} · {item.quantidadePorDose} {unidadeTexto}
+                      {(item.horarios || []).join(', ')} · {formatarQuantidade(doseHoje.quantidadePorDose)} {unidadeTexto}
                     </span>
                   </div>
 
                   <div style={estilos.detalhe}>{descreverFrequencia(item.frequencia)}</div>
+
+                  {fase && (
+                    <div style={{ ...estilos.detalhe, color: CORES.primariaEscura, fontWeight: 600 }}>
+                      Fase {fase.indice + 1} de {fase.total}
+                      {fase.fim
+                        ? ` · até ${formatarDataExibicao(fase.fim)}, depois ${formatarQuantidade(fase.proximaDose)} ${unidadeTexto}`
+                        : ' · dose final'}
+                    </div>
+                  )}
 
                   <div style={estilos.linhaDetalhe}>
                     <Package
@@ -189,7 +201,7 @@ export default function ManageMedicinesScreen() {
                     <div style={{ flex: 1 }}>
                       <div style={estilos.nomeAntigo}>{item.nome}</div>
                       <div style={estilos.detalheAntigo}>
-                        {item.quantidadePorDose} {unidadeTexto} · {descreverFrequencia(item.frequencia)}
+                        {formatarQuantidade(item.quantidadePorDose)} {unidadeTexto} · {descreverFrequencia(item.frequencia)}
                       </div>
                       {item.dataTermino && (
                         <div style={estilos.detalheAntigo}>

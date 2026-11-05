@@ -90,6 +90,83 @@ export function remedioAplicavelNoDia(frequencia, dataStr, dataInicio, dataTermi
   return false;
 }
 
+// 0.25 -> "0,25" (como se escreve no Brasil)
+export function formatarQuantidade(n) {
+  return String(n).replace('.', ',');
+}
+
+// ---------------------------------------------------------------------
+// FASES DE DOSE (esquema escalonado)
+// remedio.fases = [{ quantidadePorDose: 0.25, dias: 14 }, { quantidadePorDose: 0.5, dias: 28 },
+//                  { quantidadePorDose: 1, dias: null }]
+// As fases começam em remedio.dataInicio e seguem em sequência, contando dias
+// de calendário. A última fase não tem duração: vale "daí em diante".
+// (Mesma lógica de api/_logica.js — manter as duas iguais.)
+// ---------------------------------------------------------------------
+export function fasesDoRemedio(remedio) {
+  const lista = Array.isArray(remedio?.fases) ? remedio.fases : [];
+  return lista.filter((f) => Number(f?.quantidadePorDose) > 0);
+}
+
+// Fase em vigor numa data (ou null se o remédio não usa fases / sem data de início)
+export function faseDoDia(remedio, dataStr) {
+  const fases = fasesDoRemedio(remedio);
+  if (fases.length === 0 || !remedio.dataInicio) return null;
+
+  const decorridos = Math.max(0, diferencaEmDias(remedio.dataInicio, dataStr));
+  let inicioFase = 0;
+  for (let i = 0; i < fases.length; i++) {
+    const dias = Number(fases[i].dias) > 0 ? Math.floor(Number(fases[i].dias)) : null;
+    const ultima = i === fases.length - 1;
+    if (dias === null || ultima || decorridos < inicioFase + dias) {
+      const inicio = somarDias(remedio.dataInicio, inicioFase);
+      const emAberto = dias === null || ultima;
+      return {
+        indice: i,
+        total: fases.length,
+        quantidadePorDose: Number(fases[i].quantidadePorDose),
+        inicio,
+        fim: emAberto ? null : somarDias(inicio, dias - 1),
+        proximaDose: ultima ? null : Number(fases[i + 1].quantidadePorDose),
+      };
+    }
+    inicioFase += dias;
+  }
+  return null;
+}
+
+export function doseDoDia(remedio, dataStr) {
+  const fase = faseDoDia(remedio, dataStr);
+  return fase ? fase.quantidadePorDose : Number(remedio.quantidadePorDose) || 1;
+}
+
+// Cópia do remédio com a dose (e o texto da dose) valendo na data. Sem fases,
+// devolve o próprio objeto.
+export function remedioNoDia(remedio, dataStr) {
+  const fase = faseDoDia(remedio, dataStr);
+  if (!fase) return remedio;
+  return {
+    ...remedio,
+    quantidadePorDose: fase.quantidadePorDose,
+    dosagem: `${formatarQuantidade(fase.quantidadePorDose)} ${remedio.unidade || ''}`.trim(),
+    faseDoDia: fase,
+  };
+}
+
+// Lista as fases com as datas calculadas a partir de uma data de início
+// (usada na prévia do formulário). [{ quantidadePorDose, dias, inicio, fim }]
+export function calcularFasesComDatas(fases, dataInicio) {
+  let cursor = 0;
+  return fases.map((f, i) => {
+    const dias = Number(f.dias) > 0 ? Math.floor(Number(f.dias)) : null;
+    const emAberto = dias === null || i === fases.length - 1;
+    const inicio = somarDias(dataInicio, cursor);
+    const fim = emAberto ? null : somarDias(inicio, dias - 1);
+    if (dias) cursor += dias;
+    return { quantidadePorDose: Number(f.quantidadePorDose), dias: emAberto ? null : dias, inicio, fim };
+  });
+}
+
 // Devolve os 7 dias (domingo a sábado) da semana que contém "hoje"
 export function diasDaSemanaAtual() {
   const hoje = new Date();

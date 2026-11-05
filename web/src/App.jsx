@@ -13,7 +13,7 @@ import TelaAlarme from './components/TelaAlarme.jsx';
 import { ProvedorTema } from './utils/ThemeContext.jsx';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
 import { listarRemedios, obterRegistros, doseTomada, alternarDose, obterIdDispositivo } from './utils/storage.js';
-import { remedioAplicavelNoDia, formatarData } from './utils/constantes.js';
+import { remedioAplicavelNoDia, remedioNoDia, formatarData } from './utils/constantes.js';
 
 export default function App() {
   const jaAvisados = useRef(new Set());
@@ -82,7 +82,9 @@ export default function App() {
       const remedios = await listarRemedios();
       const registros = await obterRegistros();
 
-      for (const remedio of remedios) {
+      for (const remedioBase of remedios) {
+        // com fases de dose, o texto do alarme usa a dose que vale hoje
+        const remedio = remedioNoDia(remedioBase, hoje);
         if (!remedioAplicavelNoDia(remedio.frequencia, hoje, remedio.dataInicio, remedio.dataTermino)) continue;
         for (const horario of remedio.horarios || []) {
           if (horario !== horaAtual) continue;

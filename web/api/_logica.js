@@ -77,6 +77,75 @@ export function remedioAplicavelNoDia(frequencia, dataStr, dataInicio, dataTermi
   return false;
 }
 
+// 0.25 -> "0,25" (como se escreve no Brasil)
+export function formatarQuantidade(n) {
+  return String(n).replace('.', ',');
+}
+
+// ---------------------------------------------------------------------
+// FASES DE DOSE (esquema escalonado)
+// remedio.fases = [{ quantidadePorDose: 0.25, dias: 14 }, { quantidadePorDose: 0.5, dias: 28 },
+//                  { quantidadePorDose: 1, dias: null }]
+// As fases começam em remedio.dataInicio e seguem em sequência, contando dias
+// de calendário. A última fase não tem duração: vale "daí em diante".
+// (Mesma lógica de src/utils/constantes.js — manter as duas iguais.)
+// ---------------------------------------------------------------------
+function somarDiasStr(dataStr, n) {
+  const d = new Date(`${dataStr}T12:00:00`);
+  d.setDate(d.getDate() + n);
+  return formatarData(d);
+}
+
+export function fasesDoRemedio(remedio) {
+  const lista = Array.isArray(remedio?.fases) ? remedio.fases : [];
+  return lista.filter((f) => Number(f?.quantidadePorDose) > 0);
+}
+
+// Fase em vigor numa data (ou null se o remédio não usa fases / sem data de início)
+export function faseDoDia(remedio, dataStr) {
+  const fases = fasesDoRemedio(remedio);
+  if (fases.length === 0 || !remedio.dataInicio) return null;
+
+  const decorridos = Math.max(0, diferencaEmDias(remedio.dataInicio, dataStr));
+  let inicioFase = 0;
+  for (let i = 0; i < fases.length; i++) {
+    const dias = Number(fases[i].dias) > 0 ? Math.floor(Number(fases[i].dias)) : null;
+    const ultima = i === fases.length - 1;
+    if (dias === null || ultima || decorridos < inicioFase + dias) {
+      const inicio = somarDiasStr(remedio.dataInicio, inicioFase);
+      const emAberto = dias === null || ultima;
+      return {
+        indice: i,
+        total: fases.length,
+        quantidadePorDose: Number(fases[i].quantidadePorDose),
+        inicio,
+        fim: emAberto ? null : somarDiasStr(inicio, dias - 1),
+        proximaDose: ultima ? null : Number(fases[i + 1].quantidadePorDose),
+      };
+    }
+    inicioFase += dias;
+  }
+  return null;
+}
+
+export function doseDoDia(remedio, dataStr) {
+  const fase = faseDoDia(remedio, dataStr);
+  return fase ? fase.quantidadePorDose : Number(remedio.quantidadePorDose) || 1;
+}
+
+// Cópia do remédio com a dose (e o texto da dose) valendo na data. Sem fases,
+// devolve o próprio objeto.
+export function remedioNoDia(remedio, dataStr) {
+  const fase = faseDoDia(remedio, dataStr);
+  if (!fase) return remedio;
+  return {
+    ...remedio,
+    quantidadePorDose: fase.quantidadePorDose,
+    dosagem: `${formatarQuantidade(fase.quantidadePorDose)} ${remedio.unidade || ''}`.trim(),
+    faseDoDia: fase,
+  };
+}
+
 const ROTULOS_UNIDADE = {
   comprimido: 'comprimido(s)',
   capsula: 'cápsula(s)',
@@ -119,8 +188,22 @@ export function descreverFrequenciaTexto(frequencia) {
 
 // Quantos dias o estoque atual dura, no ritmo de uso médio. Devolve null
 // quando não dá pra calcular (estoque não informado ou sem horários).
-export function diasRestantesDeEstoque(remedio) {
+export function diasRestantesDeEstoque(remedio, hojeStr) {
   if (remedio.quantidadeAtual == null || remedio.quantidadeAtual === '') return null;
+
+  // com fases a dose muda ao longo do tempo: simula dia a dia a partir de hoje
+  if (hojeStr && fasesDoRemedio(remedio).length > 0 && remedio.horarios?.length) {
+    let restante = Number(remedio.quantidadeAtual);
+    for (let i = 0; i < 3650; i++) {
+      const dia = somarDiasStr(hojeStr, i);
+      if (!remedioAplicavelNoDia(remedio.frequencia, dia, null, null)) continue;
+      const consumoDia = remedio.horarios.length * doseDoDia(remedio, dia);
+      if (restante < consumoDia) return i;
+      restante -= consumoDia;
+    }
+    return null;
+  }
+
   const consumoPorDia = mediaDosesPorDia(remedio) * (Number(remedio.quantidadePorDose) || 1);
   if (!consumoPorDia) return null;
   return Math.floor(Number(remedio.quantidadeAtual) / consumoPorDia);

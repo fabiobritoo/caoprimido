@@ -1,4 +1,12 @@
-import { remedioEstaAtivo, remedioAplicavelNoDia, formatarData, rotuloUnidade } from './constantes.js';
+import {
+  remedioEstaAtivo,
+  remedioAplicavelNoDia,
+  formatarData,
+  rotuloUnidade,
+  fasesDoRemedio,
+  calcularFasesComDatas,
+  formatarQuantidade,
+} from './constantes.js';
 
 // Gera um arquivo de calendário (.ics) com um evento recorrente + alerta pra
 // cada horário de cada remédio ativo. Esses alertas são tocados pelo app de
@@ -9,7 +17,7 @@ import { remedioEstaAtivo, remedioAplicavelNoDia, formatarData, rotuloUnidade } 
 const DIAS_ICS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
 function escapar(texto) {
-  return String(texto).replace(/\\/g, '\\\\').replace(/;/g, '\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  return String(texto).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
 }
 
 // linhas do iCalendar não podem passar de 75 bytes: continua na linha seguinte
@@ -44,25 +52,45 @@ function somarDiasStr(dataStr, n) {
   return formatarData(d);
 }
 
-// primeira data (a partir de "inicio") em que o remédio realmente é tomado;
-// garante que o evento recorrente comece alinhado com a frequência
-function primeiraOcorrencia(remedio, inicio) {
+// primeira data (a partir de "inicio") em que o remédio realmente é tomado,
+// dentro da janela [inicioJanela, fimJanela]; garante que o evento recorrente
+// comece alinhado com a frequência
+function primeiraOcorrencia(remedio, inicio, inicioJanela, fimJanela) {
   for (let i = 0; i < 400; i++) {
     const dia = somarDiasStr(inicio, i);
-    if (remedioAplicavelNoDia(remedio.frequencia, dia, remedio.dataInicio, remedio.dataTermino)) return dia;
+    if (remedioAplicavelNoDia(remedio.frequencia, dia, inicioJanela, fimJanela)) return dia;
   }
   return null;
 }
 
-function regraRepeticao(remedio) {
+function regraRepeticao(remedio, fim) {
   const f = remedio.frequencia;
   let regra;
   if (!f || f.tipo === 'diaria') regra = 'FREQ=DAILY';
   else if (f.tipo === 'dias_semana') regra = `FREQ=WEEKLY;BYDAY=${(f.dias || []).map((d) => DIAS_ICS[d]).join(',')}`;
   else if (f.tipo === 'intervalo') regra = `FREQ=DAILY;INTERVAL=${f.intervaloDias || 1}`;
   else regra = 'FREQ=DAILY';
-  if (remedio.dataTermino) regra += `;UNTIL=${remedio.dataTermino.replace(/-/g, '')}T235959`;
+  if (fim) regra += `;UNTIL=${fim.replace(/-/g, '')}T235959`;
   return regra;
+}
+
+// Trechos de calendário de um remédio. Sem fases é um só (início→término).
+// Com fases de dose, cada fase vira um trecho com a sua dose e o seu período,
+// porque o título do alerta no Calendário leva a dose.
+function trechosDoRemedio(remedio) {
+  if (fasesDoRemedio(remedio).length === 0 || !remedio.dataInicio) {
+    return [{ inicio: remedio.dataInicio || null, fim: remedio.dataTermino || null, dose: remedio.quantidadePorDose || 1, sufixoUid: '' }];
+  }
+  const fases = calcularFasesComDatas(fasesDoRemedio(remedio), remedio.dataInicio);
+  return fases.map((f, i) => ({
+    inicio: f.inicio,
+    // o término geral do remédio, se houver, corta a última fase (ou qualquer uma)
+    fim: f.fim && remedio.dataTermino ? (f.fim < remedio.dataTermino ? f.fim : remedio.dataTermino) : f.fim || remedio.dataTermino || null,
+    dose: f.quantidadePorDose,
+    // a 1ª fase mantém o UID antigo: reimportar substitui o evento que já
+    // estava no Calendário em vez de duplicar
+    sufixoUid: i === 0 ? '' : `-f${i + 1}`,
+  }));
 }
 
 export function gerarCalendarioICS(remedios, agora = new Date()) {
@@ -81,32 +109,37 @@ export function gerarCalendarioICS(remedios, agora = new Date()) {
     if (!remedioEstaAtivo(remedio, hoje)) continue;
     if (remedio.dataTermino && remedio.dataTermino < hoje) continue;
 
-    const inicioBusca = remedio.dataInicio && remedio.dataInicio > hoje ? remedio.dataInicio : hoje;
-    const primeira = primeiraOcorrencia(remedio, inicioBusca);
-    if (!primeira) continue;
+    for (const trecho of trechosDoRemedio(remedio)) {
+      // fase que já terminou: não gera evento
+      if (trecho.fim && trecho.fim < hoje) continue;
 
-    const dose = `${remedio.quantidadePorDose || 1} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
+      const inicioBusca = trecho.inicio && trecho.inicio > hoje ? trecho.inicio : hoje;
+      const primeira = primeiraOcorrencia(remedio, inicioBusca, trecho.inicio, trecho.fim);
+      if (!primeira) continue;
 
-    for (const horario of remedio.horarios || []) {
-      total += 1;
-      linhas.push(
-        'BEGIN:VEVENT',
-        // mesmo UID = reimportar atualiza o evento em vez de duplicar
-        `UID:${remedio.id}-${horario.replace(':', '')}@caoprimido`,
-        `DTSTAMP:${carimbo}`,
-        `DTSTART:${dataHoraLocal(primeira, horario)}`,
-        'DURATION:PT10M',
-        `RRULE:${regraRepeticao(remedio)}`,
-        `SUMMARY:${escapar(`💊 ${remedio.nome} — ${dose}`)}`,
-        `DESCRIPTION:${escapar('Hora do remédio! Abra o Cãoprimido pra confirmar que tomou.')}`,
-        'TRANSP:TRANSPARENT',
-        'BEGIN:VALARM',
-        'ACTION:DISPLAY',
-        `DESCRIPTION:${escapar(`💊 ${remedio.nome} — ${dose}`)}`,
-        'TRIGGER:PT0M',
-        'END:VALARM',
-        'END:VEVENT'
-      );
+      const dose = `${formatarQuantidade(trecho.dose)} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
+
+      for (const horario of remedio.horarios || []) {
+        total += 1;
+        linhas.push(
+          'BEGIN:VEVENT',
+          // mesmo UID = reimportar atualiza o evento em vez de duplicar
+          `UID:${remedio.id}-${horario.replace(':', '')}${trecho.sufixoUid}@caoprimido`,
+          `DTSTAMP:${carimbo}`,
+          `DTSTART:${dataHoraLocal(primeira, horario)}`,
+          'DURATION:PT10M',
+          `RRULE:${regraRepeticao(remedio, trecho.fim)}`,
+          `SUMMARY:${escapar(`💊 ${remedio.nome} — ${dose}`)}`,
+          `DESCRIPTION:${escapar('Hora do remédio! Abra o Cãoprimido pra confirmar que tomou.')}`,
+          'TRANSP:TRANSPARENT',
+          'BEGIN:VALARM',
+          'ACTION:DISPLAY',
+          `DESCRIPTION:${escapar(`💊 ${remedio.nome} — ${dose}`)}`,
+          'TRIGGER:PT0M',
+          'END:VALARM',
+          'END:VEVENT'
+        );
+      }
     }
   }
 
