@@ -10,6 +10,7 @@ import ComprasRemedioScreen from './screens/ComprasRemedioScreen.jsx';
 import ComoInstalarScreen from './screens/ComoInstalarScreen.jsx';
 import ConfiguracoesScreen from './screens/ConfiguracoesScreen.jsx';
 import TelaAlarme from './components/TelaAlarme.jsx';
+import AvisoAtualizacao from './components/AvisoAtualizacao.jsx';
 import { ProvedorTema } from './utils/ThemeContext.jsx';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
 import { listarRemedios, obterRegistros, doseTomada, alternarDose, obterIdDispositivo } from './utils/storage.js';
@@ -122,6 +123,7 @@ export default function App() {
           aoFechar={() => setAlarmeAtivo(null)}
         />
       )}
+      <AvisoAtualizacao />
       <HashRouter>
         <Routes>
           <Route path="/" element={<HomeScreen />} />

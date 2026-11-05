@@ -98,6 +98,12 @@ passar por loja de aplicativos.
   editável por data
 
 ### Outros
+- Aviso de atualização: ao abrir o app (e ao voltar pra ele), se há versão nova
+  já baixada aparece "Uma versão nova está disponível, quer atualizar?" com
+  **Atualizar agora** / **Depois** (volta a aparecer na próxima abertura).
+  Código: `src/components/AvisoAtualizacao.jsx` e `src/utils/atualizacao.js`
+  (a troca recarrega o app mesmo se o navegador não avisar e, se travar, limpa o
+  cache do app sem perder a inscrição de notificações).
 - Consultas médicas (data, médico, local, anotações), separadas em abas de
   "Próximas" e "Anteriores"
 - Perfil pessoal (nome, idade, altura), usado tanto no relatório em PDF
