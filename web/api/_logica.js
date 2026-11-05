@@ -152,6 +152,7 @@ const ROTULOS_UNIDADE = {
   gota: 'gota(s)',
   ml: 'ml',
   grama: 'g',
+  mg: 'mg',
   injecao: 'injeção(ões)',
   sache: 'sachê(s)',
   unidade: 'unidade(s)',

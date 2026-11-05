@@ -45,6 +45,7 @@ const ICONE_UNIDADE = {
   gota: Droplet,
   ml: FlaskConical,
   grama: Scale,
+  mg: Scale,
   injecao: Syringe,
   sache: Package,
   unidade: Package,

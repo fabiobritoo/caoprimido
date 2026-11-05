@@ -30,7 +30,7 @@ passar por loja de aplicativos.
 
 ### Remédios
 - Cadastro com nome, unidade (comprimido, cápsula, gota, ml, grama, injeção,
-  sachê, unidade), dose, horários, frequência (diária / dias específicos da
+  sachê, mg, unidade), dose, horários, frequência (diária / dias específicos da
   semana / a cada X dias), estoque com aviso de quantidade mínima
 - Data de início (padrão hoje) e data de término opcional
 - **Fases de dose** (esquema escalonado): num único cadastro, a dose muda com
