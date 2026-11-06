@@ -8,7 +8,7 @@ import {
   calcularAdesaoPorRemedio,
   dosesAgendadasNoDia,
 } from '../utils/evolucao.js';
-import { formatarData } from '../utils/constantes.js';
+import { formatarData, remedioEstaAtivo } from '../utils/constantes.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { RAIO, SOMBRA, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
@@ -49,7 +49,17 @@ export default function EvolucaoScreen() {
       setAdesaoGeral(calcularAdesaoGeral(listaRemedios, listaRegistros, DIAS_HISTORICO));
       setSequenciaAtual(calcularSequenciaDias(listaRemedios, listaRegistros));
       setMelhorSequencia(calcularMelhorSequencia(listaRemedios, listaRegistros, DIAS_HISTORICO));
-      setPorRemedio(calcularAdesaoPorRemedio(listaRemedios, listaRegistros, DIAS_HISTORICO));
+      // o mapa e a adesão geral (em cima) mantêm o histórico de todos os remédios;
+      // a lista "Adesão por remédio" mostra só os que estão ativos hoje
+      // (arquivados e com tratamento encerrado ficam de fora)
+      const hojeStr = formatarData(new Date());
+      setPorRemedio(
+        calcularAdesaoPorRemedio(
+          listaRemedios.filter((r) => remedioEstaAtivo(r, hojeStr)),
+          listaRegistros,
+          DIAS_HISTORICO
+        )
+      );
       setCarregando(false);
     })();
   }, []);
