@@ -1,4 +1,11 @@
 import { precacheAndRoute, cleanupOutdatedCaches } from 'workbox-precaching';
+import { clientsClaim } from 'workbox-core';
+
+// A versão nova assume sozinha assim que baixa (sem ficar "esperando", que era
+// o que deixava o aviso de atualização preso). O app só pergunta se quer
+// recarregar pra começar a usar a tela nova.
+self.skipWaiting();
+clientsClaim();
 
 // limpa caches de versões antigas sempre que uma nova ativa — sem isso,
 // arquivos antigos podem ficar "presos" junto com os novos e causar

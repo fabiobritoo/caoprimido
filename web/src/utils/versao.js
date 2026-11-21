@@ -1,4 +1,4 @@
 // Atualizo esse número toda vez que envio uma mudança —
 // serve pra você confirmar se o app realmente atualizou no celular.
-export const VERSAO = '1.47.4';
-export const VERSAO_DESCRICAO = 'Correção: a variação de preço (%) agora compara o valor por unidade, não o total da compra';
+export const VERSAO = '1.47.5';
+export const VERSAO_DESCRICAO = 'Correção: versão nova agora assume sozinha, o aviso de atualização não fica mais preso';

@@ -70,6 +70,11 @@ export function aplicarAtualizacao(worker) {
 // Usada pelo aviso "nova versão disponível": troca normalmente e, se a troca
 // já travou antes nesta mesma versão, limpa o cache do app em vez de repetir.
 export function atualizarAgora(worker) {
+  // versão nova já está ativa: só recarregar
+  if (worker === 'trocado') {
+    recarregar();
+    return;
+  }
   if (lerTentativa() === VERSAO) {
     gravarTentativa('');
     limparCacheERecarregar();
@@ -91,6 +96,14 @@ export function observarNovaVersao(aoEncontrar) {
   const avisar = (worker) => {
     if (ativo && worker && navigator.serviceWorker.controller) aoEncontrar(worker);
   };
+
+  // A versão nova agora assume sozinha: quando o controlador troca (e já havia
+  // um antes), é porque chegou versão nova — basta recarregar pra usar.
+  const tinhaControlador = !!navigator.serviceWorker.controller;
+  const aoTrocarControlador = () => {
+    if (ativo && tinhaControlador && !recarregando) aoEncontrar('trocado');
+  };
+  navigator.serviceWorker.addEventListener('controllerchange', aoTrocarControlador);
 
   navigator.serviceWorker
     .getRegistration()
@@ -125,6 +138,7 @@ export function observarNovaVersao(aoEncontrar) {
   return () => {
     ativo = false;
     document.removeEventListener('visibilitychange', aoVoltarParaOApp);
+    navigator.serviceWorker.removeEventListener('controllerchange', aoTrocarControlador);
   };
 }
 
