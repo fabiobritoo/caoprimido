@@ -98,7 +98,12 @@ export default function ComprasRemedioScreen() {
   const comprasComVariacao = compras.map((c, i) => {
     const anterior = compras[i + 1];
     if (!anterior) return { ...c, variacao: null };
-    const variacao = ((c.preco - anterior.preco) / anterior.preco) * 100;
+    // compara o preço POR UNIDADE quando as duas compras têm quantidade
+    // (senão uma caixa de 60 contra uma de 30 pareceria um aumento enorme)
+    const usaUnidade = c.quantidade > 0 && anterior.quantidade > 0;
+    const atual = usaUnidade ? c.preco / c.quantidade : c.preco;
+    const antes = usaUnidade ? anterior.preco / anterior.quantidade : anterior.preco;
+    const variacao = ((atual - antes) / antes) * 100;
     return { ...c, variacao };
   });
 

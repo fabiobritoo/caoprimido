@@ -192,8 +192,11 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     const precoMinimo = Math.min(...precos);
     const precoMaximo = Math.max(...precos);
 
-    const variacaoDesdeInicio =
-      compras.length > 1 ? ((maisRecente.preco - primeira.preco) / primeira.preco) * 100 : null;
+    // variação pelo preço POR UNIDADE quando as duas compras têm quantidade
+    const usaUnidade = maisRecente.quantidade > 0 && primeira.quantidade > 0;
+    const valorAtual = usaUnidade ? maisRecente.preco / maisRecente.quantidade : maisRecente.preco;
+    const valorInicial = usaUnidade ? primeira.preco / primeira.quantidade : primeira.preco;
+    const variacaoDesdeInicio = compras.length > 1 ? ((valorAtual - valorInicial) / valorInicial) * 100 : null;
 
     let custoDiarioEstimado = null;
     if (maisRecente.quantidade > 0) {
@@ -205,7 +208,9 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     const locais = [...new Set(compras.filter((c) => c.local).map((c) => c.local))];
     let localMaisBarato = null;
     if (locais.length > 1) {
-      const compraMaisBarata = compras.reduce((menor, c) => (c.preco < menor.preco ? c : menor));
+      const todasComQuantidade = compras.every((c) => c.quantidade > 0);
+      const valor = (c) => (todasComQuantidade ? c.preco / c.quantidade : c.preco);
+      const compraMaisBarata = compras.reduce((menor, c) => (valor(c) < valor(menor) ? c : menor));
       localMaisBarato = compraMaisBarata.local;
     }
 
