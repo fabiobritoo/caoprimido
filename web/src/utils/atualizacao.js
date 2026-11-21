@@ -87,8 +87,29 @@ export function atualizarAgora(worker) {
 // (baixada, mas ainda não ativa). Confere ao abrir e sempre que o app volta pra
 // frente (no máximo 1x por minuto). Na 1ª instalação (sem versão anterior)
 // não avisa. Devolve uma função que cancela a observação.
-export function observarNovaVersao(aoEncontrar) {
+// Confere no servidor se o app publicado é mesmo diferente do que está rodando
+// (compara o arquivo principal do app). Evita avisar "versão nova" quando já se
+// está na última — qualquer dúvida/erro de rede = não incomoda.
+async function servidorTemVersaoDiferente() {
+  try {
+    const atual = document.querySelector('script[type="module"][src*="/assets/index-"]');
+    if (!atual) return false;
+    const resposta = await fetch(`/index.html?_=${Date.now()}`, { cache: 'no-store' });
+    if (!resposta.ok) return false;
+    const html = await resposta.text();
+    const achou = html.match(/\/assets\/index-[^"']+\.js/);
+    if (!achou) return false;
+    return !atual.getAttribute('src').endsWith(achou[0]);
+  } catch (e) {
+    return false;
+  }
+}
+
+export function observarNovaVersao(aoEncontrarBruto) {
   if (!('serviceWorker' in navigator)) return () => {};
+  const aoEncontrar = async (worker) => {
+    if (await servidorTemVersaoDiferente()) aoEncontrarBruto(worker);
+  };
 
   let ativo = true;
   let registroAtual = null;
