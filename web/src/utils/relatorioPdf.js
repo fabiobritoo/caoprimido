@@ -75,6 +75,11 @@ function carregarImagemComoBase64(url) {
   });
 }
 
+// 88.7 -> "88,7" ; 90 -> "90" (vírgula, como no resto do app)
+function formatarPesoKg(n) {
+  return Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+}
+
 export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false } = {}) {
   // abre a aba já aqui, ANTES de qualquer await — se abrir só depois de
   // esperar imagens/dados carregarem, o Safari/iOS bloqueia como popup
@@ -149,7 +154,7 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
     if (perfil.idade) partes.push(`Idade: ${perfil.idade} anos`);
     if (perfil.altura) partes.push(`Altura: ${perfil.altura} cm`);
     if (pesoMaisRecente) {
-      partes.push(`Peso mais recente: ${pesoMaisRecente.peso} kg (${formatarDataBR(pesoMaisRecente.data)})`);
+      partes.push(`Peso mais recente: ${formatarPesoKg(pesoMaisRecente.peso)} kg (${formatarDataBR(pesoMaisRecente.data)})`);
     }
 
     doc.setFontSize(9.5);
@@ -168,7 +173,7 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
 
   // ---------- Cartões de resumo ----------
   const cartoes = [
-    { rotulo: 'Adesão geral', valor: adesaoGeral === null ? '—' : `${adesaoGeral}%` },
+    { rotulo: 'Adesão (12 semanas)', valor: adesaoGeral === null ? '—' : `${adesaoGeral}%` },
     { rotulo: 'Sequência atual', valor: `${sequenciaAtual} ${sequenciaAtual === 1 ? 'dia' : 'dias'}` },
     { rotulo: 'Remédios ativos', valor: `${remedios.filter((r) => remedioEstaAtivo(r, formatarData(new Date()))).length}` },
   ];
@@ -186,7 +191,11 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
     doc.setTextColor(...TEXTO_SECUNDARIO);
     doc.text(c.rotulo, x + larguraCartao / 2, y + 17, { align: 'center' });
   });
-  y += 22 + 14;
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...TEXTO_SECUNDARIO);
+  doc.text('Doses puladas de propósito e o dia de hoje não entram no cálculo da adesão.', 14, y + 22 + 5);
+  y += 22 + 16;
 
   // ---------- Seção: Remédios ----------
   function tituloSecao(texto, yAtual) {
@@ -296,7 +305,7 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
       head: [['Data', 'Peso', 'Pressão', 'Freq. cardíaca', 'Anotações']],
       body: ordenados.map((r) => [
         formatarDataBR(r.data),
-        r.peso != null ? `${r.peso} kg` : '—',
+        r.peso != null ? `${formatarPesoKg(r.peso)} kg` : '—',
         r.pressaoSistolica != null ? `${r.pressaoSistolica}/${r.pressaoDiastolica || '—'} mmHg` : '—',
         r.frequenciaCardiaca != null ? `${r.frequenciaCardiaca} bpm` : '—',
         r.anotacoes || '—',

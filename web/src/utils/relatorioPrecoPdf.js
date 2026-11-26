@@ -52,18 +52,21 @@ function descreverFrequenciaResumo(remedio) {
   const freq = remedio.frequencia;
   const horariosPorDia = remedio.horarios?.length || 1;
   const dose = `${formatarQuantidade(doseDoDia(remedio, formatarData(new Date())))} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
-  const sufixo = ` · ${horariosPorDia}x ao dia · ${dose} por dose`;
+  const faseTexto = remedio.fases?.length > 1 ? ' (dose atual)' : '';
+  const sufixo = `${dose} por dose${faseTexto}`;
+  const porDia = horariosPorDia === 1 ? '1 dose' : `${horariosPorDia} doses`;
 
-  if (!freq || freq.tipo === 'diaria') return `todos os dias${sufixo}`;
+  if (freq?.tipo === 'sob_demanda') return `só quando precisar · ${sufixo}`;
+  if (!freq || freq.tipo === 'diaria') return `todos os dias · ${horariosPorDia}x ao dia · ${sufixo}`;
   if (freq.tipo === 'dias_semana') {
     const n = freq.dias?.length || 0;
     const diasTexto = n === 1 ? '1x por semana' : `${n}x por semana`;
-    return `${diasTexto}${sufixo}`;
+    return `${diasTexto} (${porDia} por dia de uso) · ${sufixo}`;
   }
   if (freq.tipo === 'intervalo') {
-    return `a cada ${freq.intervaloDias || 1} dias${sufixo}`;
+    return `a cada ${freq.intervaloDias || 1} dias (${porDia} por dia de uso) · ${sufixo}`;
   }
-  return '';
+  return sufixo;
 }
 
 function carregarImagemComoBase64(url) {
@@ -261,7 +264,8 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = f
       `Mín: ${formatarPreco(precoMinimo)}`,
       `Máx: ${formatarPreco(precoMaximo)}`,
     ];
-    if (m.custoDiarioEstimado != null) {
+    // remédio parado não tem custo mensal "atual" — só histórico
+    if (m.custoDiarioEstimado != null && remedioEstaAtivo(remedio, hojeStrRelatorio)) {
       metricasTexto.push(`Custo/mês: ${formatarPreco(m.custoDiarioEstimado * 30)}`);
     }
     doc.setFontSize(8.5);
@@ -294,7 +298,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = f
       doc.setTextColor(...(subiu ? PERIGO : SUCESSO));
       doc.setFont('helvetica', 'bold');
       doc.text(
-        `${subiu ? '▲' : '▼'} ${formatarVariacao(variacaoDesdeInicio)}${variacaoPorUnidade ? ' por unidade' : ''} desde a primeira compra registrada`,
+        `Variação: ${formatarVariacao(variacaoDesdeInicio)}${variacaoPorUnidade ? ' por unidade' : ''} desde a primeira compra registrada`,
         14,
         y
       );
