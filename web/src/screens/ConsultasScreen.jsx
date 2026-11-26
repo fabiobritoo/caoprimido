@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Pencil, CalendarClock, MapPin, User, X } from 'lucide-react';
+import { Plus, Trash2, Pencil, CalendarClock, MapPin, User, X, EyeOff } from 'lucide-react';
 import { listarConsultas, adicionarConsulta, atualizarConsulta, removerConsulta } from '../utils/consultas.js';
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
@@ -21,6 +21,7 @@ export default function ConsultasScreen() {
   const [medico, setMedico] = useState('');
   const [local, setLocal] = useState('');
   const [anotacoes, setAnotacoes] = useState('');
+  const [foraDoRelatorio, setForaDoRelatorio] = useState(false);
   const [idEditando, setIdEditando] = useState(null);
 
   const carregar = async () => setConsultas(await listarConsultas());
@@ -35,6 +36,7 @@ export default function ConsultasScreen() {
     setMedico('');
     setLocal('');
     setAnotacoes('');
+    setForaDoRelatorio(false);
     setIdEditando(null);
   }
 
@@ -44,6 +46,7 @@ export default function ConsultasScreen() {
     setMedico(c.medico);
     setLocal(c.local || '');
     setAnotacoes(c.anotacoes || '');
+    setForaDoRelatorio(!!c.foraDoRelatorio);
     setIdEditando(c.id);
     setFormularioAberto(true);
   }
@@ -59,6 +62,7 @@ export default function ConsultasScreen() {
       medico: medico.trim(),
       local: local.trim() || null,
       anotacoes: anotacoes.trim() || null,
+      foraDoRelatorio,
     };
     if (idEditando) await atualizarConsulta(idEditando, dados);
     else await adicionarConsulta(dados);
@@ -117,6 +121,12 @@ export default function ConsultasScreen() {
           </div>
         )}
         {c.anotacoes && <div style={estilos.anotacoes}>{c.anotacoes}</div>}
+        {c.foraDoRelatorio && (
+          <div style={{ ...estilos.linhaInfo, marginTop: 8, fontSize: 12 }}>
+            <EyeOff size={13} color={CORES.textoSecundario} />
+            <span>Fora do relatório do médico</span>
+          </div>
+        )}
       </div>
     );
   }
@@ -174,6 +184,16 @@ export default function ConsultasScreen() {
               style={estilos.textarea}
               rows={3}
             />
+
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 12, fontSize: 14, color: CORES.textoPrincipal }}>
+              <input
+                type="checkbox"
+                checked={foraDoRelatorio}
+                onChange={(e) => setForaDoRelatorio(e.target.checked)}
+                style={{ width: 20, height: 20, accentColor: CORES.primaria }}
+              />
+              Não incluir no relatório do médico
+            </label>
 
             <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
               <button

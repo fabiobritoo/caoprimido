@@ -100,7 +100,8 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
   const registros = await obterRegistros();
   const registrosSaude = await listarRegistrosSaude();
   const perfil = await obterPerfil();
-  const consultas = await listarConsultas();
+  // consultas marcadas como "fora do relatório" não entram no PDF
+  const consultas = (await listarConsultas()).filter((c) => !c.foraDoRelatorio);
 
   const adesaoGeral = calcularAdesaoGeral(remedios, registros, 84);
   const adesaoPorRemedio = calcularAdesaoPorRemedio(remedios, registros, 84);
