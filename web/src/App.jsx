@@ -11,6 +11,7 @@ import ConfiguracoesScreen from './screens/ConfiguracoesScreen.jsx';
 import TelaAlarme from './components/TelaAlarme.jsx';
 import AvisoAtualizacao from './components/AvisoAtualizacao.jsx';
 import { ProvedorTema } from './utils/ThemeContext.jsx';
+import { iniciarBackupAutomatico, fazerBackupNuvem } from './utils/backupNuvem.js';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
 import { listarRemedios, obterRegistros, doseTomada, alternarDose, obterIdDispositivo } from './utils/storage.js';
 import { remedioAplicavelNoDia, remedioNoDia, formatarData, descreverDose, doseValeNoDia } from './utils/constantes.js';
@@ -61,6 +62,15 @@ export default function App() {
 
     navigator.serviceWorker.addEventListener('message', aoReceberMensagem);
     return () => navigator.serviceWorker.removeEventListener('message', aoReceberMensagem);
+  }, []);
+
+  useEffect(() => {
+    // backup automático criptografado: ao abrir e sempre que o app volta pra frente
+    iniciarBackupAutomatico();
+    // ao sair do app também envia (se algo mudou), pra o backup ficar em dia
+    const aoVoltar = () => fazerBackupNuvem();
+    document.addEventListener('visibilitychange', aoVoltar);
+    return () => document.removeEventListener('visibilitychange', aoVoltar);
   }, []);
 
   useEffect(() => {

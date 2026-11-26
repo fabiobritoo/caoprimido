@@ -30,12 +30,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { deviceId, remedioId, dia, horario } = req.body;
+    const { deviceId, remedioId, dia, horario, desfazer } = req.body;
     if (!deviceId || !remedioId || !dia || !horario) {
       return res.status(400).json({ erro: 'Faltam dados obrigatórios' });
     }
 
     const chaveBase = `${deviceId}:${remedioId}:${dia}:${horario}`;
+
+    // desfazer: remove a confirmação — assim o /api/check volta a considerar
+    // essa dose "não tomada" e retoma o envio de notificações no próximo ciclo
+    if (desfazer) {
+      await kv.del(`reconhecido:${chaveBase}`);
+      return res.status(200).json({ ok: true });
+    }
+
     await kv.set(`reconhecido:${chaveBase}`, true, { ex: 172800 }); // vale por 2 dias, depois some sozinho
 
     // se o cuidador tinha sido avisado (dose ficou atrasada), manda uma

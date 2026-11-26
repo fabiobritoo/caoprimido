@@ -197,3 +197,11 @@ Pra tudo ficar igual em todas as telas, os formatos e cálculos ficam num lugar 
 - **Remédios**: lista com estoque (duração), última compra/preço, edição, arquivar; relatório de preços; preços por remédio em `/remedio/:id/compras`.
 - **Saúde** (`/saude?aba=`): `adesao` (antiga Evolução), `corpo` (peso/pressão), `consultas`, `relatorios` (PDFs). `/evolucao` e `/consultas` redirecionam pra cá.
 - **Ajustes** (`/configuracoes?secao=`): seções recolhíveis `lembretes` (Telegram, cuidador, alarmes no calendário, diagnóstico), `perfil`, `dados` (backup) e `sobre` (versão/atualização).
+
+## Backup automático e privacidade (1.50.0)
+
+- Cada aparelho tem um **código de recuperação** próprio (20 caracteres, gerado no aparelho). Os dados são comprimidos e **criptografados no aparelho** (AES-GCM, chave derivada do código) antes de irem pro servidor, que só guarda o bloco ilegível sob um hash do código (`api/backup.js`, chave `backup:<hash>`). Sem o código ninguém acha nem lê o backup — sem login, sem senha. Os aparelhos são independentes: o seu não enxerga o de outra pessoa.
+- Liga sozinho na primeira abertura depois da atualização (dá pra desligar/apagar em Ajustes › Dados e backup) e reenvia só quando algo mudou, ao abrir/sair do app.
+- Restaurar num celular novo: Ajustes › Dados e backup › Restaurar com o código.
+- Testes: `npm test` (lógica compartilhada cliente/servidor e backup).
+- A função `api/desreconhecer.js` foi incorporada a `api/reconhecer.js` (`desfazer: true`) pra manter o limite de 12 funções da Vercel Hobby.

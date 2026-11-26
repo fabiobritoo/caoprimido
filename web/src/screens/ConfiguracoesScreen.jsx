@@ -5,8 +5,9 @@ import { ChevronDown, ChevronUp, Bell, CalendarClock,
 } from 'lucide-react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
-import { useTema } from '../utils/ThemeContext.jsx';
+import { useTema, TAMANHOS_TEXTO } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
+import BackupNuvemSecao from '../components/BackupNuvemSecao.jsx';
 import { obterConfiguracoes, salvarConfiguracoes } from '../utils/configuracoes.js';
 import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
@@ -49,7 +50,7 @@ export default function ConfiguracoesScreen() {
   function alternarSecao(id) {
     setParametros(secaoAberta === id ? {} : { secao: id }, { replace: true });
   }
-  const { CORES, modoEscuro, setModoEscuro, modoBob, setModoBob } = useTema();
+  const { CORES, modoEscuro, setModoEscuro, modoBob, setModoBob, tamanhoTexto, setTamanhoTexto } = useTema();
   const estilos = criarEstilos(CORES);
   const inputArquivoRef = useRef(null);
   const [statusBackup, setStatusBackup] = useState('');
@@ -647,6 +648,29 @@ export default function ConfiguracoesScreen() {
             />
           </button>
         </div>
+        <div style={estilos.linhaToggle}>
+          <span style={estilos.label}>Tamanho do texto</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
+          {TAMANHOS_TEXTO.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTamanhoTexto(t.id)}
+              style={{
+                flex: 1,
+                padding: '10px 4px',
+                borderRadius: RAIO.medio,
+                border: `1.5px solid ${tamanhoTexto === t.id ? CORES.primaria : CORES.borda}`,
+                backgroundColor: tamanhoTexto === t.id ? CORES.primariaClara : CORES.fundoCard,
+                color: tamanhoTexto === t.id ? CORES.primariaEscura : CORES.textoSecundario,
+                fontWeight: 700,
+                fontSize: 13,
+              }}
+            >
+              {t.rotulo}
+            </button>
+          ))}
+        </div>
         <div style={{ ...estilos.explicacao, marginTop: -8 }}>
           {modoBob
             ? 'Voltar pra Nina (paleta rosa).'
@@ -654,11 +678,13 @@ export default function ConfiguracoesScreen() {
         </div>
 
         </Grupo>
-        <Grupo id="dados" titulo="Dados e backup" icone={<Database size={20} color={CORES.primaria} />} resumo="Baixar, salvar em pasta e restaurar seus dados" aberto={secaoAberta === 'dados'} aoAlternar={() => alternarSecao('dados')} estilos={estilos} CORES={CORES}>
+        <Grupo id="dados" titulo="Dados e backup" icone={<Database size={20} color={CORES.primaria} />} resumo="Backup automático criptografado, arquivo e restauração" aberto={secaoAberta === 'dados'} aoAlternar={() => alternarSecao('dados')} estilos={estilos} CORES={CORES}>
+        <BackupNuvemSecao />
+        <div style={estilos.divisor} />
 
         <div style={estilos.secaoTitulo}>
           <Database size={20} color={CORES.primaria} />
-          Backup dos dados
+          Backup em arquivo
         </div>
         <div style={estilos.explicacao}>
           Hoje seus dados ficam salvos só nesse navegador. Se trocar de celular ou

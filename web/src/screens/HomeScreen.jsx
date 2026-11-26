@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Check, Pill, Flame, Settings2, ClipboardList, CalendarDays, CalendarClock, Database, Download,
-  ChevronLeft, HeartPulse,
+  ChevronLeft, HeartPulse, ShieldCheck,
 } from 'lucide-react';
 import {
   listarRemedios,
@@ -24,6 +24,7 @@ import { deveLembrarBackup } from '../utils/backup.js';
 import { estaInstalado } from '../utils/instalacao.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
 import { dosesParaStatus } from '../utils/evolucao.js';
+import { backupNuvemAtivo, codigoJaAnotado } from '../utils/backupNuvem.js';
 
 const LIMIAR_SWIPE = 45; // pixels mínimos de arrasto pra contar como swipe
 
@@ -52,6 +53,7 @@ export default function HomeScreen() {
   const [arrastando, setArrastando] = useState(false);
   const [transicaoAtiva, setTransicaoAtiva] = useState(true);
 
+  const avisarCodigo = backupNuvemAtivo() && !codigoJaAnotado();
   const diaDoAppRef = useRef(HOJE);
   const toqueInicioX = useRef(null);
   const larguraViewportRef = useRef(0);
@@ -306,10 +308,11 @@ export default function HomeScreen() {
 
     // avisa o servidor que a confirmação foi desfeita, senão ele acha que já
     // foi tomada e nunca mais reenvia o lembrete pra esse horário
-    fetch('/api/desreconhecer', {
+    fetch('/api/reconhecer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
+        desfazer: true,
         deviceId: obterIdDispositivo(),
         remedioId: item.remedio.id,
         dia: diaSelecionado,
@@ -436,7 +439,7 @@ export default function HomeScreen() {
         )}
       </div>
 
-      {(proximaConsulta || lembrarBackup || !jaInstalado) && (
+      {(proximaConsulta || lembrarBackup || avisarCodigo || !jaInstalado) && (
         <div style={estilos.avisos}>
           {proximaConsulta && (
             <button onClick={() => navigate('/saude?aba=consultas')} style={estilos.avisoLinha}>
@@ -445,6 +448,13 @@ export default function HomeScreen() {
                 Próxima consulta: {formatarDataCurtaBR(proximaConsulta.data)}
                 {proximaConsulta.hora && ` às ${proximaConsulta.hora}`} — {proximaConsulta.medico}
               </span>
+            </button>
+          )}
+
+          {avisarCodigo && (
+            <button onClick={() => navigate('/configuracoes?secao=dados')} style={estilos.avisoLinha}>
+              <ShieldCheck size={16} strokeWidth={2.3} color={CORES.primaria} />
+              <span style={estilos.avisoTexto}>Backup automático ligado — guarde seu código de recuperação</span>
             </button>
           )}
 

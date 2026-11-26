@@ -3,6 +3,12 @@ import { CORES_CLARO, CORES_ESCURO, CORES_CLARO_BOB, CORES_ESCURO_BOB } from './
 
 const CHAVE_MODO_ESCURO = '@caoprimido:modoEscuro';
 const CHAVE_MODO_BOB = '@caoprimido:modoBob';
+const CHAVE_TAMANHO_TEXTO = '@caoprimido:tamanhoTexto';
+export const TAMANHOS_TEXTO = [
+  { id: 'normal', rotulo: 'Normal', zoom: 1 },
+  { id: 'grande', rotulo: 'Grande', zoom: 1.15 },
+  { id: 'muito', rotulo: 'Muito grande', zoom: 1.3 },
+];
 const ContextoTema = createContext(null);
 
 // Em vez de só chamar setAttribute (que em alguns Android/Chrome não força
@@ -33,6 +39,25 @@ export function ProvedorTema({ children }) {
       return false;
     }
   });
+
+  const [tamanhoTexto, setTamanhoTexto] = useState(() => {
+    try {
+      return localStorage.getItem(CHAVE_TAMANHO_TEXTO) || 'normal';
+    } catch (e) {
+      return 'normal';
+    }
+  });
+
+  // "texto grande": amplia o app inteiro (letras, botões e espaços juntos)
+  useEffect(() => {
+    const zoom = (TAMANHOS_TEXTO.find((t) => t.id === tamanhoTexto) || TAMANHOS_TEXTO[0]).zoom;
+    document.documentElement.style.zoom = zoom === 1 ? '' : String(zoom);
+    try {
+      localStorage.setItem(CHAVE_TAMANHO_TEXTO, tamanhoTexto);
+    } catch (e) {
+      // sem problema
+    }
+  }, [tamanhoTexto]);
 
   useEffect(() => {
     try {
@@ -74,7 +99,7 @@ export function ProvedorTema({ children }) {
 
   return (
     <ContextoTema.Provider
-      value={{ modoEscuro, setModoEscuro, modoBob, setModoBob, CORES, pastaMascote }}
+      value={{ modoEscuro, setModoEscuro, modoBob, setModoBob, CORES, pastaMascote, tamanhoTexto, setTamanhoTexto }}
     >
       {children}
     </ContextoTema.Provider>

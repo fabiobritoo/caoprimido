@@ -8,6 +8,7 @@ const CHAVES_BACKUP = [
   '@caoprimido:consultas', // consultas médicas
   '@caoprimido:modoEscuro', // preferência de tema
   '@caoprimido:modoBob', // Nina ou Bob
+  '@caoprimido:tamanhoTexto', // texto grande
   '@caoprimido:perfil', // nome, idade, altura
   '@caoprimido:compras', // historico de precos/compras
 ];
@@ -83,12 +84,19 @@ export async function compartilharBackup() {
   }
 }
 
-function montarPacoteBackup() {
+// Todos os dados do usuário num objeto { chave: texto } (usado no arquivo de
+// backup e no backup automático criptografado)
+export function coletarDadosBackup() {
   const dados = {};
   for (const chave of CHAVES_BACKUP) {
     const valor = localStorage.getItem(chave);
     if (valor !== null) dados[chave] = valor;
   }
+  return dados;
+}
+
+function montarPacoteBackup() {
+  const dados = coletarDadosBackup();
 
   const pacote = {
     app: 'caoprimido',
@@ -109,6 +117,12 @@ const DIAS_PARA_LEMBRAR = 21;
 export function deveLembrarBackup() {
   const dadosExistem = CHAVES_BACKUP.some((chave) => localStorage.getItem(chave) !== null);
   if (!dadosExistem) return false; // nada cadastrado ainda, sem o que perder
+
+  // com o backup automático ligado e funcionando, não precisa lembrar
+  const ultimoNuvem = Number(localStorage.getItem('@caoprimido:backupNuvemEm') || 0);
+  if (localStorage.getItem('@caoprimido:backupNuvemAtivo') === 'true' && Date.now() - ultimoNuvem < 3 * 86400000) {
+    return false;
+  }
 
   const ultimoBackupEm = localStorage.getItem(CHAVE_ULTIMO_BACKUP);
   if (!ultimoBackupEm) return true; // nunca fez backup

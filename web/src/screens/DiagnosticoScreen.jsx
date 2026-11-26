@@ -3,6 +3,7 @@ import { RefreshCw, Copy, Send, Timer, Repeat, Check } from 'lucide-react';
 import { RAIO, criarBotaoPrimario, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
+import GuiaNotificacoes from '../components/GuiaNotificacoes.jsx';
 import { obterIdDispositivo, listarRemedios } from '../utils/storage.js';
 import { renovarInscricaoPush } from '../utils/notifications.js';
 import { VERSAO } from '../utils/versao.js';
@@ -289,6 +290,7 @@ export default function DiagnosticoScreen() {
       <CabecalhoTopo titulo="Diagnóstico" mostrarVoltar />
 
       <div style={{ padding: 16 }}>
+        <GuiaNotificacoes />
         <button onClick={copiar} style={{ ...criarBotaoPrimario(CORES), width: '100%', marginBottom: 10 }}>
           {copiado ? <Check size={16} strokeWidth={2.5} /> : <Copy size={16} strokeWidth={2.3} />}
           {copiado ? 'Copiado!' : 'Copiar relatório completo'}
