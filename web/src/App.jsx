@@ -14,7 +14,7 @@ import AvisoAtualizacao from './components/AvisoAtualizacao.jsx';
 import { ProvedorTema } from './utils/ThemeContext.jsx';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
 import { listarRemedios, obterRegistros, doseTomada, alternarDose, obterIdDispositivo } from './utils/storage.js';
-import { remedioAplicavelNoDia, remedioNoDia, formatarData, descreverDose } from './utils/constantes.js';
+import { remedioAplicavelNoDia, remedioNoDia, formatarData, descreverDose, doseValeNoDia } from './utils/constantes.js';
 
 export default function App() {
   const jaAvisados = useRef(new Set());
@@ -89,6 +89,7 @@ export default function App() {
         if (!remedioAplicavelNoDia(remedio.frequencia, hoje, remedio.dataInicio, remedio.dataTermino)) continue;
         for (const horario of remedio.horarios || []) {
           if (horario !== horaAtual) continue;
+          if (!doseValeNoDia(remedio, hoje, horario)) continue;
           const chave = `${remedio.id}|${hoje}|${horario}`;
           if (jaAvisados.current.has(chave)) continue;
           if (doseTomada(registros, remedio.id, hoje, horario)) continue;

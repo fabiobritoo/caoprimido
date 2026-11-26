@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Pill, Clock, Package, Tag, Archive, ArchiveRestore, X } from 'lucide-react';
-import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo } from '../utils/storage.js';
+import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo, obterRegistros, doseTomada } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, diasRestantesDeEstoque, estoqueInformado } from '../utils/constantes.js';
+import { somarDias, rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, diasRestantesDeEstoque, estoqueInformado } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -37,12 +37,20 @@ export default function ManageMedicinesScreen() {
   }
 
   async function pararDeTomar(remedio) {
-    if (!confirm(`Marcar "${remedio.nome}" como parado? Ele sai da lista principal e vai pra "Remédios antigos" — o histórico continua guardado.`)) {
+    if (!confirm(`Marcar "${remedio.nome}" como parado? Ele sai da lista principal e vai pra "Remédios antigos" e some de hoje (se ainda não tomou, ou só as próximas doses se já tomou). O histórico continua guardado.`)) {
       return;
     }
+    // Se nenhuma dose de hoje foi tomada, o remédio some de hoje também
+    // (termina ontem). Se alguma já foi tomada, fica registrado hoje, mas as
+    // doses que ainda não chegaram (depois de agora) são removidas.
+    const registros = await obterRegistros();
+    const tomouHoje = (remedio.horarios || []).some((h) => doseTomada(registros, remedio.id, HOJE, h));
+    const agora = new Date();
+    const horaAgora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
     await atualizarRemedio(remedio.id, {
       ativo: false,
-      dataTermino: remedio.dataTermino || HOJE,
+      dataTermino: remedio.dataTermino && remedio.dataTermino < HOJE ? remedio.dataTermino : tomouHoje ? HOJE : somarDias(HOJE, -1),
+      paradoApos: tomouHoje ? horaAgora : null,
     });
     const novaLista = await listarRemedios();
     setRemedios(novaLista);
@@ -50,7 +58,7 @@ export default function ManageMedicinesScreen() {
   }
 
   async function reativar(remedio) {
-    await atualizarRemedio(remedio.id, { ativo: true, dataTermino: null });
+    await atualizarRemedio(remedio.id, { ativo: true, dataTermino: null, paradoApos: null });
     const novaLista = await listarRemedios();
     setRemedios(novaLista);
     await sincronizarNotificacoesServidor(obterIdDispositivo(), novaLista);

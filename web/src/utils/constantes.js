@@ -91,6 +91,14 @@ export function remedioAplicavelNoDia(frequencia, dataStr, dataInicio, dataTermi
   return false;
 }
 
+// Remédio arquivado no meio do dia: se alguma dose de hoje já tinha sido tomada,
+// o remédio fica até hoje, mas as doses POSTERIORES ao momento em que foi
+// arquivado (remedio.paradoApos = "HH:MM") somem. Fora desse caso, vale sempre.
+export function doseValeNoDia(remedio, dataStr, horario) {
+  if (remedio.paradoApos && remedio.dataTermino === dataStr && horario > remedio.paradoApos) return false;
+  return true;
+}
+
 // 0.25 -> "0,25" (como se escreve no Brasil)
 export function formatarQuantidade(n) {
   return String(n).replace('.', ',');

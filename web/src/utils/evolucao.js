@@ -1,4 +1,4 @@
-import { formatarData, remedioAplicavelNoDia } from './constantes.js';
+import { formatarData, remedioAplicavelNoDia, doseValeNoDia } from './constantes.js';
 import { doseTomada } from './storage.js';
 
 // Acha, dentro dos registros salvos, a data mais antiga em que existe
@@ -44,6 +44,7 @@ export function dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros) {
     // agenda/notificações daqui pra frente, não pra reescrever o passado.
     if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
+      if (!doseValeNoDia(remedio, dataStr, horario)) continue;
       doses.push({ remedioId: remedio.id, horario, nome: remedio.nome });
     }
   }
@@ -59,6 +60,7 @@ export function dosesParaStatus(remedios, dataStr, hojeStr, registros) {
   for (const remedio of remedios) {
     if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
+      if (!doseValeNoDia(remedio, dataStr, horario)) continue;
       doses.push({ remedioId: remedio.id, horario, nome: remedio.nome });
     }
   }
@@ -171,6 +173,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
       if (incluiPiso ? dataStr < piso : dataStr <= piso) continue;
       if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
+        if (!doseValeNoDia(remedio, dataStr, horario)) continue;
         contadores[remedio.id].agendadas++;
         if (doseTomada(registros, remedio.id, dataStr, horario)) {
           contadores[remedio.id].tomadas++;

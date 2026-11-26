@@ -11,6 +11,7 @@ import {
   descreverFrequenciaTexto,
   diasRestantesDeEstoque,
   estoqueBaixo,
+  doseValeNoDia,
   dataFuturaCurta,
 } from './_logica.js';
 
@@ -112,6 +113,7 @@ async function montarResumoPendencias(chatId) {
       if (!remedioAplicavelNoDia(remedio.frequencia, hoje, remedio.dataInicio, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
         if (horario > horaAtual) continue; // ainda não chegou a hora, não conta como pendente
+        if (!doseValeNoDia(remedio, hoje, horario)) continue;
 
         const chaveBase = `${deviceId}:${remedio.id}:${hoje}:${horario}`;
         const reconhecido = await kv.get(`reconhecido:${chaveBase}`);

@@ -12,7 +12,7 @@ import {
   alternarDose,
   obterIdDispositivo,
 } from '../utils/storage.js';
-import { rotuloUnidade, diasDaSemanaContendo, remedioAplicavelNoDia, remedioNoDia, formatarQuantidade, formatarData, formatarDataPorExtenso, somarDias, dataHoje, formatarHoraDeTimestamp, formatarDataCurtaBR, estoqueBaixo, dataFuturaCurta } from '../utils/constantes.js';
+import { rotuloUnidade, diasDaSemanaContendo, remedioAplicavelNoDia, remedioNoDia, formatarQuantidade, formatarData, formatarDataPorExtenso, somarDias, dataHoje, doseValeNoDia, formatarHoraDeTimestamp, formatarDataCurtaBR, estoqueBaixo, dataFuturaCurta } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -199,6 +199,7 @@ export default function HomeScreen() {
   for (const remedio of remedios) {
     if (!remedioAplicavelNoDia(remedio.frequencia, diaSelecionado, remedio.dataInicio, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
+      if (!doseValeNoDia(remedio, diaSelecionado, horario)) continue;
       dosesDoDia.push({
         // com fases de dose, usa a dose que valia naquele dia
         remedio: remedioNoDia(remedio, diaSelecionado),

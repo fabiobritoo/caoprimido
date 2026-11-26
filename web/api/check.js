@@ -12,6 +12,7 @@ import {
   formatarQuantidade,
   estoqueBaixo,
   descreverDose,
+  doseValeNoDia,
 } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
@@ -481,6 +482,7 @@ export default async function handler(req, res) {
 
         for (const horario of remedio.horarios || []) {
           if (horario > horaAtual) continue;
+          if (!doseValeNoDia(remedio, hoje, horario)) continue;
 
           const atrasoMs =
             minutosDeAtraso(

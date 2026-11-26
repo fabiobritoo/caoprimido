@@ -1,4 +1,4 @@
-import { formatarData, remedioAplicavelNoDia } from './constantes.js';
+import { formatarData, remedioAplicavelNoDia, doseValeNoDia } from './constantes.js';
 import { doseTomada } from './storage.js';
 
 export function seloSuportado() {
@@ -18,6 +18,7 @@ export function contarDosesPendentes(remedios, registros) {
     if (!remedioAplicavelNoDia(remedio.frequencia, hoje, remedio.dataInicio, remedio.dataTermino)) continue;
     for (const horario of remedio.horarios || []) {
       if (horario > horaAtual) continue; // ainda não chegou a hora
+      if (!doseValeNoDia(remedio, hoje, horario)) continue;
       if (!doseTomada(registros, remedio.id, hoje, horario)) contador++;
     }
   }
