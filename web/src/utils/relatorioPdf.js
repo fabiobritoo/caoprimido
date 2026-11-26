@@ -6,7 +6,8 @@ import { calcularAdesaoPorRemedio, calcularAdesaoGeral } from './evolucao.js';
 import { calcularSequenciaDias } from './streak.js';
 import { obterPerfil } from './perfil.js';
 import { entregarPdf } from './pdfSaida.js';
-import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData, doseDoDia, formatarQuantidade, formatarDataBR } from './constantes.js';
+import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData, doseDoDia, formatarQuantidade, formatarDataBR, somarDias, calcularFasesComDatas } from './constantes.js';
+import { listarConsultas } from './consultas.js';
 
 // Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
 function obterPaletaPdf(modoBob) {
@@ -99,6 +100,7 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
   const registros = await obterRegistros();
   const registrosSaude = await listarRegistrosSaude();
   const perfil = await obterPerfil();
+  const consultas = await listarConsultas();
 
   const adesaoGeral = calcularAdesaoGeral(remedios, registros, 84);
   const adesaoPorRemedio = calcularAdesaoPorRemedio(remedios, registros, 84);
@@ -194,7 +196,9 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...TEXTO_SECUNDARIO);
-  doc.text('Doses puladas de propósito e o dia de hoje não entram no cálculo da adesão.', 14, y + 22 + 5);
+  const fimPeriodo = somarDias(formatarData(new Date()), -1);
+  const inicioPeriodo = somarDias(formatarData(new Date()), -83);
+  doc.text(`Adesão de ${formatarDataBR(inicioPeriodo)} a ${formatarDataBR(fimPeriodo)}. Doses puladas de propósito e o dia de hoje não entram no cálculo.`, 14, y + 22 + 5);
   y += 22 + 16;
 
   // ---------- Seção: Remédios ----------
@@ -290,6 +294,89 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
     y = doc.lastAutoTable.finalY + 14;
   }
 
+  // ---------- Seção: Detalhes dos remédios (esquema de dose, puladas, uso eventual) ----------
+  const hojeRel = formatarData(new Date());
+  const inicioJanela = somarDias(hojeRel, -83);
+  const detalhes = [];
+  for (const r of [...remediosAtivos, ...remediosParados]) {
+    const linhas = [];
+    if (Array.isArray(r.fases) && r.fases.length > 1 && r.dataInicio) {
+      const partes = calcularFasesComDatas(r.fases, r.dataInicio).map((f) => {
+        const dose = `${formatarQuantidade(f.quantidadePorDose)} ${rotuloUnidade(r.unidade).toLowerCase()}`;
+        return f.fim ? `${dose} (${formatarDataBR(f.inicio)} a ${formatarDataBR(f.fim)})` : `${dose} (a partir de ${formatarDataBR(f.inicio)})`;
+      });
+      linhas.push(`Esquema de dose: ${partes.join('; depois ')}`);
+    }
+    const puladas = [];
+    let usosEventuais = 0;
+    for (const chave in registros) {
+      const [id, data, horario] = chave.split('|');
+      if (id !== r.id || data < inicioJanela || data > hojeRel) continue;
+      if (registros[chave]?.pulada) puladas.push(registros[chave].motivo || '');
+      else if (horario?.startsWith('prn-')) usosEventuais++;
+    }
+    if (puladas.length > 0) {
+      const motivos = [...new Set(puladas.filter(Boolean))];
+      linhas.push(`Doses puladas de propósito (12 semanas): ${puladas.length}${motivos.length ? ` — motivos: ${motivos.join(', ')}` : ''}`);
+    }
+    if (r.frequencia?.tipo === 'sob_demanda') {
+      linhas.push(`Uso eventual: ${usosEventuais} ${usosEventuais === 1 ? 'vez' : 'vezes'} nas últimas 12 semanas`);
+    }
+    if (linhas.length > 0) detalhes.push([r.nome, linhas.join('\n')]);
+  }
+
+  if (detalhes.length > 0) {
+    if (y > alturaPagina - 60) {
+      doc.addPage();
+      y = 20;
+    }
+    y = tituloSecao('Detalhes dos remédios', y);
+    autoTable(doc, {
+      startY: y,
+      head: [['Remédio', 'Observações']],
+      body: detalhes,
+      theme: 'plain',
+      headStyles: { fillColor: ROSA, textColor: BRANCO, fontStyle: 'bold', fontSize: 8.5 },
+      bodyStyles: { fontSize: 8, textColor: TEXTO_PRINCIPAL },
+      alternateRowStyles: { fillColor: CREME },
+      columnStyles: { 0: { cellWidth: 38 } },
+      margin: { left: 14, right: 14 },
+      styles: { cellPadding: 3.5 },
+    });
+    y = doc.lastAutoTable.finalY + 14;
+  }
+
+  // ---------- Seção: Consultas (próximas e dos últimos 90 dias) ----------
+  const limitePassado = somarDias(hojeRel, -90);
+  const proximas = consultas.filter((c) => c.data >= hojeRel).sort((a, b) => (a.data + (a.hora || '')).localeCompare(b.data + (b.hora || '')));
+  const recentes = consultas.filter((c) => c.data < hojeRel && c.data >= limitePassado).sort((a, b) => b.data.localeCompare(a.data));
+  if (proximas.length + recentes.length > 0) {
+    if (y > alturaPagina - 60) {
+      doc.addPage();
+      y = 20;
+    }
+    y = tituloSecao('Consultas', y);
+    autoTable(doc, {
+      startY: y,
+      head: [['Situação', 'Data', 'Hora', 'Médico / especialidade', 'Local', 'Anotações']],
+      body: [...proximas.map((c) => ['Próxima', c]), ...recentes.map((c) => ['Realizada', c])].map(([situacao, c]) => [
+        situacao,
+        formatarDataBR(c.data),
+        c.hora || '—',
+        c.medico,
+        c.local || '—',
+        c.anotacoes || '—',
+      ]),
+      theme: 'plain',
+      headStyles: { fillColor: ROSA, textColor: BRANCO, fontStyle: 'bold', fontSize: 8.5 },
+      bodyStyles: { fontSize: 8, textColor: TEXTO_PRINCIPAL },
+      alternateRowStyles: { fillColor: CREME },
+      margin: { left: 14, right: 14 },
+      styles: { cellPadding: 3.5 },
+    });
+    y = doc.lastAutoTable.finalY + 14;
+  }
+
   // ---------- Seção: Saúde ----------
   if (y > alturaPagina - 60) {
     doc.addPage();
@@ -299,6 +386,26 @@ export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false 
   y = tituloSecao('Registros de saúde', y);
 
   if (registrosSaude.length > 0) {
+    // variação do peso entre o primeiro e o último registro
+    const comPeso = registrosSaude.filter((r) => r.peso != null).sort((a, b) => a.data.localeCompare(b.data));
+    if (comPeso.length >= 2) {
+      const primeiro = comPeso[0];
+      const ultimo = comPeso[comPeso.length - 1];
+      const diff = Math.round((ultimo.peso - primeiro.peso) * 100) / 100;
+      const sinal = diff > 0 ? '+' : diff < 0 ? '-' : '';
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...TEXTO_PRINCIPAL);
+      doc.text(
+        diff === 0
+          ? `Peso estável entre ${formatarDataBR(primeiro.data)} e ${formatarDataBR(ultimo.data)} (${formatarPesoKg(ultimo.peso)} kg)`
+          : `Variação do peso: ${sinal}${formatarPesoKg(Math.abs(diff))} kg entre ${formatarDataBR(primeiro.data)} e ${formatarDataBR(ultimo.data)} (de ${formatarPesoKg(primeiro.peso)} para ${formatarPesoKg(ultimo.peso)} kg)`,
+        14,
+        y
+      );
+      doc.setFont('helvetica', 'normal');
+      y += 5;
+    }
     const ordenados = [...registrosSaude].sort((a, b) => b.data.localeCompare(a.data));
     autoTable(doc, {
       startY: y,

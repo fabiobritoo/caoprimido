@@ -168,6 +168,26 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = f
     const valorInicial = usaUnidade ? primeira.preco / primeira.quantidade : primeira.preco;
     const variacaoDesdeInicio = compras.length > 1 ? ((valorAtual - valorInicial) / valorInicial) * 100 : null;
 
+    // o preço mais recente é o mais alto / o mais baixo já pago? (só com 2+ compras)
+    const todasComQtd = compras.every((c) => c.quantidade > 0);
+    const valorDe = (c) => (todasComQtd ? c.preco / c.quantidade : c.preco);
+    const anteriores = compras.slice(0, -1).map(valorDe);
+    const ultimoValor = valorDe(maisRecente);
+    let extremo = null;
+    if (anteriores.length > 0) {
+      if (ultimoValor > Math.max(...anteriores)) extremo = 'maior';
+      else if (ultimoValor < Math.min(...anteriores)) extremo = 'menor';
+    }
+
+    let custoPorDose = null;
+    let rendeDias = null;
+    if (maisRecente.quantidade > 0) {
+      const porDose = doseDoDia(remedio, formatarData(new Date()));
+      custoPorDose = (maisRecente.preco / maisRecente.quantidade) * porDose;
+      const consumoDia = mediaDosesPorDia(remedio) * porDose;
+      if (consumoDia > 0) rendeDias = Math.floor(maisRecente.quantidade / consumoDia);
+    }
+
     let custoDiarioEstimado = null;
     if (maisRecente.quantidade > 0) {
       const precoPorUnidade = maisRecente.preco / maisRecente.quantidade;
@@ -194,6 +214,10 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = f
       variacaoDesdeInicio,
       variacaoPorUnidade: usaUnidade,
       custoDiarioEstimado,
+      custoPorDose,
+      rendeDias,
+      extremo,
+      extremoPorUnidade: todasComQtd,
       localMaisBarato,
     };
   });
@@ -265,6 +289,9 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = f
       `Máx: ${formatarPreco(precoMaximo)}`,
     ];
     // remédio parado não tem custo mensal "atual" — só histórico
+    if (m.custoPorDose != null) {
+      metricasTexto.push(`Custo/dose: ${formatarPreco(m.custoPorDose)}`);
+    }
     if (m.custoDiarioEstimado != null && remedioEstaAtivo(remedio, hojeStrRelatorio)) {
       metricasTexto.push(`Custo/mês: ${formatarPreco(m.custoDiarioEstimado * 30)}`);
     }
@@ -302,6 +329,26 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = f
         14,
         y
       );
+      y += 6;
+    }
+
+    if (m.extremo) {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...(m.extremo === 'maior' ? PERIGO : SUCESSO));
+      doc.text(
+        m.extremo === 'maior'
+          ? `Atenção: o preço mais recente é o mais alto já pago${m.extremoPorUnidade ? ' (por unidade)' : ''}.`
+          : `O preço mais recente é o mais baixo já pago${m.extremoPorUnidade ? ' (por unidade)' : ''}.`,
+        14,
+        y
+      );
+      y += 6;
+    }
+
+    if (m.rendeDias != null && remedioEstaAtivo(remedio, hojeStrRelatorio)) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...TEXTO_SECUNDARIO);
+      doc.text(`A última compra (${formatarDataBR(maisRecente.data)}) rende ~${m.rendeDias} ${m.rendeDias === 1 ? 'dia' : 'dias'} de uso.`, 14, y);
       y += 6;
     }
 
