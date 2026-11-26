@@ -1,19 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, CalendarClock, MapPin, User, X } from 'lucide-react';
 import { listarConsultas, adicionarConsulta, removerConsulta } from '../utils/consultas.js';
-import { formatarData } from '../utils/constantes.js';
+import { formatarData, dataHoje, formatarDataBR } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
-const HOJE = formatarData(new Date());
 
-function formatarDataExibicao(dataStr) {
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 export default function ConsultasScreen() {
+  const HOJE = dataHoje();
   const { CORES } = useTema();
   const estilos = criarEstilos(CORES);
   const [consultas, setConsultas] = useState([]);
@@ -76,7 +72,7 @@ export default function ConsultasScreen() {
           <div style={estilos.dataBox}>
             <CalendarClock size={16} color={CORES.primaria} />
             <span style={estilos.dataTexto}>
-              {formatarDataExibicao(c.data)} {c.hora && `às ${c.hora}`}
+              {formatarDataBR(c.data)} {c.hora && `às ${c.hora}`}
             </span>
           </div>
           <button onClick={() => excluir(c.id)} style={estilos.botaoExcluir}>

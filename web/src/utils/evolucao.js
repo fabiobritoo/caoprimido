@@ -50,6 +50,21 @@ export function dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros) {
   return doses;
 }
 
+// Doses que valem pra pintar a bolinha de um dia (Home), contar sequência e
+// afins. Dias PASSADOS seguem a regra do histórico (dosesAgendadasNoDia);
+// hoje e o futuro seguem a agenda atual (respeitam data de início/término).
+export function dosesParaStatus(remedios, dataStr, hojeStr, registros) {
+  if (dataStr < hojeStr) return dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros);
+  const doses = [];
+  for (const remedio of remedios) {
+    if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
+    for (const horario of remedio.horarios || []) {
+      doses.push({ remedioId: remedio.id, horario, nome: remedio.nome });
+    }
+  }
+  return doses;
+}
+
 /**
  * Devolve um array com os últimos `dias` dias (mais antigo primeiro), cada um com:
  * { data, status: 'sem_remedio' | 'completo' | 'parcial' | 'nenhum' | 'hoje_pendente' | 'futuro', proporcao }
@@ -142,7 +157,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
   const contadores = {};
 
   for (const remedio of remedios) {
-    contadores[remedio.id] = { nome: remedio.nome, agendadas: 0, tomadas: 0 };
+    contadores[remedio.id] = { id: remedio.id, nome: remedio.nome, agendadas: 0, tomadas: 0 };
   }
 
   for (let i = dias - 1; i >= 0; i--) {
@@ -167,6 +182,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
   return Object.values(contadores)
     .filter((c) => c.agendadas > 0)
     .map((c) => ({
+      id: c.id,
       nome: c.nome,
       percentual: Math.round((c.tomadas / c.agendadas) * 100),
       tomadas: c.tomadas,

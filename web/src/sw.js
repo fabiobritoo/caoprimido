@@ -82,7 +82,7 @@ self.addEventListener('push', (evento) => {
           ? []
           : [
               { action: 'tomei', title: '✅ Já tomei' },
-              { action: 'adiar', title: '⏰ Adiar 5 min' },
+              { action: 'adiar', title: '⏰ Adiar 10 min' },
             ],
       });
       } catch (erroExibir) {
@@ -177,7 +177,7 @@ async function adiarViaNotificacao(dados) {
     await fetch('/api/soneca', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, remedioId, dia, horario, minutos: 5 }),
+      body: JSON.stringify({ deviceId, remedioId, dia, horario, minutos: 10 }),
     });
   } catch (e) {
     // sem sinal agora; o próximo /api/check tenta de novo no intervalo normal

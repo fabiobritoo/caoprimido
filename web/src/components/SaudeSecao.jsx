@@ -6,18 +6,14 @@ import {
   removerRegistroSaude,
   atualizarRegistroSaude,
 } from '../utils/saude.js';
-import { formatarData, somarDias } from '../utils/constantes.js';
+import { formatarData, somarDias, dataHoje, formatarDataBR, formatarDataCurtaBR, formatarNumero, formatarVariacao } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 
-const HOJE = formatarData(new Date());
 const INICIO_DOS_TEMPOS = '1970-01-01'; // usado como "sem filtro de início", pra mostrar todo o histórico
 
-function formatarDataExibicao(dataStr) {
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 export default function SaudeSecao({ CORES }) {
+  const HOJE = dataHoje();
   const estilos = criarEstilos(CORES);
   const [registros, setRegistros] = useState([]);
   const [formularioAberto, setFormularioAberto] = useState(false);
@@ -116,8 +112,8 @@ export default function SaudeSecao({ CORES }) {
           <span style={estilos.periodoTexto}>
             Período:{' '}
             {dataInicioPeriodo === INICIO_DOS_TEMPOS
-              ? `Todo o histórico (até ${formatarDataExibicao(dataFimPeriodo)})`
-              : `${formatarDataExibicao(dataInicioPeriodo)} — ${formatarDataExibicao(dataFimPeriodo)}`}
+              ? `Todo o histórico (até ${formatarDataBR(dataFimPeriodo)})`
+              : `${formatarDataBR(dataInicioPeriodo)} — ${formatarDataBR(dataFimPeriodo)}`}
           </span>
           <button onClick={() => setPeriodoAberto(!periodoAberto)} style={estilos.linkPeriodo}>
             {periodoAberto ? 'Fechar' : 'Escolher período'}
@@ -270,7 +266,7 @@ export default function SaudeSecao({ CORES }) {
         {registros.map((r) => (
           <div key={r.id} style={estilos.cartaoRegistro}>
             <div style={estilos.cartaoTopo}>
-              <span style={estilos.cartaoData}>{formatarDataExibicao(r.data)}</span>
+              <span style={estilos.cartaoData}>{formatarDataBR(r.data)}</span>
               <div style={estilos.acoesCartao}>
                 <button onClick={() => abrirParaEditar(r)} style={estilos.botaoEditar}>
                   <Pencil size={14} />
@@ -283,7 +279,7 @@ export default function SaudeSecao({ CORES }) {
             <div style={estilos.cartaoValores}>
               {r.peso != null && (
                 <span style={estilos.valorItem}>
-                  <Scale size={13} /> {r.peso} kg
+                  <Scale size={13} /> {formatarNumero(r.peso, 1)} kg
                 </span>
               )}
               {r.pressaoSistolica != null && (
@@ -305,10 +301,6 @@ export default function SaudeSecao({ CORES }) {
   );
 }
 
-function formatarDataCurta(dataStr) {
-  const [, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}`;
-}
 
 function GraficoPeso({ pontos, CORES }) {
   const largura = 320;
@@ -350,7 +342,7 @@ function GraficoPeso({ pontos, CORES }) {
       }}
     >
       <div style={{ fontSize: 13, color: CORES.textoSecundario, marginBottom: 8 }}>
-        Evolução do peso ({pontos[0].peso}kg → {pontos[pontos.length - 1].peso}kg)
+        Evolução do peso ({formatarNumero(pontos[0].peso, 1)} kg → {formatarNumero(pontos[pontos.length - 1].peso, 1)} kg)
       </div>
       <svg width="100%" viewBox={`0 0 ${largura} ${altura}`} preserveAspectRatio="xMidYMid meet">
         <polyline
@@ -375,7 +367,7 @@ function GraficoPeso({ pontos, CORES }) {
                 fill={CORES.textoSecundario}
                 textAnchor="middle"
               >
-                {formatarDataCurta(p.data)}
+                {formatarDataCurtaBR(p.data)}
               </text>
             )
         )}
@@ -389,9 +381,7 @@ function GraficoPeso({ pontos, CORES }) {
             color: perdeu ? CORES.sucessoTexto : CORES.perigoTexto,
           }}
         >
-          {perdeu ? '▼' : '▲'} {Math.abs(variacaoAbsoluta).toFixed(1)} kg (
-          {variacaoPercentual > 0 ? '+' : ''}
-          {variacaoPercentual.toFixed(1)}%) nesse período
+          {perdeu ? '▼' : '▲'} {formatarNumero(Math.abs(variacaoAbsoluta), 1)} kg ({formatarVariacao(variacaoPercentual)}) nesse período
         </div>
       ) : (
         <div style={{ ...estiloResumoVariacao, backgroundColor: CORES.fundo, color: CORES.textoSecundario }}>

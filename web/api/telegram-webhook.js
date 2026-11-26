@@ -10,6 +10,7 @@ import {
   rotuloUnidade,
   descreverFrequenciaTexto,
   diasRestantesDeEstoque,
+  estoqueBaixo,
   dataFuturaCurta,
 } from './_logica.js';
 
@@ -178,8 +179,7 @@ function montarLinhasRemedio(remedioBruto, hoje) {
         ? ` (até ${dataCurtaBR(fase.fim)}) — depois ${formatarQuantidade(fase.proximaDose)} ${rotuloUnidade(remedio.unidade)}`
         : ' (dose final)')
     : null;
-  const estoqueBaixo =
-    remedio.quantidadeMinima > 0 && remedio.quantidadeAtual != null && remedio.quantidadeAtual <= remedio.quantidadeMinima;
+  const emEstoqueBaixo = estoqueBaixo(remedio);
 
   let linhaEstoque;
   if (remedio.quantidadeAtual == null || remedio.quantidadeAtual === '') {
@@ -191,7 +191,7 @@ function montarLinhasRemedio(remedioBruto, hoje) {
     else linhaEstoque = `📦 Estoque: ${estoque} — dura ~${dias} ${dias === 1 ? 'dia' : 'dias'} (até ${dataFuturaCurta(hoje, dias)})`;
   }
 
-  const alerta = estoqueBaixo || (dias !== null && dias <= 7) ? '⚠️ ' : '';
+  const alerta = emEstoqueBaixo || (dias !== null && dias <= 7) ? '⚠️ ' : '';
   return {
     dias,
     linhas: [

@@ -5,7 +5,7 @@ import { listarRegistrosSaude } from './saude.js';
 import { calcularAdesaoPorRemedio, calcularAdesaoGeral } from './evolucao.js';
 import { calcularSequenciaDias } from './streak.js';
 import { obterPerfil } from './perfil.js';
-import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData, doseDoDia } from './constantes.js';
+import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData, doseDoDia, formatarQuantidade, formatarDataBR } from './constantes.js';
 
 // Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
 function obterPaletaPdf(modoBob) {
@@ -31,10 +31,6 @@ function obterPaletaPdf(modoBob) {
   };
 }
 
-function formatarDataExtenso(dataStr) {
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 // Acha a data mais antiga com uma dose confirmada pra um remédio específico
 // — usado pra mostrar "desde quando" ele realmente começou a ser tomado
@@ -152,7 +148,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
     if (perfil.idade) partes.push(`Idade: ${perfil.idade} anos`);
     if (perfil.altura) partes.push(`Altura: ${perfil.altura} cm`);
     if (pesoMaisRecente) {
-      partes.push(`Peso mais recente: ${pesoMaisRecente.peso} kg (${formatarDataExtenso(pesoMaisRecente.data)})`);
+      partes.push(`Peso mais recente: ${pesoMaisRecente.peso} kg (${formatarDataBR(pesoMaisRecente.data)})`);
     }
 
     doc.setFontSize(9.5);
@@ -173,7 +169,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
   const cartoes = [
     { rotulo: 'Adesão geral', valor: adesaoGeral === null ? '—' : `${adesaoGeral}%` },
     { rotulo: 'Sequência atual', valor: `${sequenciaAtual} ${sequenciaAtual === 1 ? 'dia' : 'dias'}` },
-    { rotulo: 'Remédios ativos', valor: `${remedios.length}` },
+    { rotulo: 'Remédios ativos', valor: `${remedios.filter((r) => remedioEstaAtivo(r, formatarData(new Date()))).length}` },
   ];
   const larguraCartao = (larguraPagina - 28 - 12) / 3; // 14mm de margem cada lado, 6mm de gap entre os 3
   cartoes.forEach((c, i) => {
@@ -209,15 +205,15 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
   const remediosParados = remedios.filter((r) => !remedioEstaAtivo(r, hojeStrRelatorio));
 
   function montarLinhaRemedio(r) {
-    const adesao = adesaoPorRemedio.find((a) => a.nome === r.nome);
+    const adesao = adesaoPorRemedio.find((a) => a.id === r.id);
     const unidadeTexto = rotuloUnidade(r.unidade).toLowerCase();
     const primeiraDose = primeiraDoseDoRemedio(r.id, registros);
     return [
       r.nome,
-      `${doseDoDia(r, hojeStrRelatorio)} ${unidadeTexto}${Array.isArray(r.fases) && r.fases.length > 1 ? ' (atual)' : ''}`,
+      `${formatarQuantidade(doseDoDia(r, hojeStrRelatorio))} ${unidadeTexto}${Array.isArray(r.fases) && r.fases.length > 1 ? ' (atual)' : ''}`,
       descreverFrequencia(r.frequencia),
       (r.horarios || []).join(', '),
-      primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
+      primeiraDose ? formatarDataBR(primeiraDose) : '—',
       adesao ? `${adesao.percentual}%` : '—',
     ];
   }
@@ -262,11 +258,11 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
         const ultimaDose = ultimaDoseDoRemedio(r.id, registros);
         return [
           r.nome,
-          `${doseDoDia(r, hojeStrRelatorio)} ${unidadeTexto}`,
+          `${formatarQuantidade(doseDoDia(r, hojeStrRelatorio))} ${unidadeTexto}`,
           descreverFrequencia(r.frequencia),
           (r.horarios || []).join(', '),
-          primeiraDose ? formatarDataExtenso(primeiraDose) : '—',
-          ultimaDose ? formatarDataExtenso(ultimaDose) : '—',
+          primeiraDose ? formatarDataBR(primeiraDose) : '—',
+          ultimaDose ? formatarDataBR(ultimaDose) : '—',
         ];
       }),
       theme: 'plain',
@@ -298,7 +294,7 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
       startY: y,
       head: [['Data', 'Peso', 'Pressão', 'Freq. cardíaca', 'Anotações']],
       body: ordenados.map((r) => [
-        formatarDataExtenso(r.data),
+        formatarDataBR(r.data),
         r.peso != null ? `${r.peso} kg` : '—',
         r.pressaoSistolica != null ? `${r.pressaoSistolica}/${r.pressaoDiastolica || '—'} mmHg` : '—',
         r.frequenciaCardiaca != null ? `${r.frequenciaCardiaca} bpm` : '—',

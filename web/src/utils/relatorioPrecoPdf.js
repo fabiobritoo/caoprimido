@@ -2,7 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { listarRemedios, obterRegistros } from './storage.js';
 import { obterTodasCompras } from './compras.js';
-import { rotuloUnidade, remedioEstaAtivo, formatarData, doseDoDia } from './constantes.js';
+import { rotuloUnidade, remedioEstaAtivo, formatarData, doseDoDia, formatarQuantidade, formatarDataBR, formatarPreco, formatarVariacao, mediaDosesPorDia } from './constantes.js';
 
 function obterPaletaPdf(modoBob) {
   if (modoBob) {
@@ -31,14 +31,7 @@ function obterPaletaPdf(modoBob) {
   };
 }
 
-function formatarDataExtenso(dataStr) {
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
-function formatarPreco(valor) {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
 
 function ultimaDoseDoRemedio(remedioId, registros) {
   let maisRecente = null;
@@ -53,28 +46,11 @@ function ultimaDoseDoRemedio(remedioId, registros) {
 // Calcula a média de doses por dia considerando a frequência real do
 // remédio — sem isso, um remédio "1x por semana" seria calculado como se
 // fosse tomado todo santo dia, inflando o custo estimado em até 7x
-function calcularMediaDosesPorDia(remedio) {
-  const horariosPorDia = remedio.horarios?.length || 1;
-  const freq = remedio.frequencia;
-
-  if (!freq || freq.tipo === 'diaria') {
-    return horariosPorDia;
-  }
-  if (freq.tipo === 'dias_semana') {
-    const diasPorSemana = freq.dias?.length || 7;
-    return (horariosPorDia * diasPorSemana) / 7;
-  }
-  if (freq.tipo === 'intervalo') {
-    const intervalo = freq.intervaloDias || 1;
-    return horariosPorDia / intervalo;
-  }
-  return horariosPorDia;
-}
 
 function descreverFrequenciaResumo(remedio) {
   const freq = remedio.frequencia;
   const horariosPorDia = remedio.horarios?.length || 1;
-  const dose = `${doseDoDia(remedio, formatarData(new Date()))} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
+  const dose = `${formatarQuantidade(doseDoDia(remedio, formatarData(new Date())))} ${rotuloUnidade(remedio.unidade).toLowerCase()}`;
   const sufixo = ` · ${horariosPorDia}x ao dia · ${dose} por dose`;
 
   if (!freq || freq.tipo === 'diaria') return `todos os dias${sufixo}`;
@@ -201,7 +177,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     let custoDiarioEstimado = null;
     if (maisRecente.quantidade > 0) {
       const precoPorUnidade = maisRecente.preco / maisRecente.quantidade;
-      const mediaDosesPorDia = calcularMediaDosesPorDia(remedio);
+      const mediaDosesPorDia = mediaDosesPorDia(remedio);
       custoDiarioEstimado = precoPorUnidade * doseDoDia(remedio, formatarData(new Date())) * mediaDosesPorDia;
     }
 
@@ -222,6 +198,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       precoMinimo,
       precoMaximo,
       variacaoDesdeInicio,
+      variacaoPorUnidade: usaUnidade,
       custoDiarioEstimado,
       localMaisBarato,
     };
@@ -268,7 +245,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
   y += linhasExplicacao.length * 3.6 + 8;
 
   function renderizarBlocoRemedio(m) {
-    const { remedio, compras, maisRecente, precoMedio, precoMinimo, precoMaximo, variacaoDesdeInicio } = m;
+    const { remedio, compras, maisRecente, precoMedio, precoMinimo, precoMaximo, variacaoDesdeInicio, variacaoPorUnidade } = m;
 
     if (y > alturaPagina - 65) {
       doc.addPage();
@@ -285,7 +262,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(...TEXTO_SECUNDARIO);
-    doc.text(`Mais recente: ${formatarPreco(maisRecente.preco)}`, larguraPagina - 14, y, { align: 'right' });
+    doc.text(`Mais recente: ${formatarPreco(maisRecente.preco)}${maisRecente.quantidade > 0 ? ` (${formatarPreco(maisRecente.preco / maisRecente.quantidade)}/un.)` : ''}`, larguraPagina - 14, y, { align: 'right' });
     y += 7;
 
     const metricasTexto = [
@@ -312,8 +289,8 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       doc.setFontSize(8.5);
       doc.setTextColor(...TEXTO_SECUNDARIO);
       doc.text(
-        `Última dose: ${ultimaDose ? formatarDataExtenso(ultimaDose) : '—'}   ·   Parou em: ${
-          remedio.dataTermino ? formatarDataExtenso(remedio.dataTermino) : '—'
+        `Última dose: ${ultimaDose ? formatarDataBR(ultimaDose) : '—'}   ·   Parou em: ${
+          remedio.dataTermino ? formatarDataBR(remedio.dataTermino) : '—'
         }`,
         14,
         y
@@ -326,7 +303,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       doc.setTextColor(...(subiu ? PERIGO : SUCESSO));
       doc.setFont('helvetica', 'bold');
       doc.text(
-        `${subiu ? '▲' : '▼'} ${subiu ? '+' : ''}${variacaoDesdeInicio.toFixed(1)}% desde a primeira compra registrada`,
+        `${subiu ? '▲' : '▼'} ${formatarVariacao(variacaoDesdeInicio)}${variacaoPorUnidade ? ' por unidade' : ''} desde a primeira compra registrada`,
         14,
         y
       );
@@ -347,7 +324,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
       startY: y,
       head: [['Data', 'Preço', 'Local', 'Qtd', 'Anotações']],
       body: ultimasTres.map((c) => [
-        formatarDataExtenso(c.data),
+        formatarDataBR(c.data),
         formatarPreco(c.preco),
         c.local || '—',
         c.quantidade != null ? `${c.quantidade} ${rotuloUnidade(remedio.unidade).toLowerCase()}` : '—',

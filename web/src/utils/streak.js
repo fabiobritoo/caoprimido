@@ -1,4 +1,5 @@
-import { formatarData, remedioAplicavelNoDia } from './constantes.js';
+import { formatarData } from './constantes.js';
+import { dosesParaStatus } from './evolucao.js';
 import { doseTomada } from './storage.js';
 
 // Conta quantos dias seguidos (terminando hoje ou ontem) o usuário tomou
@@ -11,14 +12,7 @@ export function calcularSequenciaDias(remedios, registros) {
 
   for (let i = 0; i < 3650; i++) {
     const dataStr = formatarData(cursor);
-    const dosesDoDia = [];
-
-    for (const remedio of remedios) {
-      if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
-      for (const horario of remedio.horarios || []) {
-        dosesDoDia.push({ remedioId: remedio.id, horario });
-      }
-    }
+    const dosesDoDia = dosesParaStatus(remedios, dataStr, hojeStr, registros);
 
     if (dosesDoDia.length === 0) {
       cursor.setDate(cursor.getDate() - 1);

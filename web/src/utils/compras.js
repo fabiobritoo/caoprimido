@@ -46,3 +46,8 @@ export async function removerCompra(id, remedioId) {
   await salvarTodasCompras(novaLista);
   return listarComprasDoRemedio(remedioId);
 }
+
+export async function removerComprasDoRemedio(remedioId) {
+  const todas = await obterTodasCompras();
+  await salvarTodasCompras(todas.filter((c) => c.remedioId !== remedioId));
+}

@@ -12,16 +12,7 @@ import {
   alternarDose,
   obterIdDispositivo,
 } from '../utils/storage.js';
-import {
-  rotuloUnidade,
-  diasDaSemanaContendo,
-  remedioAplicavelNoDia,
-  remedioNoDia,
-  formatarQuantidade,
-  formatarData,
-  formatarDataPorExtenso,
-  somarDias,
-} from '../utils/constantes.js';
+import { rotuloUnidade, diasDaSemanaContendo, remedioAplicavelNoDia, remedioNoDia, formatarQuantidade, formatarData, formatarDataPorExtenso, somarDias, dataHoje, formatarHoraDeTimestamp, formatarDataCurtaBR, estoqueBaixo, dataFuturaCurta } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -33,22 +24,14 @@ import { obterProximaConsulta } from '../utils/consultas.js';
 import { deveLembrarBackup } from '../utils/backup.js';
 import { estaInstalado } from '../utils/instalacao.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
+import { dosesParaStatus } from '../utils/evolucao.js';
 
-const HOJE = formatarData(new Date());
 const LIMIAR_SWIPE = 45; // pixels mínimos de arrasto pra contar como swipe
 
-function formatarHora(timestamp) {
-  if (!timestamp) return '--:--';
-  const data = new Date(timestamp);
-  return `${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`;
-}
 
-function formatarDataCurtaBR(dataStr) {
-  const [, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}`;
-}
 
 export default function HomeScreen() {
+  const HOJE = dataHoje();
   const navigate = useNavigate();
   const { CORES, pastaMascote } = useTema();
   const estilos = criarEstilos(CORES);
@@ -70,6 +53,7 @@ export default function HomeScreen() {
   const [arrastando, setArrastando] = useState(false);
   const [transicaoAtiva, setTransicaoAtiva] = useState(true);
 
+  const diaDoAppRef = useRef(HOJE);
   const toqueInicioX = useRef(null);
   const larguraViewportRef = useRef(0);
   const viewportRef = useRef(null);
@@ -92,7 +76,15 @@ export default function HomeScreen() {
   useEffect(() => {
     carregar();
     const aoVoltarParaAba = () => {
-      if (document.visibilityState === 'visible') carregar();
+      if (document.visibilityState !== 'visible') return;
+      // app ficou aberto de um dia pro outro: volta a mostrar o dia de hoje
+      const hojeAgora = dataHoje();
+      if (hojeAgora !== diaDoAppRef.current) {
+        diaDoAppRef.current = hojeAgora;
+        setDiaSelecionado(hojeAgora);
+        setSemanaAncora(hojeAgora);
+      }
+      carregar();
     };
     document.addEventListener('visibilitychange', aoVoltarParaAba);
     return () => document.removeEventListener('visibilitychange', aoVoltarParaAba);
@@ -133,20 +125,19 @@ export default function HomeScreen() {
 
   const obterStatusDoDia = useCallback(
     (dataStr) => {
-      const doses = [];
-      for (const remedio of remedios) {
-        if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, remedio.dataInicio, remedio.dataTermino)) continue;
-        for (const horario of remedio.horarios || []) {
-          doses.push({ remedioId: remedio.id, horario });
-        }
-      }
+      // dias passados usam a mesma regra da Evolução e da sequência (não contam
+      // dias anteriores ao cadastro do remédio); hoje e o futuro seguem a agenda
+      const doses = dosesParaStatus(remedios, dataStr, HOJE, registros);
       if (doses.length === 0) return null;
+      // dias que ainda não aconteceram (e hoje, enquanto nada foi marcado) ficam
+      // sem cor — vermelho só pra dia que já passou sem as doses
+      if (dataStr > HOJE) return null;
       const tomadas = doses.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario));
       if (tomadas.length === doses.length) return 'completo';
-      if (tomadas.length === 0) return 'nenhum';
+      if (tomadas.length === 0) return dataStr === HOJE ? null : 'nenhum';
       return 'parcial';
     },
-    [remedios, registros]
+    [remedios, registros, HOJE]
   );
 
 
@@ -279,10 +270,7 @@ export default function HomeScreen() {
       // se essa confirmação deixou o estoque no limite (ou abaixo), avisa na
       // hora — não depende de notificação push, que só repete a cada 3 dias
       const remedioAtualizado = resultado.remedios.find((r) => r.id === item.remedio.id);
-      if (
-        remedioAtualizado?.quantidadeMinima > 0 &&
-        remedioAtualizado.quantidadeAtual <= remedioAtualizado.quantidadeMinima
-      ) {
+      if (remedioAtualizado && estoqueBaixo(remedioAtualizado)) {
         setAvisoEstoque(remedioAtualizado);
       }
 
@@ -583,7 +571,7 @@ export default function HomeScreen() {
                       {formatarQuantidade(item.remedio.quantidadePorDose)} {unidadeTexto} · agendado {item.horario}
                     </div>
                   </div>
-                  <div style={estilos.horaRegistrada}>{formatarHora(item.tomadoEm)}</div>
+                  <div style={estilos.horaRegistrada}>{formatarHoraDeTimestamp(item.tomadoEm)}</div>
                   <div style={{ ...estilos.doseStatus, ...estilos.doseStatusTomado }}>
                     <Check size={16} strokeWidth={3} color="#fff" />
                   </div>
@@ -637,7 +625,7 @@ export default function HomeScreen() {
             <div style={estilos.textoAvisoEstoque}>
               <strong>{avisoEstoque.nome}</strong> está com só{' '}
               <strong>
-                {avisoEstoque.quantidadeAtual} {rotuloUnidade(avisoEstoque.unidade).toLowerCase()}
+                {formatarQuantidade(avisoEstoque.quantidadeAtual)} {rotuloUnidade(avisoEstoque.unidade).toLowerCase()}
               </strong>{' '}
               restantes. Bom já pensar em comprar mais.
             </div>
@@ -720,7 +708,6 @@ function criarEstilos(CORES) {
       fontSize: 13,
       fontWeight: 600,
       color: CORES.textoPrincipal,
-      textTransform: 'capitalize',
     },
     botaoVoltarHoje: {
       display: 'flex',

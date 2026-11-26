@@ -1,13 +1,8 @@
 import React from 'react';
 import { Pill, Undo2, X } from 'lucide-react';
 import { RAIO, SOMBRA } from '../utils/tema.js';
-import { rotuloUnidade, formatarQuantidade } from '../utils/constantes.js';
+import { rotuloUnidade, formatarQuantidade, formatarHoraDeTimestamp } from '../utils/constantes.js';
 
-function formatarHora(timestamp) {
-  if (!timestamp) return '--:--';
-  const data = new Date(timestamp);
-  return `${String(data.getHours()).padStart(2, '0')}:${String(data.getMinutes()).padStart(2, '0')}`;
-}
 
 export default function DoseDetalheModal({ item, CORES, aoFechar, aoDesfazer }) {
   if (!item) return null;
@@ -45,11 +40,11 @@ export default function DoseDetalheModal({ item, CORES, aoFechar, aoDesfazer }) 
 
         <div style={estilos.linha}>
           <span style={estilos.linhaLabel}>Horário registrado</span>
-          <span style={estilos.linhaValor}>{formatarHora(item.tomadoEm)}</span>
+          <span style={estilos.linhaValor}>{formatarHoraDeTimestamp(item.tomadoEm)}</span>
         </div>
 
         <div style={estilos.statusBox}>
-          Esta dose foi marcada como tomada às {formatarHora(item.tomadoEm)}
+          Esta dose foi marcada como tomada às {formatarHoraDeTimestamp(item.tomadoEm)}
         </div>
 
         <button onClick={() => aoDesfazer(item)} style={estilos.botaoDesfazer}>

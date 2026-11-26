@@ -3,19 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Pill, Clock, Package, Tag, Archive, ArchiveRestore, X } from 'lucide-react';
 import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData } from '../utils/constantes.js';
+import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, diasRestantesDeEstoque, estoqueInformado } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
-const HOJE = formatarData(new Date());
 
-function formatarDataExibicao(dataStr) {
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 export default function ManageMedicinesScreen() {
+  const HOJE = dataHoje();
   const navigate = useNavigate();
   const { CORES } = useTema();
   const estilos = criarEstilos(CORES);
@@ -88,6 +84,10 @@ export default function ManageMedicinesScreen() {
           // com fases de dose, mostra a dose que vale hoje
           const doseHoje = remedioNoDia(item, HOJE);
           const fase = doseHoje.faseDoDia;
+          const duracao = descreverDuracaoEstoque(item, HOJE);
+          const diasEstoque = diasRestantesDeEstoque(item, HOJE);
+          // alerta: abaixo do mínimo definido, ou estoque pra 7 dias ou menos
+          const alerta = estoqueBaixo(item) || (diasEstoque !== null && diasEstoque <= 7);
           return (
             <div key={item.id} style={estilos.card}>
               <div style={estilos.linhaConteudo}>
@@ -111,30 +111,19 @@ export default function ManageMedicinesScreen() {
                     <div style={{ ...estilos.detalhe, color: CORES.primariaEscura, fontWeight: 600 }}>
                       Fase {fase.indice + 1} de {fase.total}
                       {fase.fim
-                        ? ` · até ${formatarDataExibicao(fase.fim)}, depois ${formatarQuantidade(fase.proximaDose)} ${unidadeTexto}`
+                        ? ` · até ${formatarDataBR(fase.fim)}, depois ${formatarQuantidade(fase.proximaDose)} ${unidadeTexto}`
                         : ' · dose final'}
                     </div>
                   )}
 
                   <div style={estilos.linhaDetalhe}>
-                    <Package
-                      size={13}
-                      color={
-                        item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima
-                          ? CORES.perigoTexto
-                          : CORES.textoSecundario
-                      }
-                    />
-                    <span
-                      style={{
-                        ...estilos.detalhe,
-                        ...(item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima
-                          ? { color: CORES.perigoTexto, fontWeight: 700 }
-                          : {}),
-                      }}
-                    >
-                      Estoque: {item.quantidadeAtual} {unidadeTexto}
-                      {item.quantidadeMinima && item.quantidadeAtual <= item.quantidadeMinima && ' · baixo!'}
+                    <Package size={13} color={alerta ? CORES.perigoTexto : CORES.textoSecundario} />
+                    <span style={{ ...estilos.detalhe, ...(alerta ? { color: CORES.perigoTexto, fontWeight: 700 } : {}) }}>
+                      {estoqueInformado(item)
+                        ? `Estoque: ${formatarQuantidade(item.quantidadeAtual)} ${unidadeTexto}`
+                        : 'Estoque não informado'}
+                      {duracao ? ` · ${duracao}` : ''}
+                      {estoqueBaixo(item) && ' · baixo!'}
                     </span>
                   </div>
                 </div>
@@ -205,7 +194,7 @@ export default function ManageMedicinesScreen() {
                       </div>
                       {item.dataTermino && (
                         <div style={estilos.detalheAntigo}>
-                          Parou em {formatarDataExibicao(item.dataTermino)}
+                          Parou em {formatarDataBR(item.dataTermino)}
                         </div>
                       )}
                     </div>

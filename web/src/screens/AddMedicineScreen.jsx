@@ -19,25 +19,12 @@ import {
 } from 'lucide-react';
 import { adicionarRemedio, atualizarRemedio, listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import {
-  UNIDADES,
-  DIAS_SEMANA,
-  formatarData,
-  somarDias,
-  rotuloUnidade,
-  doseDoDia,
-  calcularFasesComDatas,
-} from '../utils/constantes.js';
+import { UNIDADES, DIAS_SEMANA, formatarData, somarDias, rotuloUnidade, doseDoDia, calcularFasesComDatas, formatarDataBR, formatarQuantidade } from '../utils/constantes.js';
 import { adicionarCompra } from '../utils/compras.js';
 import { RAIO, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
-function formatarDataExibicao(dataStr) {
-  if (!dataStr) return '';
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 const ICONE_UNIDADE = {
   comprimido: Pill,
@@ -282,7 +269,7 @@ export default function AddMedicineScreen() {
       nome: nome.trim(),
       unidade,
       quantidadePorDose: dosePrincipal,
-      dosagem: `${dosePrincipal} ${unidade}`,
+      dosagem: `${formatarQuantidade(dosePrincipal)} ${rotuloUnidade(unidade).toLowerCase()}`,
       fases: fasesSalvas,
       horarios,
       frequencia: montarFrequencia(),
@@ -404,7 +391,7 @@ export default function AddMedicineScreen() {
             <div style={estilos.subLabel}>
               Ex.: 0,25 por 2 semanas, depois 0,5 por 4 semanas, depois 1 daí em diante. As fases
               contam a partir da data de início (em "Duração", abaixo):{' '}
-              <strong>{formatarDataExibicao(dataInicio)}</strong>. A dose é na unidade do estoque
+              <strong>{formatarDataBR(dataInicio)}</strong>. A dose é na unidade do estoque
               ({rotuloUnidade(unidade).toLowerCase()}).
             </div>
 
@@ -484,8 +471,8 @@ export default function AddMedicineScreen() {
                   <strong>Fase {i + 1}:</strong> {p.quantidadePorDose ? formatarDose(p.quantidadePorDose) : '?'}{' '}
                   {rotuloUnidade(unidade).toLowerCase()} ·{' '}
                   {p.fim
-                    ? `${formatarDataExibicao(p.inicio)} a ${formatarDataExibicao(p.fim)}`
-                    : `a partir de ${formatarDataExibicao(p.inicio)}`}
+                    ? `${formatarDataBR(p.inicio)} a ${formatarDataBR(p.fim)}`
+                    : `a partir de ${formatarDataBR(p.inicio)}`}
                 </div>
               ))}
             </div>
@@ -651,7 +638,7 @@ export default function AddMedicineScreen() {
                   style={estilos.input}
                 />
                 <div style={estilos.subLabel}>
-                  Termina em {formatarDataExibicao(dataTermino)}
+                  Termina em {formatarDataBR(dataTermino)}
                 </div>
               </>
             ) : (
@@ -666,7 +653,7 @@ export default function AddMedicineScreen() {
           </>
         ) : (
           <div style={estilos.subLabel}>
-            Início em {formatarDataExibicao(dataInicio)}, sem data de término.
+            Início em {formatarDataBR(dataInicio)}, sem data de término.
           </div>
         )}
 

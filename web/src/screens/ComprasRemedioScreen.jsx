@@ -3,23 +3,16 @@ import { useParams } from 'react-router-dom';
 import { Plus, Trash2, Pencil, Tag, MapPin, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { listarComprasDoRemedio, adicionarCompra, atualizarCompra, removerCompra } from '../utils/compras.js';
 import { listarRemedios } from '../utils/storage.js';
-import { formatarData } from '../utils/constantes.js';
+import { formatarData, dataHoje, formatarDataBR, formatarPreco, formatarVariacao, formatarNumero } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
-const HOJE = formatarData(new Date());
 
-function formatarDataExibicao(dataStr) {
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
-function formatarPreco(valor) {
-  return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-}
 
 export default function ComprasRemedioScreen() {
+  const HOJE = dataHoje();
   const { id: remedioId } = useParams();
   const { CORES } = useTema();
   const estilos = criarEstilos(CORES);
@@ -203,7 +196,7 @@ export default function ComprasRemedioScreen() {
           {comprasComVariacao.map((c) => (
             <div key={c.id} style={estilos.cartao}>
               <div style={estilos.cartaoTopo}>
-                <span style={estilos.cartaoData}>{formatarDataExibicao(c.data)}</span>
+                <span style={estilos.cartaoData}>{formatarDataBR(c.data)}</span>
                 <div style={estilos.acoesCartao}>
                   <button onClick={() => abrirParaEditar(c)} style={estilos.botaoEditar}>
                     <Pencil size={14} />
@@ -226,8 +219,7 @@ export default function ComprasRemedioScreen() {
                     }}
                   >
                     {c.variacao > 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                    {c.variacao > 0 ? '+' : ''}
-                    {c.variacao.toFixed(1)}%
+                    {formatarVariacao(c.variacao)}
                   </span>
                 )}
               </div>
@@ -241,7 +233,7 @@ export default function ComprasRemedioScreen() {
               {c.quantidade != null && (
                 <div style={estilos.linhaInfo}>
                   <span>
-                    {c.quantidade} unidades — {formatarPreco(c.preco / c.quantidade)}/unidade
+                    {c.quantidade} {c.quantidade === 1 ? 'unidade' : 'unidades'} — {formatarPreco(c.preco / c.quantidade)}/unidade
                   </span>
                 </div>
               )}

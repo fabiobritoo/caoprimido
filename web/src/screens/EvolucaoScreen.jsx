@@ -8,7 +8,7 @@ import {
   calcularAdesaoPorRemedio,
   dosesAgendadasNoDia,
 } from '../utils/evolucao.js';
-import { formatarData, remedioEstaAtivo } from '../utils/constantes.js';
+import { formatarData, remedioEstaAtivo, formatarDataBR } from '../utils/constantes.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { RAIO, SOMBRA, criarBotaoSecundario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
@@ -17,10 +17,6 @@ import SaudeSecao from '../components/SaudeSecao.jsx';
 
 const DIAS_HISTORICO = 84; // 12 semanas
 
-function formatarDataExibicao(dataStr) {
-  const [ano, mes, dia] = dataStr.split('-');
-  return `${dia}/${mes}/${ano}`;
-}
 
 export default function EvolucaoScreen() {
   const { CORES, modoBob } = useTema();
@@ -47,8 +43,11 @@ export default function EvolucaoScreen() {
 
       setMapaCalor(calcularMapaCalor(listaRemedios, listaRegistros, DIAS_HISTORICO));
       setAdesaoGeral(calcularAdesaoGeral(listaRemedios, listaRegistros, DIAS_HISTORICO));
-      setSequenciaAtual(calcularSequenciaDias(listaRemedios, listaRegistros));
-      setMelhorSequencia(calcularMelhorSequencia(listaRemedios, listaRegistros, DIAS_HISTORICO));
+      const atual = calcularSequenciaDias(listaRemedios, listaRegistros);
+      setSequenciaAtual(atual);
+      // a sequência atual olha mais pra trás que as 12 semanas do mapa, então
+      // a "melhor" nunca pode ser menor que ela
+      setMelhorSequencia(Math.max(calcularMelhorSequencia(listaRemedios, listaRegistros, DIAS_HISTORICO), atual));
       // o mapa e a adesão geral (em cima) mantêm o histórico de todos os remédios;
       // a lista "Adesão por remédio" mostra só os que estão ativos hoje
       // (arquivados e com tratamento encerrado ficam de fora)
@@ -152,20 +151,17 @@ export default function EvolucaoScreen() {
         </button>
       </div>
 
-      {aba === 'remedios' && (
-        <div style={{ padding: '14px 16px 0' }}>
-          <button onClick={baixarRelatorioPreco} disabled={gerandoPdfPreco} style={estilos.botaoPdfPreco}>
-            <Tag size={16} strokeWidth={2.3} />
-            {gerandoPdfPreco ? 'Gerando PDF...' : 'Exportar relatório de preços'}
-          </button>
-        </div>
-      )}
-
-      <div style={{ padding: '14px 16px 0' }}>
+      <div style={{ padding: '14px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button onClick={baixarRelatorio} disabled={gerandoPdf} style={estilos.botaoPdf}>
           <FileDown size={16} strokeWidth={2.3} />
           {gerandoPdf ? 'Gerando PDF...' : 'Exportar relatório em PDF'}
         </button>
+        {aba === 'remedios' && (
+          <button onClick={baixarRelatorioPreco} disabled={gerandoPdfPreco} style={estilos.botaoPdf}>
+            <Tag size={16} strokeWidth={2.3} />
+            {gerandoPdfPreco ? 'Gerando PDF...' : 'Exportar relatório de preços'}
+          </button>
+        )}
       </div>
 
       {aba === 'saude' ? (
@@ -247,7 +243,7 @@ export default function EvolucaoScreen() {
             <>
               <div style={{ ...estilos.secaoTitulo, marginTop: 26 }}>Adesão por remédio</div>
               {porRemedio.map((r) => (
-                <div key={r.nome} style={estilos.linhaRemedio}>
+                <div key={r.id || r.nome} style={estilos.linhaRemedio}>
                   <div style={estilos.linhaRemedioTopo}>
                     <span style={estilos.linhaRemedioNome}>{r.nome}</span>
                     <span style={estilos.linhaRemedioPercentual}>{r.percentual}%</span>
@@ -263,7 +259,7 @@ export default function EvolucaoScreen() {
                     />
                   </div>
                   <div style={estilos.linhaRemedioDetalhe}>
-                    {r.tomadas} de {r.agendadas} doses
+                    {r.tomadas} de {r.agendadas} {r.agendadas === 1 ? 'dose' : 'doses'}
                   </div>
                 </div>
               ))}
@@ -282,7 +278,7 @@ export default function EvolucaoScreen() {
         <div style={estilos.fundoModal} onClick={() => setDiaDetalhe(null)}>
           <div style={estilos.folhaModal} onClick={(e) => e.stopPropagation()}>
             <div style={estilos.topoModal}>
-              <span style={estilos.tituloModal}>{formatarDataExibicao(diaDetalhe.data)}</span>
+              <span style={estilos.tituloModal}>{formatarDataBR(diaDetalhe.data)}</span>
               <button onClick={() => setDiaDetalhe(null)} style={estilos.botaoFecharModal}>
                 <X size={18} />
               </button>
@@ -326,11 +322,6 @@ function criarEstilos(CORES) {
     botaoPdf: {
       ...criarBotaoSecundario(CORES),
       width: '100%',
-    },
-    botaoPdfPreco: {
-      ...criarBotaoSecundario(CORES),
-      width: '100%',
-      backgroundColor: CORES.primariaClara,
     },
     seletorAbas: {
       display: 'flex',

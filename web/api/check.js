@@ -10,6 +10,8 @@ import {
   nomeResumido,
   rotuloUnidade,
   formatarQuantidade,
+  estoqueBaixo,
+  descreverDose,
 } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
@@ -381,10 +383,7 @@ export default async function handler(req, res) {
         ? remedios.filter(
             (remedio) =>
               remedioEstaAtivo(remedio, hoje) &&
-              remedio.quantidadeMinima &&
-              remedio.quantidadeMinima > 0 &&
-              remedio.quantidadeAtual <=
-                remedio.quantidadeMinima
+              estoqueBaixo(remedio)
           )
         : [];
 
@@ -412,10 +411,7 @@ export default async function handler(req, res) {
 
           if (jaAvisou) continue;
 
-          const unidadeTexto =
-            remedio.unidade === 'comprimido'
-              ? 'comprimido(s)'
-              : remedio.unidade;
+          const unidadeTexto = rotuloUnidade(remedio.unidade);
 
           try {
             await webpush.sendNotification(
@@ -693,7 +689,7 @@ export default async function handler(req, res) {
         ) {
           const { titulo, corpo } = montarMensagemEscalonada(
             remedio.nome,
-            remedio.dosagem,
+            descreverDose(remedio),
             atrasoMs
           );
 
@@ -760,7 +756,7 @@ export default async function handler(req, res) {
             corpo,
           } = montarMensagemEscalonada(
             remedio.nome,
-            remedio.dosagem,
+            descreverDose(remedio),
             atrasoMs
           );
 

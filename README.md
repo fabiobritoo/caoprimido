@@ -177,3 +177,16 @@ trocar de banco sem mexer em código.
 
 Consulte `web/src/utils/versao.js` — o número e a descrição da última mudança
 aparecem também no rodapé da tela inicial do app.
+
+
+## Padrões do app (revisão geral — 1.48.0)
+
+Pra tudo ficar igual em todas as telas, os formatos e cálculos ficam num lugar só (`web/src/utils/constantes.js`, espelhado em `web/api/_logica.js` pro servidor — manter os dois iguais):
+
+- **Datas**: `formatarDataBR` (26/11/2026), `formatarDataCurtaBR` (26/11), `formatarDataPorExtenso`; "hoje" sempre por `dataHoje()` (nunca em constante de módulo, senão fica errado se o app passar da meia-noite).
+- **Números**: `formatarNumero`, `formatarVariacao` (+9,5%), `formatarQuantidade` (0,25), `formatarPreco` — sempre com vírgula.
+- **Dose**: `descreverDose` ("0,25 mg") é o texto usado na tela, nas notificações e no Telegram.
+- **Estoque**: `estoqueBaixo`, `diasRestantesDeEstoque`, `descreverDuracaoEstoque` — o app (Meus Remédios) e o Telegram mostram a mesma duração.
+- **Variação de preço**: sempre por unidade (preço ÷ quantidade) quando há quantidade.
+- **Sequência / bolinhas da Home / Evolução**: dias passados usam a mesma regra (`dosesParaStatus` em `utils/evolucao.js`); dias futuros e hoje (sem doses marcadas) ficam sem cor.
+- **Adiar** (notificação e tela de alarme): 10 minutos.

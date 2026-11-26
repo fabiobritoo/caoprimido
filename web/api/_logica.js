@@ -141,9 +141,15 @@ export function remedioNoDia(remedio, dataStr) {
   return {
     ...remedio,
     quantidadePorDose: fase.quantidadePorDose,
-    dosagem: `${formatarQuantidade(fase.quantidadePorDose)} ${remedio.unidade || ''}`.trim(),
+    dosagem: `${formatarQuantidade(fase.quantidadePorDose)} ${rotuloUnidade(remedio.unidade)}`,
     faseDoDia: fase,
   };
+}
+
+// Texto da dose, sempre igual em todo lugar: "0,25 mg", "1 comprimido(s)"
+// (mesma lógica de src/utils/constantes.js)
+export function descreverDose(remedio) {
+  return `${formatarQuantidade(Number(remedio.quantidadePorDose) || 1)} ${rotuloUnidade(remedio.unidade)}`;
 }
 
 const ROTULOS_UNIDADE = {
@@ -189,6 +195,13 @@ export function descreverFrequenciaTexto(frequencia) {
 
 // Quantos dias o estoque atual dura, no ritmo de uso médio. Devolve null
 // quando não dá pra calcular (estoque não informado ou sem horários).
+// Estoque informado e no limite (ou abaixo) do mínimo definido
+// (mesma lógica de src/utils/constantes.js — manter as duas iguais)
+export function estoqueBaixo(remedio) {
+  const informado = remedio.quantidadeAtual != null && remedio.quantidadeAtual !== '' && !Number.isNaN(Number(remedio.quantidadeAtual));
+  return informado && Number(remedio.quantidadeMinima) > 0 && Number(remedio.quantidadeAtual) <= Number(remedio.quantidadeMinima);
+}
+
 export function diasRestantesDeEstoque(remedio, hojeStr) {
   if (remedio.quantidadeAtual == null || remedio.quantidadeAtual === '') return null;
 

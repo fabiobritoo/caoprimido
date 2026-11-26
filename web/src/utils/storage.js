@@ -1,4 +1,5 @@
 import { formatarData, doseDoDia } from './constantes.js';
+import { removerComprasDoRemedio } from './compras.js';
 
 const CHAVE_REMEDIOS = '@caoprimido:lista';
 const CHAVE_REGISTROS = '@caoprimido:registros';
@@ -48,6 +49,16 @@ export async function removerRemedio(id) {
   const lista = await listarRemedios();
   const novaLista = lista.filter((r) => r.id !== id);
   await salvarRemedios(novaLista);
+
+  // "Excluir permanentemente" apaga o histórico também: doses registradas e
+  // compras desse remédio (antes ficavam órfãs, ocupando espaço e entrando no backup)
+  const registros = await obterRegistros();
+  const restantes = {};
+  for (const chave in registros) {
+    if (!chave.startsWith(`${id}|`)) restantes[chave] = registros[chave];
+  }
+  await salvarRegistros(restantes);
+  await removerComprasDoRemedio(id);
   return novaLista;
 }
 
@@ -97,11 +108,14 @@ export async function alternarDose(remedio, data, horario) {
 
   const delta = estavaTomado ? porDose : -porDose;
   const listaRemedios = await listarRemedios();
-  const novaLista = listaRemedios.map((r) =>
-    r.id === remedio.id
-      ? { ...r, quantidadeAtual: Math.max(0, r.quantidadeAtual + delta) }
-      : r
-  );
+  const novaLista = listaRemedios.map((r) => {
+    if (r.id !== remedio.id) return r;
+    // estoque não informado: não inventa um número (antes virava 0)
+    if (r.quantidadeAtual == null || r.quantidadeAtual === '') return r;
+    // arredonda pra evitar resíduos de ponto flutuante (ex.: 0,30000000000000004)
+    const novo = Math.round((Number(r.quantidadeAtual) + delta) * 1000) / 1000;
+    return { ...r, quantidadeAtual: Math.max(0, novo) };
+  });
   await salvarRemedios(novaLista);
 
   return { remedios: novaLista, registros: novosRegistros, tomadoAgora: !estavaTomado };
