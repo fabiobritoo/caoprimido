@@ -4,7 +4,6 @@ import { listarConsultas, adicionarConsulta, removerConsulta } from '../utils/co
 import { formatarData, dataHoje, formatarDataBR } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
-import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 
 
 
@@ -95,8 +94,7 @@ export default function ConsultasScreen() {
   }
 
   return (
-    <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 40 }}>
-      <CabecalhoTopo titulo="Consultas médicas" mostrarVoltar />
+    <div>
 
       <div style={{ padding: 16 }}>
         {!formularioAberto ? (

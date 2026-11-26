@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Pill, Clock, Package, Tag, Archive, ArchiveRestore, X } from 'lucide-react';
 import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo, obterRegistros, doseTomada } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { somarDias, rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, diasRestantesDeEstoque, estoqueInformado } from '../utils/constantes.js';
+import { formatarPreco, formatarDataCurtaBR, somarDias, rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, diasRestantesDeEstoque, estoqueInformado } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
+import BotaoRelatorio from '../components/BotaoRelatorio.jsx';
+import { obterTodasCompras } from '../utils/compras.js';
 
 
 
@@ -17,9 +19,11 @@ export default function ManageMedicinesScreen() {
   const estilos = criarEstilos(CORES);
   const [remedios, setRemedios] = useState([]);
   const [antigosAbertos, setAntigosAbertos] = useState(false);
+  const [compras, setCompras] = useState([]);
 
   const carregar = useCallback(async () => {
     setRemedios(await listarRemedios());
+    setCompras(await obterTodasCompras());
   }, []);
 
   useEffect(() => {
@@ -69,6 +73,9 @@ export default function ManageMedicinesScreen() {
       <CabecalhoTopo titulo="Meus Remédios" mostrarVoltar />
 
       <div style={{ padding: 16 }}>
+        {compras.length > 0 && (
+          <BotaoRelatorio tipo="preco" rotulo="Relatório de preços (PDF)" style={{ marginBottom: 14 }} />
+        )}
         <div style={estilos.linhaAntigos}>
           <span style={estilos.textoAntigos}>Remédios antigos {antigos.length > 0 && `(${antigos.length})`}</span>
           <button
@@ -95,6 +102,10 @@ export default function ManageMedicinesScreen() {
           const duracao = descreverDuracaoEstoque(item, HOJE);
           const diasEstoque = diasRestantesDeEstoque(item, HOJE);
           // alerta: abaixo do mínimo definido, ou estoque pra 7 dias ou menos
+          // compra mais recente: preço total e por unidade, pra ver o custo junto do estoque
+          const ultimaCompra = compras
+            .filter((c) => c.remedioId === item.id)
+            .sort((a, b) => b.data.localeCompare(a.data))[0];
           const alerta = estoqueBaixo(item) || (diasEstoque !== null && diasEstoque <= 7);
           return (
             <div key={item.id} style={estilos.card}>
@@ -134,6 +145,17 @@ export default function ManageMedicinesScreen() {
                       {estoqueBaixo(item) && ' · baixo!'}
                     </span>
                   </div>
+
+                  <button onClick={() => navigate(`/remedio/${item.id}/compras`)} style={estilos.linhaPreco}>
+                    <Tag size={13} color={CORES.textoSecundario} />
+                    <span>
+                      {ultimaCompra
+                        ? `Última compra: ${formatarPreco(ultimaCompra.preco)}${
+                            ultimaCompra.quantidade > 0 ? ` (${formatarPreco(ultimaCompra.preco / ultimaCompra.quantidade)}/un.)` : ''
+                          } · ${formatarDataCurtaBR(ultimaCompra.data)}`
+                        : 'Registrar preço'}
+                    </span>
+                  </button>
                 </div>
               </div>
 
@@ -273,6 +295,18 @@ function criarEstilos(CORES) {
     nome: { fontSize: 17, fontWeight: 700, color: CORES.textoPrincipal, marginBottom: 4 },
     linhaDetalhe: { display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 },
     detalhe: { color: CORES.textoSecundario, fontSize: 13 },
+    linhaPreco: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 5,
+      marginTop: 3,
+      padding: 0,
+      background: 'none',
+      border: 'none',
+      color: CORES.textoSecundario,
+      fontSize: 13,
+      textAlign: 'left',
+    },
     acoes: { display: 'flex', gap: 10, justifyContent: 'flex-end' },
     botaoIconePreco: {
       width: 40,

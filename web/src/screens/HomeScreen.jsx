@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Plus, Check, Pill, Flame, Settings2, ClipboardList, TrendingUp, CalendarDays, CalendarClock, Database, Download,
-  ChevronLeft,
+  Plus, Check, Pill, Flame, Settings2, ClipboardList, CalendarDays, CalendarClock, Database, Download,
+  ChevronLeft, HeartPulse,
 } from 'lucide-react';
 import {
   listarRemedios,
@@ -18,7 +18,6 @@ import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import DoseDetalheModal from '../components/DoseDetalheModal.jsx';
 import CalendarioModal from '../components/CalendarioModal.jsx';
-import { VERSAO, VERSAO_DESCRICAO } from '../utils/versao.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { obterProximaConsulta } from '../utils/consultas.js';
 import { deveLembrarBackup } from '../utils/backup.js';
@@ -369,17 +368,13 @@ export default function HomeScreen() {
           <Pill size={20} strokeWidth={2.2} />
           <span>Remédios</span>
         </button>
-        <button onClick={() => navigate('/evolucao')} style={estilos.navItem}>
-          <TrendingUp size={20} strokeWidth={2.2} />
-          <span>Evolução</span>
-        </button>
-        <button onClick={() => navigate('/consultas')} style={estilos.navItem}>
-          <CalendarClock size={20} strokeWidth={2.2} />
-          <span>Consultas</span>
+        <button onClick={() => navigate('/saude')} style={estilos.navItem}>
+          <HeartPulse size={20} strokeWidth={2.2} />
+          <span>Saúde</span>
         </button>
         <button onClick={() => navigate('/configuracoes')} style={estilos.navItem}>
           <Settings2 size={20} strokeWidth={2.2} />
-          <span>Config</span>
+          <span>Ajustes</span>
         </button>
       </div>
 
@@ -441,30 +436,34 @@ export default function HomeScreen() {
         )}
       </div>
 
-      {proximaConsulta && (
-        <button onClick={() => navigate('/consultas')} style={estilos.faixaConsulta}>
-          <CalendarClock size={15} strokeWidth={2.3} />
-          Próxima consulta: {formatarDataCurtaBR(proximaConsulta.data)}
-          {proximaConsulta.hora && ` às ${proximaConsulta.hora}`} — {proximaConsulta.medico}
-        </button>
-      )}
+      {(proximaConsulta || lembrarBackup || !jaInstalado) && (
+        <div style={estilos.avisos}>
+          {proximaConsulta && (
+            <button onClick={() => navigate('/saude?aba=consultas')} style={estilos.avisoLinha}>
+              <CalendarClock size={16} strokeWidth={2.3} color={CORES.primaria} />
+              <span style={estilos.avisoTexto}>
+                Próxima consulta: {formatarDataCurtaBR(proximaConsulta.data)}
+                {proximaConsulta.hora && ` às ${proximaConsulta.hora}`} — {proximaConsulta.medico}
+              </span>
+            </button>
+          )}
 
-      {lembrarBackup && (
-        <button onClick={() => navigate('/configuracoes')} style={estilos.faixaBackup}>
-          <Database size={15} strokeWidth={2.3} />
-          Faz um tempo que você não faz backup dos dados — toque pra fazer agora
-        </button>
-      )}
+          {lembrarBackup && (
+            <button onClick={() => navigate('/configuracoes?secao=dados')} style={estilos.avisoLinha}>
+              <Database size={16} strokeWidth={2.3} color={CORES.primaria} />
+              <span style={estilos.avisoTexto}>Faz um tempo que você não faz backup — toque pra fazer agora</span>
+            </button>
+          )}
 
-      {!jaInstalado && (
-        <div style={estilos.faixaInstalar}>
-          <button onClick={instalarAgora} style={estilos.botaoInstalarPrincipal}>
-            <Download size={15} strokeWidth={2.3} />
-            {promptInstalacao ? 'Instalar app' : 'Instale o app no seu celular'}
-          </button>
-          <button onClick={() => navigate('/como-instalar')} style={estilos.linkComoInstalar}>
-            Como instalar
-          </button>
+          {!jaInstalado && (
+            <div style={estilos.avisoLinha}>
+              <Download size={16} strokeWidth={2.3} color={CORES.primaria} />
+              <span style={estilos.avisoTexto}>Instale o app no seu celular</span>
+              <button onClick={instalarAgora} style={estilos.botaoInstalarPrincipal}>
+                {promptInstalacao ? 'Instalar' : 'Como instalar'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -592,10 +591,6 @@ export default function HomeScreen() {
       <button onClick={() => navigate('/novo')} style={estilos.botaoAdicionar}>
         <Plus size={28} strokeWidth={2.5} color="#fff" />
       </button>
-
-      <div style={estilos.rodapeVersao}>
-        v{VERSAO} · {VERSAO_DESCRICAO}
-      </div>
 
       <DoseDetalheModal
         item={doseSelecionada}
@@ -783,48 +778,26 @@ function criarEstilos(CORES) {
       minHeight: 40,
       boxSizing: 'border-box',
     },
-    faixaConsulta: {
+    avisos: {
+      margin: '12px 16px 0',
+      backgroundColor: CORES.fundoCard,
+      borderRadius: RAIO.medio,
+      boxShadow: SOMBRA.card,
+      overflow: 'hidden',
+    },
+    avisoLinha: {
       width: '100%',
       display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      textAlign: 'center',
-      backgroundColor: CORES.fundoCard,
-      borderBottom: `1px solid ${CORES.borda}`,
-      color: CORES.textoSecundario,
-      fontWeight: 600,
-      fontSize: 12,
-      padding: '9px 10px',
-      border: 'none',
-      borderRadius: 0,
-    },
-    faixaBackup: {
-      width: '100%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      gap: 6,
-      textAlign: 'center',
-      backgroundColor: CORES.fundoCard,
-      borderBottom: `1px solid ${CORES.borda}`,
-      color: CORES.textoSecundario,
-      fontWeight: 600,
-      fontSize: 12,
-      padding: '9px 10px',
-      border: 'none',
-      borderRadius: 0,
-    },
-    faixaInstalar: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
       gap: 10,
-      backgroundColor: CORES.primariaClara,
+      background: 'none',
+      border: 'none',
       borderBottom: `1px solid ${CORES.borda}`,
-      padding: '9px 10px',
-      flexWrap: 'wrap',
+      padding: '11px 14px',
+      textAlign: 'left',
+      color: CORES.textoPrincipal,
     },
+    avisoTexto: { flex: 1, fontSize: 13, fontWeight: 600, color: CORES.textoPrincipal },
     botaoInstalarPrincipal: {
       display: 'flex',
       alignItems: 'center',
@@ -836,14 +809,6 @@ function criarEstilos(CORES) {
       padding: '6px 12px',
       fontSize: 12,
       fontWeight: 700,
-    },
-    linkComoInstalar: {
-      background: 'none',
-      border: 'none',
-      color: CORES.primariaEscura,
-      fontSize: 12,
-      fontWeight: 700,
-      textDecoration: 'underline',
     },
     cabecalhoLista: {
       display: 'flex',
@@ -950,13 +915,6 @@ function criarEstilos(CORES) {
       borderRadius: RAIO.pill,
       border: 'none',
       boxShadow: SOMBRA.botao,
-    },
-    rodapeVersao: {
-      textAlign: 'center',
-      fontSize: 11,
-      color: CORES.textoSecundario,
-      opacity: 0.65,
-      padding: '20px 0 10px',
     },
     fundoAvisoEstoque: {
       position: 'fixed',

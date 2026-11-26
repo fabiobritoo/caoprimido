@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { HashRouter, Routes, Route } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import HomeScreen from './screens/HomeScreen.jsx';
 import AddMedicineScreen from './screens/AddMedicineScreen.jsx';
 import ManageMedicinesScreen from './screens/ManageMedicinesScreen.jsx';
 import DiagnosticoScreen from './screens/DiagnosticoScreen.jsx';
-import EvolucaoScreen from './screens/EvolucaoScreen.jsx';
-import ConsultasScreen from './screens/ConsultasScreen.jsx';
+import SaudeScreen from './screens/SaudeScreen.jsx';
 import ComprasRemedioScreen from './screens/ComprasRemedioScreen.jsx';
 import ComoInstalarScreen from './screens/ComoInstalarScreen.jsx';
 import ConfiguracoesScreen from './screens/ConfiguracoesScreen.jsx';
@@ -132,8 +131,10 @@ export default function App() {
           <Route path="/editar/:id" element={<AddMedicineScreen />} />
           <Route path="/meus-remedios" element={<ManageMedicinesScreen />} />
           <Route path="/diagnostico" element={<DiagnosticoScreen />} />
-          <Route path="/evolucao" element={<EvolucaoScreen />} />
-          <Route path="/consultas" element={<ConsultasScreen />} />
+          <Route path="/saude" element={<SaudeScreen />} />
+          {/* endereços antigos continuam funcionando */}
+          <Route path="/evolucao" element={<Navigate to="/saude?aba=adesao" replace />} />
+          <Route path="/consultas" element={<Navigate to="/saude?aba=consultas" replace />} />
           <Route path="/remedio/:id/compras" element={<ComprasRemedioScreen />} />
           <Route path="/como-instalar" element={<ComoInstalarScreen />} />
           <Route path="/configuracoes" element={<ConfiguracoesScreen />} />

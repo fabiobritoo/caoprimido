@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Flame, Award, Percent, FileDown, Tag, X, Check } from 'lucide-react';
+import { TrendingUp, Flame, Award, Percent, X, Check } from 'lucide-react';
 import { listarRemedios, obterRegistros, doseTomada } from '../utils/storage.js';
 import {
   calcularMapaCalor,
@@ -10,20 +10,16 @@ import {
 } from '../utils/evolucao.js';
 import { formatarData, remedioEstaAtivo, formatarDataBR } from '../utils/constantes.js';
 import { calcularSequenciaDias } from '../utils/streak.js';
-import { RAIO, SOMBRA, criarBotaoSecundario } from '../utils/tema.js';
+import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
-import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
-import SaudeSecao from '../components/SaudeSecao.jsx';
 
 const DIAS_HISTORICO = 84; // 12 semanas
 
 
+// Aba "Adesão" da tela Saúde: adesão geral, sequências, mapa das 12 semanas e adesão por remédio
 export default function EvolucaoScreen() {
-  const { CORES, modoBob } = useTema();
+  const { CORES } = useTema();
   const estilos = criarEstilos(CORES);
-  const [gerandoPdf, setGerandoPdf] = useState(false);
-  const [gerandoPdfPreco, setGerandoPdfPreco] = useState(false);
-  const [aba, setAba] = useState('remedios');
   const [carregando, setCarregando] = useState(true);
   const [mapaCalor, setMapaCalor] = useState([]);
   const [adesaoGeral, setAdesaoGeral] = useState(null);
@@ -108,67 +104,9 @@ export default function EvolucaoScreen() {
     setDiaDetalhe({ data: dia.data, status: dia.status, itens: montarDetalheDoDia(dia.data) });
   }
 
-  async function baixarRelatorio() {
-    setGerandoPdf(true);
-    try {
-      const { gerarRelatorioPdf } = await import('../utils/relatorioPdf.js');
-      await gerarRelatorioPdf({ modoBob });
-    } catch (e) {
-      console.error('Erro ao gerar PDF', e);
-      alert('Não consegui gerar o PDF agora. Tente de novo.');
-    }
-    setGerandoPdf(false);
-  }
-
-  async function baixarRelatorioPreco() {
-    setGerandoPdfPreco(true);
-    try {
-      const { gerarRelatorioPrecoPdf } = await import('../utils/relatorioPrecoPdf.js');
-      await gerarRelatorioPrecoPdf({ modoBob });
-    } catch (e) {
-      console.error('Erro ao gerar PDF de preços', e);
-      alert('Não consegui gerar o PDF agora. Tente de novo.');
-    }
-    setGerandoPdfPreco(false);
-  }
-
   return (
-    <div style={{ minHeight: '100%', backgroundColor: CORES.fundo, paddingBottom: 40 }}>
-      <CabecalhoTopo titulo="Evolução" mostrarVoltar />
-
-      <div style={estilos.seletorAbas}>
-        <button
-          onClick={() => setAba('remedios')}
-          style={{ ...estilos.aba, ...(aba === 'remedios' ? estilos.abaAtiva : {}) }}
-        >
-          Remédios
-        </button>
-        <button
-          onClick={() => setAba('saude')}
-          style={{ ...estilos.aba, ...(aba === 'saude' ? estilos.abaAtiva : {}) }}
-        >
-          Saúde
-        </button>
-      </div>
-
-      <div style={{ padding: '14px 16px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button onClick={baixarRelatorio} disabled={gerandoPdf} style={estilos.botaoPdf}>
-          <FileDown size={16} strokeWidth={2.3} />
-          {gerandoPdf ? 'Gerando PDF...' : 'Exportar relatório em PDF'}
-        </button>
-        {aba === 'remedios' && (
-          <button onClick={baixarRelatorioPreco} disabled={gerandoPdfPreco} style={estilos.botaoPdf}>
-            <Tag size={16} strokeWidth={2.3} />
-            {gerandoPdfPreco ? 'Gerando PDF...' : 'Exportar relatório de preços'}
-          </button>
-        )}
-      </div>
-
-      {aba === 'saude' ? (
-        <div style={{ padding: 16 }}>
-          <SaudeSecao CORES={CORES} />
-        </div>
-      ) : carregando ? (
+    <div>
+      {carregando ? (
         <div style={{ padding: 40, textAlign: 'center', color: CORES.textoSecundario }}>
           Carregando...
         </div>
@@ -319,30 +257,6 @@ export default function EvolucaoScreen() {
 
 function criarEstilos(CORES) {
   return {
-    botaoPdf: {
-      ...criarBotaoSecundario(CORES),
-      width: '100%',
-    },
-    seletorAbas: {
-      display: 'flex',
-      backgroundColor: CORES.fundoCard,
-      borderBottom: `1px solid ${CORES.borda}`,
-      padding: '0 16px',
-    },
-    aba: {
-      flex: 1,
-      background: 'none',
-      border: 'none',
-      padding: '14px 0',
-      fontSize: 15,
-      fontWeight: 600,
-      color: CORES.textoSecundario,
-      borderBottom: '3px solid transparent',
-    },
-    abaAtiva: {
-      color: CORES.primaria,
-      borderBottom: `3px solid ${CORES.primaria}`,
-    },
     cartoesResumo: { display: 'flex', gap: 10, marginBottom: 24 },
     cartaoResumo: {
       flex: 1,

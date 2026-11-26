@@ -190,3 +190,10 @@ Pra tudo ficar igual em todas as telas, os formatos e cálculos ficam num lugar 
 - **Variação de preço**: sempre por unidade (preço ÷ quantidade) quando há quantidade.
 - **Sequência / bolinhas da Home / Evolução**: dias passados usam a mesma regra (`dosesParaStatus` em `utils/evolucao.js`); dias futuros e hoje (sem doses marcadas) ficam sem cor.
 - **Adiar** (notificação e tela de alarme): 10 minutos.
+
+## Organização das telas (1.49.0)
+
+- **Hoje** (Home): agenda do dia; avisos (próxima consulta, backup, instalar) juntos num cartão só.
+- **Remédios**: lista com estoque (duração), última compra/preço, edição, arquivar; relatório de preços; preços por remédio em `/remedio/:id/compras`.
+- **Saúde** (`/saude?aba=`): `adesao` (antiga Evolução), `corpo` (peso/pressão), `consultas`, `relatorios` (PDFs). `/evolucao` e `/consultas` redirecionam pra cá.
+- **Ajustes** (`/configuracoes?secao=`): seções recolhíveis `lembretes` (Telegram, cuidador, alarmes no calendário, diagnóstico), `perfil`, `dados` (backup) e `sobre` (versão/atualização).
