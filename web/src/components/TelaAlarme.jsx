@@ -3,7 +3,7 @@ import { AlarmClock, Check, Clock3 } from 'lucide-react';
 import { RAIO } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import { iniciarAlarme, pararAlarme } from '../utils/somAlarme.js';
-import { listarRemedios, alternarDose, doseTomada, obterRegistros, obterIdDispositivo } from '../utils/storage.js';
+import { listarRemedios, alternarDose, doseResolvida, obterRegistros, obterIdDispositivo } from '../utils/storage.js';
 
 export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoFechar }) {
   const { CORES } = useTema();
@@ -26,7 +26,7 @@ export default function TelaAlarme({ titulo, corpo, remedioId, dia, horario, aoF
         const remedios = await listarRemedios();
         const remedio = remedios.find((r) => r.id === remedioId);
         const registros = await obterRegistros();
-        const jaMarcado = remedio && doseTomada(registros, remedioId, dia, horario);
+        const jaMarcado = remedio && doseResolvida(registros, remedioId, dia, horario);
         if (remedio && !jaMarcado) {
           await alternarDose(remedio, dia, horario);
         }

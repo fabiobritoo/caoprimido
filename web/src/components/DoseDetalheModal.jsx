@@ -27,7 +27,9 @@ export default function DoseDetalheModal({ item, CORES, aoFechar, aoDesfazer }) 
             Agendado para {item.horario} · Tomar {formatarQuantidade(item.remedio.quantidadePorDose)} {unidadeTexto}
           </div>
           <div style={estilos.subtitulo}>
-            Restante: {item.remedio.quantidadeAtual} {unidadeTexto}
+            {item.remedio.quantidadeAtual != null && item.remedio.quantidadeAtual !== ''
+              ? `Restante: ${item.remedio.quantidadeAtual} ${unidadeTexto}`
+              : ''}
           </div>
         </div>
 
@@ -44,12 +46,14 @@ export default function DoseDetalheModal({ item, CORES, aoFechar, aoDesfazer }) 
         </div>
 
         <div style={estilos.statusBox}>
-          Esta dose foi marcada como tomada às {formatarHoraDeTimestamp(item.tomadoEm)}
+          {item.pulada
+            ? `Dose pulada às ${formatarHoraDeTimestamp(item.tomadoEm)}${item.motivo ? ` — ${item.motivo}` : ''}`
+            : `Esta dose foi marcada como tomada às ${formatarHoraDeTimestamp(item.tomadoEm)}`}
         </div>
 
         <button onClick={() => aoDesfazer(item)} style={estilos.botaoDesfazer}>
           <Undo2 size={18} strokeWidth={2.3} />
-          Desfazer (marcar como não tomada)
+          {item.pulada ? 'Desfazer (voltar para pendente)' : 'Desfazer (marcar como não tomada)'}
         </button>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { formatarData } from './constantes.js';
 import { dosesParaStatus } from './evolucao.js';
-import { doseTomada } from './storage.js';
+import { doseResolvida } from './storage.js';
 
 // Conta quantos dias seguidos (terminando hoje ou ontem) o usuário tomou
 // TODAS as doses agendadas. Dias sem nenhum remédio agendado são pulados
@@ -20,7 +20,7 @@ export function calcularSequenciaDias(remedios, registros) {
     }
 
     const todasTomadas = dosesDoDia.every((d) =>
-      doseTomada(registros, d.remedioId, dataStr, d.horario)
+      doseResolvida(registros, d.remedioId, dataStr, d.horario)
     );
 
     if (!todasTomadas) {

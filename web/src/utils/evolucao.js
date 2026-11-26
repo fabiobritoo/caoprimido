@@ -1,5 +1,5 @@
 import { formatarData, remedioAplicavelNoDia, doseValeNoDia } from './constantes.js';
-import { doseTomada } from './storage.js';
+import { doseTomada, dosePulada } from './storage.js';
 
 // Acha, dentro dos registros salvos, a data mais antiga em que existe
 // QUALQUER confirmação de dose pra esse remédio específico — evidência
@@ -92,8 +92,10 @@ export function calcularMapaCalor(remedios, registros, dias = 84) {
       continue;
     }
 
-    const tomadas = agendadas.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario));
-    const proporcao = tomadas.length / agendadas.length;
+    // doses puladas de propósito não entram na conta (nem contra, nem a favor)
+    const contaveis = agendadas.filter((d) => !dosePulada(registros, d.remedioId, dataStr, d.horario));
+    const tomadas = contaveis.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario));
+    const proporcao = contaveis.length === 0 ? 1 : tomadas.length / contaveis.length;
 
     let status;
     if (proporcao === 1) status = 'completo';
@@ -123,8 +125,9 @@ export function calcularAdesaoGeral(remedios, registros, dias = 84) {
     if (dataStr === hojeStr) continue;
 
     const agendadas = dosesAgendadasNoDia(remedios, dataStr, hojeStr, registros);
-    totalAgendadas += agendadas.length;
-    totalTomadas += agendadas.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario)).length;
+    const contaveis = agendadas.filter((d) => !dosePulada(registros, d.remedioId, dataStr, d.horario));
+    totalAgendadas += contaveis.length;
+    totalTomadas += contaveis.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario)).length;
   }
 
   if (totalAgendadas === 0) return null;
@@ -174,6 +177,7 @@ export function calcularAdesaoPorRemedio(remedios, registros, dias = 84) {
       if (!remedioAplicavelNoDia(remedio.frequencia, dataStr, null, remedio.dataTermino)) continue;
       for (const horario of remedio.horarios || []) {
         if (!doseValeNoDia(remedio, dataStr, horario)) continue;
+        if (dosePulada(registros, remedio.id, dataStr, horario)) continue;
         contadores[remedio.id].agendadas++;
         if (doseTomada(registros, remedio.id, dataStr, horario)) {
           contadores[remedio.id].tomadas++;

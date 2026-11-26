@@ -42,6 +42,7 @@ export function descreverFrequencia(frequencia) {
     if (frequencia.intervaloDias === 2) return 'Dias alternados (a cada 2 dias)';
     return `A cada ${frequencia.intervaloDias} dias`;
   }
+  if (frequencia.tipo === 'sob_demanda') return 'Quando precisar';
   return '';
 }
 

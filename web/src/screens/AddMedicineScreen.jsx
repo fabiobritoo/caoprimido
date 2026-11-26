@@ -16,6 +16,7 @@ import {
   Save,
   Tag,
   TrendingUp,
+  Zap,
 } from 'lucide-react';
 import { adicionarRemedio, atualizarRemedio, listarRemedios, obterIdDispositivo } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
@@ -64,6 +65,7 @@ const FREQUENCIAS = [
   { valor: 'diaria', rotulo: 'Todos os dias', icone: CalendarDays },
   { valor: 'dias_semana', rotulo: 'Dias específicos da semana', icone: CalendarClock },
   { valor: 'intervalo', rotulo: 'A cada X dias (dias alternados)', icone: Repeat },
+  { valor: 'sob_demanda', rotulo: 'Só quando precisar (sem horário fixo)', icone: Zap },
 ];
 
 export default function AddMedicineScreen() {
@@ -226,12 +228,13 @@ export default function AddMedicineScreen() {
         proximaData: dataInicio,
       };
     }
+    if (tipoFrequencia === 'sob_demanda') return { tipo: 'sob_demanda' };
     return { tipo: 'diaria' };
   }
 
   async function salvar() {
     if (!nome.trim()) return alert('Informe o nome do remédio.');
-    if (horarios.length === 0) return alert('Adicione pelo menos um horário.');
+    if (tipoFrequencia !== 'sob_demanda' && horarios.length === 0) return alert('Adicione pelo menos um horário.');
     if (!quantidadeAtual) return alert('Informe a quantidade atual em estoque.');
     if (tipoFrequencia === 'dias_semana' && diasSemanaSelecionados.length === 0) {
       return alert('Selecione ao menos um dia da semana.');
@@ -271,7 +274,7 @@ export default function AddMedicineScreen() {
       quantidadePorDose: dosePrincipal,
       dosagem: `${formatarQuantidade(dosePrincipal)} ${rotuloUnidade(unidade).toLowerCase()}`,
       fases: fasesSalvas,
-      horarios,
+      horarios: tipoFrequencia === 'sob_demanda' ? [] : horarios,
       frequencia: montarFrequencia(),
       quantidadeAtual: Number(quantidadeAtual),
       quantidadeMinima: Number(quantidadeMinima) || 5,
@@ -479,6 +482,7 @@ export default function AddMedicineScreen() {
           </div>
         )}
 
+        {tipoFrequencia !== 'sob_demanda' && (<>
         <label style={estilos.label}>Horários do alarme</label>
         <div style={{ display: 'flex', gap: 8 }}>
           <input
@@ -501,6 +505,7 @@ export default function AddMedicineScreen() {
             </button>
           ))}
         </div>
+        </>)}
 
         <label style={estilos.label}>Frequência</label>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>

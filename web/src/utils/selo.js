@@ -1,5 +1,5 @@
 import { formatarData, remedioAplicavelNoDia, doseValeNoDia } from './constantes.js';
-import { doseTomada } from './storage.js';
+import { doseResolvida } from './storage.js';
 
 export function seloSuportado() {
   return 'setAppBadge' in navigator;
@@ -19,7 +19,7 @@ export function contarDosesPendentes(remedios, registros) {
     for (const horario of remedio.horarios || []) {
       if (horario > horaAtual) continue; // ainda não chegou a hora
       if (!doseValeNoDia(remedio, hoje, horario)) continue;
-      if (!doseTomada(registros, remedio.id, hoje, horario)) contador++;
+      if (!doseResolvida(registros, remedio.id, hoje, horario)) contador++;
     }
   }
   return contador;

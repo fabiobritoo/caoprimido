@@ -81,7 +81,23 @@ function chaveRegistro(remedioId, data, horario) {
   return `${remedioId}|${data}|${horario}`;
 }
 
+// "Tomada" = realmente tomada. Dose pulada de propósito ("pulei") também fica
+// registrada, mas não conta como tomada — ver doseResolvida
 export function doseTomada(registros, remedioId, data, horario) {
+  const r = registros[chaveRegistro(remedioId, data, horario)];
+  return !!r && !r.pulada;
+}
+
+export function dosePulada(registros, remedioId, data, horario) {
+  return !!registros[chaveRegistro(remedioId, data, horario)]?.pulada;
+}
+
+export function motivoDoPulo(registros, remedioId, data, horario) {
+  return registros[chaveRegistro(remedioId, data, horario)]?.motivo || '';
+}
+
+// Resolvida = já tratada, seja tomada ou pulada: para de lembrar, sai dos pendentes
+export function doseResolvida(registros, remedioId, data, horario) {
   return !!registros[chaveRegistro(remedioId, data, horario)];
 }
 
@@ -95,6 +111,7 @@ export async function alternarDose(remedio, data, horario) {
   const registros = await obterRegistros();
   const chave = chaveRegistro(remedio.id, data, horario);
   const estavaTomado = !!registros[chave];
+  const estavaPulada = !!registros[chave]?.pulada;
   // com fases de dose, desconta a dose que valia NAQUELE dia
   const porDose = doseDoDia(remedio, data);
 
@@ -106,7 +123,8 @@ export async function alternarDose(remedio, data, horario) {
   }
   await salvarRegistros(novosRegistros);
 
-  const delta = estavaTomado ? porDose : -porDose;
+  // desfazer uma dose pulada não devolve estoque (nada foi descontado)
+  const delta = estavaPulada ? 0 : estavaTomado ? porDose : -porDose;
   const listaRemedios = await listarRemedios();
   const novaLista = listaRemedios.map((r) => {
     if (r.id !== remedio.id) return r;
@@ -119,4 +137,26 @@ export async function alternarDose(remedio, data, horario) {
   await salvarRemedios(novaLista);
 
   return { remedios: novaLista, registros: novosRegistros, tomadoAgora: !estavaTomado };
+}
+
+// Marca a dose como pulada de propósito (com motivo opcional). Não mexe no estoque.
+export async function pularDose(remedio, data, horario, motivo = '') {
+  const registros = await obterRegistros();
+  const chave = chaveRegistro(remedio.id, data, horario);
+  const novosRegistros = { ...registros };
+  novosRegistros[chave] = { pulada: true, motivo: motivo.trim().slice(0, 120), tomadoEm: Date.now() };
+  await salvarRegistros(novosRegistros);
+  const remedios = await listarRemedios();
+  return { remedios, registros: novosRegistros };
+}
+
+// Marca várias doses (mesmo dia/horário) como tomadas de uma vez
+export async function tomarVarias(itens, data) {
+  let ultimo = null;
+  for (const { remedio, horario } of itens) {
+    const regs = await obterRegistros();
+    if (regs[chaveRegistro(remedio.id, data, horario)]) continue;
+    ultimo = await alternarDose(remedio, data, horario);
+  }
+  return ultimo || { remedios: await listarRemedios(), registros: await obterRegistros() };
 }

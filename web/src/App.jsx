@@ -13,7 +13,7 @@ import AvisoAtualizacao from './components/AvisoAtualizacao.jsx';
 import { ProvedorTema } from './utils/ThemeContext.jsx';
 import { iniciarBackupAutomatico, fazerBackupNuvem } from './utils/backupNuvem.js';
 import { pedirPermissaoNotificacao, mostrarNotificacao, sincronizarNotificacoesServidor } from './utils/notifications.js';
-import { listarRemedios, obterRegistros, doseTomada, alternarDose, obterIdDispositivo } from './utils/storage.js';
+import { listarRemedios, obterRegistros, doseTomada, alternarDose, doseResolvida, obterIdDispositivo } from './utils/storage.js';
 import { remedioAplicavelNoDia, remedioNoDia, formatarData, descreverDose, doseValeNoDia } from './utils/constantes.js';
 
 export default function App() {
@@ -48,7 +48,7 @@ export default function App() {
       const remedios = await listarRemedios();
       const remedio = remedios.find((r) => r.id === remedioId);
       const registros = await obterRegistros();
-      if (remedio && !doseTomada(registros, remedioId, dia, horario)) {
+      if (remedio && !doseResolvida(registros, remedioId, dia, horario)) {
         await alternarDose(remedio, dia, horario);
       }
 
@@ -101,7 +101,7 @@ export default function App() {
           if (!doseValeNoDia(remedio, hoje, horario)) continue;
           const chave = `${remedio.id}|${hoje}|${horario}`;
           if (jaAvisados.current.has(chave)) continue;
-          if (doseTomada(registros, remedio.id, hoje, horario)) continue;
+          if (doseResolvida(registros, remedio.id, hoje, horario)) continue;
 
           jaAvisados.current.add(chave);
           mostrarNotificacao(`Hora de tomar: ${remedio.nome}`, descreverDose(remedio));

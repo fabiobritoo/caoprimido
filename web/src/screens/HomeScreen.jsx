@@ -2,12 +2,16 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Plus, Check, Pill, Flame, Settings2, ClipboardList, CalendarDays, CalendarClock, Database, Download,
-  ChevronLeft, HeartPulse, ShieldCheck,
+  ChevronLeft, HeartPulse, ShieldCheck, SkipForward, CheckCheck, Zap, Undo2,
 } from 'lucide-react';
 import {
   listarRemedios,
   obterRegistros,
   doseTomada,
+  dosePulada,
+  motivoDoPulo,
+  pularDose,
+  tomarVarias,
   horarioRegistrado,
   alternarDose,
   obterIdDispositivo,
@@ -17,6 +21,7 @@ import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
 import DoseDetalheModal from '../components/DoseDetalheModal.jsx';
+import PularDoseModal from '../components/PularDoseModal.jsx';
 import CalendarioModal from '../components/CalendarioModal.jsx';
 import { calcularSequenciaDias } from '../utils/streak.js';
 import { obterProximaConsulta } from '../utils/consultas.js';
@@ -45,6 +50,7 @@ export default function HomeScreen() {
   const [semanaAncora, setSemanaAncora] = useState(HOJE);
   const [sequenciaDias, setSequenciaDias] = useState(0);
   const [doseSelecionada, setDoseSelecionada] = useState(null);
+  const [doseParaPular, setDoseParaPular] = useState(null);
   const [calendarioAberto, setCalendarioAberto] = useState(false);
   const [idConfirmando, setIdConfirmando] = useState(null);
   const [idRecemRegistrado, setIdRecemRegistrado] = useState(null);
@@ -137,8 +143,10 @@ export default function HomeScreen() {
       // dias que ainda não aconteceram (e hoje, enquanto nada foi marcado) ficam
       // sem cor — vermelho só pra dia que já passou sem as doses
       if (dataStr > HOJE) return null;
-      const tomadas = doses.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario));
-      if (tomadas.length === doses.length) return 'completo';
+      // doses puladas de propósito não pesam (nem a favor, nem contra)
+      const contaveis = doses.filter((d) => !dosePulada(registros, d.remedioId, dataStr, d.horario));
+      const tomadas = contaveis.filter((d) => doseTomada(registros, d.remedioId, dataStr, d.horario));
+      if (tomadas.length === contaveis.length) return 'completo';
       if (tomadas.length === 0) return dataStr === HOJE ? null : 'nenhum';
       return 'parcial';
     },
@@ -210,15 +218,17 @@ export default function HomeScreen() {
         remedio: remedioNoDia(remedio, diaSelecionado),
         horario,
         tomado: doseTomada(registros, remedio.id, diaSelecionado, horario),
+        pulada: dosePulada(registros, remedio.id, diaSelecionado, horario),
+        motivo: motivoDoPulo(registros, remedio.id, diaSelecionado, horario),
         tomadoEm: horarioRegistrado(registros, remedio.id, diaSelecionado, horario),
       });
     }
   }
   dosesDoDia.sort((a, b) => a.horario.localeCompare(b.horario));
 
-  const dosesPendentes = dosesDoDia.filter((d) => !d.tomado);
+  const dosesPendentes = dosesDoDia.filter((d) => !d.tomado && !d.pulada);
   const dosesRegistradas = dosesDoDia
-    .filter((d) => d.tomado)
+    .filter((d) => d.tomado || d.pulada)
     .sort((a, b) => (a.tomadoEm || 0) - (b.tomadoEm || 0));
 
   const gruposPorHorario = [];
@@ -232,7 +242,7 @@ export default function HomeScreen() {
   }
 
   const diaEhFuturo = diaSelecionado > HOJE;
-  const todasTomadas = dosesDoDia.length > 0 && dosesDoDia.every((d) => d.tomado);
+  const todasTomadas = dosesDoDia.length > 0 && dosesDoDia.every((d) => d.tomado || d.pulada);
 
   // se a próxima dose pendente estiver a mais de 1h de distância, mostra a
   // mascote "standby" em vez da "hora do remédio" (que fica reservada pra
@@ -323,6 +333,74 @@ export default function HomeScreen() {
         horario: item.horario,
       }),
     }).catch(() => {});
+  }
+
+  function avisarServidorReconhecida(remedioId, horario, pulada = false) {
+    fetch('/api/reconhecer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ deviceId: obterIdDispositivo(), remedioId, dia: diaSelecionado, horario, pulada }),
+    }).catch(() => {});
+    if (navigator.serviceWorker?.controller) {
+      navigator.serviceWorker.controller.postMessage({ tipo: 'FECHAR_NOTIFICACOES', remedioId, dia: diaSelecionado, horario });
+    }
+  }
+
+  function aplicarResultado(resultado) {
+    setRemedios(resultado.remedios);
+    setRegistros(resultado.registros);
+    setSequenciaDias(calcularSequenciaDias(resultado.remedios, resultado.registros));
+    atualizarSeloLocal(resultado.remedios, resultado.registros);
+  }
+
+  // "Tomei todos das 08:00": marca o grupo inteiro de uma vez
+  async function tomarGrupo(grupo) {
+    if (diaEhFuturo) return;
+    const resultado = await tomarVarias(
+      grupo.itens.map((i) => ({ remedio: i.remedio, horario: i.horario })),
+      diaSelecionado
+    );
+    aplicarResultado(resultado);
+    for (const i of grupo.itens) avisarServidorReconhecida(i.remedio.id, i.horario);
+    // avisa de estoque baixo (um aviso só, do mais urgente)
+    const emAlerta = resultado.remedios.find(
+      (r) => grupo.itens.some((i) => i.remedio.id === r.id) && estoqueEmAlerta(r, HOJE)
+    );
+    if (emAlerta) setAvisoEstoque(emAlerta);
+  }
+
+  async function confirmarPulo(item, motivo) {
+    const resultado = await pularDose(item.remedio, diaSelecionado, item.horario, motivo || '');
+    aplicarResultado(resultado);
+    setDoseParaPular(null);
+    // o servidor só precisa saber que foi resolvida (para de reenviar lembretes)
+    avisarServidorReconhecida(item.remedio.id, item.horario, true);
+  }
+
+  // ---- remédios "só quando precisar" ----
+  const remediosSobDemanda = remedios.filter(
+    (r) => r.frequencia?.tipo === 'sob_demanda' && r.ativo !== false && (!r.dataTermino || r.dataTermino >= HOJE)
+  );
+
+  function usosDeHoje(remedio) {
+    const prefixo = `${remedio.id}|${HOJE}|prn-`;
+    return Object.keys(registros)
+      .filter((k) => k.startsWith(prefixo))
+      .map((k) => ({ horario: k.split('|')[2], em: registros[k].tomadoEm }))
+      .sort((a, b) => a.em - b.em);
+  }
+
+  async function tomeiAgora(remedio) {
+    const resultado = await alternarDose(remedio, HOJE, `prn-${Date.now()}`);
+    aplicarResultado(resultado);
+    const atualizado = resultado.remedios.find((r) => r.id === remedio.id);
+    if (atualizado && estoqueEmAlerta(atualizado, HOJE)) setAvisoEstoque(atualizado);
+  }
+
+  async function desfazerUltimoUso(remedio) {
+    const usos = usosDeHoje(remedio);
+    if (usos.length === 0) return;
+    aplicarResultado(await alternarDose(remedio, HOJE, usos[usos.length - 1].horario));
   }
 
   function corDoCirculo(status) {
@@ -546,7 +624,15 @@ export default function HomeScreen() {
 
         {gruposPorHorario.map((grupo) => (
           <div key={grupo.horario} style={{ marginBottom: 18 }}>
-            <div style={estilos.horarioTitulo}>{grupo.horario}</div>
+            <div style={estilos.horarioLinha}>
+              <div style={estilos.horarioTitulo}>{grupo.horario}</div>
+              {grupo.itens.length > 1 && !diaEhFuturo && (
+                <button onClick={() => tomarGrupo(grupo)} style={estilos.botaoTomeiTodos}>
+                  <CheckCheck size={15} strokeWidth={2.5} />
+                  Tomei todos
+                </button>
+              )}
+            </div>
 
             {grupo.itens.map((item) => {
               const unidadeTexto = rotuloUnidade(item.remedio.unidade).toLowerCase();
@@ -554,8 +640,8 @@ export default function HomeScreen() {
               const chave = `${item.remedio.id}-${item.horario}`;
               const confirmando = idConfirmando === chave;
               return (
+                <div key={chave} style={{ display: 'flex', alignItems: 'stretch', gap: 6, marginBottom: 8 }}>
                 <button
-                  key={chave}
                   onClick={() => marcarComoTomado(item)}
                   disabled={diaEhFuturo || confirmando}
                   className={confirmando ? 'dose-confirmando' : ''}
@@ -563,6 +649,7 @@ export default function HomeScreen() {
                     ...estilos.doseCard,
                     ...(atrasado ? estilos.doseCardAtrasado : {}),
                     ...(confirmando ? estilos.doseCardConfirmando : {}),
+                    marginBottom: 0,
                   }}
                 >
                   <div style={estilos.doseIcone}>
@@ -589,10 +676,59 @@ export default function HomeScreen() {
                     )}
                   </div>
                 </button>
+                {!diaEhFuturo && (
+                  <button
+                    onClick={() => setDoseParaPular(item)}
+                    aria-label={`Pular ${item.remedio.nome}`}
+                    style={estilos.botaoPular}
+                  >
+                    <SkipForward size={16} strokeWidth={2.2} />
+                    <span style={{ fontSize: 10, fontWeight: 600 }}>Pular</span>
+                  </button>
+                )}
+                </div>
               );
             })}
           </div>
         ))}
+
+        {diaSelecionado === HOJE && remediosSobDemanda.length > 0 && (
+          <div style={{ marginTop: 8, marginBottom: 14 }}>
+            <div style={estilos.registradoTitulo}>
+              <Zap size={18} strokeWidth={2.3} color={CORES.textoSecundario} />
+              Quando precisar
+            </div>
+            {remediosSobDemanda.map((r) => {
+              const usos = usosDeHoje(r);
+              const unidadeTexto = rotuloUnidade(r.unidade).toLowerCase();
+              const ultimo = usos[usos.length - 1];
+              return (
+                <div key={`prn-${r.id}`} style={{ ...estilos.doseCard, flexDirection: 'column', alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
+                    <div style={estilos.doseIcone}>
+                      <Pill size={18} color={CORES.primaria} strokeWidth={2.2} />
+                    </div>
+                    <div style={{ flex: 1, textAlign: 'left' }}>
+                      <div style={estilos.doseNome}>{r.nome}</div>
+                      <div style={estilos.doseDetalhe}>
+                        {formatarQuantidade(r.quantidadePorDose)} {unidadeTexto} por vez
+                        {usos.length > 0
+                          ? ` · hoje: ${usos.length}× (última ${formatarHoraDeTimestamp(ultimo.em)})`
+                          : ' · ainda não tomou hoje'}
+                      </div>
+                    </div>
+                    <button onClick={() => tomeiAgora(r)} style={estilos.botaoTomeiAgora}>Tomei agora</button>
+                  </div>
+                  {usos.length > 0 && (
+                    <button onClick={() => desfazerUltimoUso(r)} style={estilos.linkDesfazer}>
+                      <Undo2 size={13} /> Desfazer o último
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         {dosesRegistradas.length > 0 && (
           <div style={{ marginTop: 8 }}>
@@ -610,7 +746,7 @@ export default function HomeScreen() {
                   key={`reg-${chave}`}
                   onClick={() => setDoseSelecionada(item)}
                   className={recemRegistrado ? 'dose-entrando-registrado' : ''}
-                  style={{ ...estilos.doseCard, ...estilos.doseCardTomado }}
+                  style={{ ...estilos.doseCard, ...(item.pulada ? estilos.doseCardPulada : estilos.doseCardTomado) }}
                 >
                   <div style={estilos.doseIcone}>
                     <Pill size={18} color={CORES.primaria} strokeWidth={2.2} />
@@ -618,12 +754,14 @@ export default function HomeScreen() {
                   <div style={{ flex: 1, textAlign: 'left' }}>
                     <div style={estilos.doseNome}>{item.remedio.nome}</div>
                     <div style={estilos.doseDetalhe}>
-                      {formatarQuantidade(item.remedio.quantidadePorDose)} {unidadeTexto} · agendado {item.horario}
+                      {item.pulada
+                        ? `Pulada · ${item.horario}${item.motivo ? ` · ${item.motivo}` : ''}`
+                        : `${formatarQuantidade(item.remedio.quantidadePorDose)} ${unidadeTexto} · agendado ${item.horario}`}
                     </div>
                   </div>
                   <div style={estilos.horaRegistrada}>{formatarHoraDeTimestamp(item.tomadoEm)}</div>
-                  <div style={{ ...estilos.doseStatus, ...estilos.doseStatusTomado }}>
-                    <Check size={16} strokeWidth={3} color="#fff" />
+                  <div style={{ ...estilos.doseStatus, ...(item.pulada ? estilos.doseStatusPulada : estilos.doseStatusTomado) }}>
+                    {item.pulada ? <SkipForward size={14} strokeWidth={3} color="#fff" /> : <Check size={16} strokeWidth={3} color="#fff" />}
                   </div>
                 </button>
               );
@@ -641,6 +779,13 @@ export default function HomeScreen() {
       <button onClick={() => navigate('/novo')} style={estilos.botaoAdicionar}>
         <Plus size={28} strokeWidth={2.5} color="#fff" />
       </button>
+
+      <PularDoseModal
+        item={doseParaPular}
+        CORES={CORES}
+        aoFechar={() => setDoseParaPular(null)}
+        aoConfirmar={confirmarPulo}
+      />
 
       <DoseDetalheModal
         item={doseSelecionada}
@@ -910,11 +1055,31 @@ function criarEstilos(CORES) {
     vazioContainer: { display: 'flex', flexDirection: 'column', alignItems: 'center', marginTop: 30 },
     mascoteVazio: { width: 220, height: 220, objectFit: 'contain', marginBottom: 12 },
     vazioTexto: { color: CORES.textoSecundario, textAlign: 'center' },
+    horarioLinha: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
+    botaoTomeiTodos: {
+      display: 'flex', alignItems: 'center', gap: 5,
+      backgroundColor: CORES.primariaClara, color: CORES.primariaEscura,
+      border: 'none', borderRadius: RAIO.pill, padding: '6px 12px', fontSize: 13, fontWeight: 700,
+    },
+    botaoPular: {
+      width: 54, flexShrink: 0, border: 'none', borderRadius: RAIO.medio,
+      backgroundColor: CORES.fundoCard, color: CORES.textoSecundario, boxShadow: SOMBRA.card,
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2,
+    },
+    botaoTomeiAgora: {
+      backgroundColor: CORES.primaria, color: '#fff', border: 'none',
+      borderRadius: RAIO.pill, padding: '9px 14px', fontSize: 13, fontWeight: 700, flexShrink: 0,
+    },
+    linkDesfazer: {
+      display: 'flex', alignItems: 'center', gap: 4, alignSelf: 'flex-end', marginTop: 6,
+      background: 'none', border: 'none', color: CORES.textoSecundario, fontSize: 12, fontWeight: 600,
+    },
+    doseCardPulada: { backgroundColor: CORES.fundoCard, opacity: 0.85 },
+    doseStatusPulada: { backgroundColor: CORES.textoSecundario, border: 'none' },
     horarioTitulo: {
       fontSize: 18,
       fontWeight: 700,
       color: CORES.textoPrincipal,
-      marginBottom: 8,
       paddingLeft: 2,
     },
     registradoTitulo: {

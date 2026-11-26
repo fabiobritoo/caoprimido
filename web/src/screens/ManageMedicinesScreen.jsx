@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Pill, Clock, Package, Tag, Archive, ArchiveRestore, X } from 'lucide-react';
-import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo, obterRegistros, doseTomada } from '../utils/storage.js';
+import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo, obterRegistros, doseResolvida } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { formatarPreco, formatarDataCurtaBR, somarDias, rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, estoqueEmAlerta, estoqueInformado } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
@@ -48,7 +48,7 @@ export default function ManageMedicinesScreen() {
     // (termina ontem). Se alguma já foi tomada, fica registrado hoje, mas as
     // doses que ainda não chegaram (depois de agora) são removidas.
     const registros = await obterRegistros();
-    const tomouHoje = (remedio.horarios || []).some((h) => doseTomada(registros, remedio.id, HOJE, h));
+    const tomouHoje = (remedio.horarios || []).some((h) => doseResolvida(registros, remedio.id, HOJE, h));
     const agora = new Date();
     const horaAgora = `${String(agora.getHours()).padStart(2, '0')}:${String(agora.getMinutes()).padStart(2, '0')}`;
     await atualizarRemedio(remedio.id, {

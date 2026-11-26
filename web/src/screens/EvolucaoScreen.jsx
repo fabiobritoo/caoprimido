@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrendingUp, Flame, Award, Percent, X, Check } from 'lucide-react';
-import { listarRemedios, obterRegistros, doseTomada } from '../utils/storage.js';
+import { listarRemedios, obterRegistros, doseTomada, dosePulada } from '../utils/storage.js';
 import {
   calcularMapaCalor,
   calcularAdesaoGeral,
@@ -94,6 +94,7 @@ export default function EvolucaoScreen() {
       nome: d.nome,
       horario: d.horario,
       tomado: doseTomada(registros, d.remedioId, dataStr, d.horario),
+      pulada: dosePulada(registros, d.remedioId, dataStr, d.horario),
     }));
     itens.sort((a, b) => a.horario.localeCompare(b.horario));
     return itens;
@@ -230,7 +231,7 @@ export default function EvolucaoScreen() {
                   <div
                     style={{
                       ...estilos.bolinhaDetalhe,
-                      backgroundColor: item.tomado ? CORES.sucessoBadge : CORES.perigo,
+                      backgroundColor: item.pulada ? CORES.textoSecundario : item.tomado ? CORES.sucessoBadge : CORES.perigo,
                     }}
                   >
                     {item.tomado && <Check size={12} strokeWidth={3} color="#fff" />}
@@ -240,10 +241,10 @@ export default function EvolucaoScreen() {
                   <span
                     style={{
                       ...estilos.statusDetalhe,
-                      color: item.tomado ? CORES.sucessoTexto : CORES.perigoTexto,
+                      color: item.pulada ? CORES.textoSecundario : item.tomado ? CORES.sucessoTexto : CORES.perigoTexto,
                     }}
                   >
-                    {item.tomado ? 'Tomado' : 'Não tomado'}
+                    {item.pulada ? 'Pulada' : item.tomado ? 'Tomado' : 'Não tomado'}
                   </span>
                 </div>
               ))

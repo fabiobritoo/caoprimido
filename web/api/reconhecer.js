@@ -30,7 +30,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { deviceId, remedioId, dia, horario, desfazer } = req.body;
+    const { deviceId, remedioId, dia, horario, desfazer, pulada } = req.body;
     if (!deviceId || !remedioId || !dia || !horario) {
       return res.status(400).json({ erro: 'Faltam dados obrigatórios' });
     }
@@ -45,6 +45,9 @@ export default async function handler(req, res) {
     }
 
     await kv.set(`reconhecido:${chaveBase}`, true, { ex: 172800 }); // vale por 2 dias, depois some sozinho
+
+    // dose pulada de propósito: só para os lembretes, sem mensagem de "tomou" pro cuidador
+    if (pulada) return res.status(200).json({ ok: true });
 
     // se o cuidador tinha sido avisado (dose ficou atrasada), manda uma
     // segunda mensagem tranquilizando que foi tomada agora
