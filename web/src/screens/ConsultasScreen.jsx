@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Pencil, CalendarClock, MapPin, User, X } from 'lucide-react';
 import { listarConsultas, adicionarConsulta, atualizarConsulta, removerConsulta } from '../utils/consultas.js';
+import { listarRemedios, obterIdDispositivo } from '../utils/storage.js';
+import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
 import { formatarData, dataHoje, formatarDataBR } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
@@ -60,14 +62,21 @@ export default function ConsultasScreen() {
     };
     if (idEditando) await atualizarConsulta(idEditando, dados);
     else await adicionarConsulta(dados);
+    sincronizarComServidor();
     limpar();
     setFormularioAberto(false);
     await carregar();
   }
 
+  // manda a lista de consultas pro servidor (usada só no aviso da véspera)
+  async function sincronizarComServidor() {
+    sincronizarNotificacoesServidor(obterIdDispositivo(), await listarRemedios());
+  }
+
   async function excluir(id) {
     if (!confirm('Excluir essa consulta?')) return;
     setConsultas(await removerConsulta(id));
+    sincronizarComServidor();
   }
 
   const hojeAgora = new Date();

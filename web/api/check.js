@@ -15,6 +15,7 @@ import {
   dataFuturaCurta,
   descreverDose,
   doseValeNoDia,
+  avisosDeVespera,
 } from './_logica.js';
 
 const INTERVALO_REENVIO_MS = 3 * 60 * 1000;
@@ -447,6 +448,37 @@ export default async function handler(req, res) {
               deviceId,
               erroEnvio.message
             );
+          }
+        }
+      }
+
+      // ==========================================================
+      // 3b. AVISO DE VÉSPERA (1x por dia, entre 20:00 e 20:59)
+      //
+      // Consulta marcada pra amanhã e/ou dose que muda amanhã
+      // (troca de fase). A chave NX garante um único envio por dia,
+      // mesmo com várias instâncias rodando.
+      // ==========================================================
+      if (horaAtual >= '20:00' && horaAtual < '21:00') {
+        const linhasVespera = avisosDeVespera(remedios, dadosDispositivo.consultas, hoje);
+        if (linhasVespera.length > 0) {
+          const reservouVespera = await kv.set(`avisoVespera:${deviceId}:${hoje}`, 1, { nx: true, ex: 172800 });
+          if (reservouVespera) {
+            try {
+              await webpush.sendNotification(
+                subscription,
+                JSON.stringify({
+                  tipo: 'vespera',
+                  titulo: '🐶 Cãoprimido: não esqueça de amanhã',
+                  corpo: linhasVespera.join('\n'),
+                  dia: hoje,
+                }),
+                { TTL: TTL_PUSH_ESTOQUE_SEGUNDOS }
+              );
+              notificacoesEnviadas++;
+            } catch (erroVespera) {
+              console.error('Falha no aviso de véspera para', deviceId, erroVespera.message);
+            }
           }
         }
       }

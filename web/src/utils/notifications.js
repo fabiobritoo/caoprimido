@@ -49,10 +49,14 @@ export async function sincronizarNotificacoesServidor(deviceId, remedios, config
     const { obterPerfil } = await import('./perfil.js');
     const perfil = await obterPerfil();
 
+    // só o essencial das consultas (pro aviso de véspera) — nada de anotações
+    const { listarConsultas } = await import('./consultas.js');
+    const consultas = (await listarConsultas()).map((c) => ({ id: c.id, data: c.data, hora: c.hora || null, medico: c.medico, local: c.local || null }));
+
     await fetch('/api/subscribe', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ deviceId, subscription, remedios, configuracoes, perfil }),
+      body: JSON.stringify({ deviceId, subscription, remedios, configuracoes, perfil, consultas }),
     });
   } catch (e) {
     console.error('Falha ao sincronizar notificações com o servidor', e);

@@ -105,3 +105,16 @@ describe('frequência', () => {
     }
   });
 });
+
+describe('avisos de véspera', () => {
+  const consultas = [{ id: '1', data: '2026-11-27', hora: '09:30', medico: 'Dra. Ana', local: 'Clínica X' }];
+  it('avisa consulta de amanhã e troca de fase de amanhã', () => {
+    // mounjaro: fase 1 vai de 01/11 a 14/11, troca na 15/11
+    const linhas = s.avisosDeVespera([{ ...mounjaro, nome: 'Mounjaro', ativo: true, frequencia: { tipo: 'diaria' } }], consultas, '2026-11-14');
+    expect(linhas.some((l) => l.includes('amanhã a dose muda de 0,25 para 0,5'))).toBe(true);
+    expect(s.avisosDeVespera([], [{ ...consultas[0], data: '2026-11-15' }], '2026-11-14')[0]).toContain('Dra. Ana');
+  });
+  it('não avisa quando nada muda amanhã', () => {
+    expect(s.avisosDeVespera([{ ...mounjaro, nome: 'M', ativo: true, frequencia: { tipo: 'diaria' } }], consultas, '2026-11-05')).toEqual([]);
+  });
+});

@@ -246,3 +246,37 @@ export function dataFuturaCurta(hojeStr, dias) {
   d.setDate(d.getDate() + dias);
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+// ---- Avisos de véspera (o servidor manda ~20h, no horário do Brasil) ----
+
+function diaSeguinte(dataStr) {
+  const d = new Date(`${dataStr}T12:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+
+// Devolve as linhas do aviso de amanhã: consultas e remédios cuja dose muda amanhã
+export function avisosDeVespera(remedios, consultas, hoje) {
+  const amanha = diaSeguinte(hoje);
+  const linhas = [];
+
+  for (const c of consultas || []) {
+    if (c.data !== amanha) continue;
+    const onde = c.local ? ` — ${c.local}` : '';
+    linhas.push(`🩺 Consulta amanhã${c.hora ? ` às ${c.hora}` : ''}: ${c.medico}${onde}`);
+  }
+
+  for (const remedio of remedios || []) {
+    if (!remedioEstaAtivo(remedio, hoje)) continue;
+    if (!remedio.fases || remedio.fases.length < 2) continue;
+    if (!remedioAplicavelNoDia(remedio.frequencia, amanha, remedio.dataInicio, remedio.dataTermino)) continue;
+    const doseHoje = doseDoDia(remedio, hoje);
+    const doseAmanha = doseDoDia(remedio, amanha);
+    if (doseHoje === doseAmanha) continue;
+    linhas.push(
+      `📈 ${remedio.nome}: amanhã a dose muda de ${formatarQuantidade(doseHoje)} para ${formatarQuantidade(doseAmanha)} ${rotuloUnidade(remedio.unidade)}`
+    );
+  }
+
+  return linhas;
+}

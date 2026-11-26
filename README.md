@@ -205,3 +205,15 @@ Pra tudo ficar igual em todas as telas, os formatos e cálculos ficam num lugar 
 - Restaurar num celular novo: Ajustes › Dados e backup › Restaurar com o código.
 - Testes: `npm test` (lógica compartilhada cliente/servidor e backup).
 - A função `api/desreconhecer.js` foi incorporada a `api/reconhecer.js` (`desfazer: true`) pra manter o limite de 12 funções da Vercel Hobby.
+
+
+## Dose pulada, "tomei todos" e remédio "só quando precisar" (1.52.0)
+
+- Dose pulada: `registros[chave] = { pulada: true, motivo, tomadoEm }`. `doseTomada` é falso, `doseResolvida` é verdadeiro. Não desconta estoque, não pesa na adesão e não derruba a sequência.
+- `frequencia.tipo = 'sob_demanda'`: sem horários, nunca entra na agenda nem nos lembretes. Cada uso grava a chave `id|dia|prn-<timestamp>` e desconta estoque.
+
+## Aviso de véspera (1.53.0)
+
+- O app manda ao servidor só `{id, data, hora, medico, local}` das consultas (no `/api/subscribe`).
+- `api/check.js` envia, entre 20:00 e 20:59 (Brasil), um push `tipo: 'vespera'` com a consulta de amanhã e/ou a troca de fase de dose de amanhã (`avisosDeVespera` em `_logica.js`). A chave `avisoVespera:<id>:<dia>` (NX) garante um envio por dia.
+- Isolamento entre aparelhos: tudo no servidor é indexado por `deviceId` aleatório (16 bytes de `crypto`) ou por hash do código de recuperação. Nenhum endpoint lista dispositivos; o único cruzamento é o cuidador do Telegram, que é opt-in.

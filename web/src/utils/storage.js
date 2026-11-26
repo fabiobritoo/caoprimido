@@ -8,7 +8,10 @@ const CHAVE_DISPOSITIVO = '@caoprimido:dispositivoId';
 export function obterIdDispositivo() {
   let id = localStorage.getItem(CHAVE_DISPOSITIVO);
   if (!id) {
-    id = 'dev_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    // id imprevisível (é ele que separa um celular do outro no servidor)
+    const bytes = new Uint8Array(16);
+    (globalThis.crypto || window.crypto).getRandomValues(bytes);
+    id = 'dev_' + Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
     localStorage.setItem(CHAVE_DISPOSITIVO, id);
   }
   return id;

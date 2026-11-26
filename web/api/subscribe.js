@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { deviceId, subscription, remedios, configuracoes, perfil } = req.body;
+    const { deviceId, subscription, remedios, configuracoes, perfil, consultas } = req.body;
 
     if (!deviceId || !subscription) {
       return res.status(400).json({ erro: 'Faltam dados obrigatórios' });
@@ -20,6 +20,7 @@ export default async function handler(req, res) {
       remedios: remedios || [],
       configuracoes: configuracoes || registroAnterior?.configuracoes || null,
       perfil: perfil || registroAnterior?.perfil || null,
+      consultas: Array.isArray(consultas) ? consultas.slice(0, 200) : registroAnterior?.consultas || [],
       atualizadoEm: Date.now(),
     });
 

@@ -59,7 +59,8 @@ self.addEventListener('push', (evento) => {
     // mantém o padrão se não vier JSON
   }
 
-  const ehEstoqueBaixo = dados.tipo === 'estoque_baixo';
+  const ehVespera = dados.tipo === 'vespera';
+  const ehEstoqueBaixo = dados.tipo === 'estoque_baixo' || ehVespera;
   const ehTeste = dados.tipo === 'teste';
 
   evento.waitUntil(
@@ -71,7 +72,9 @@ self.addEventListener('push', (evento) => {
         badge: '/icon-192.png',
         vibrate: ehEstoqueBaixo ? [200] : [300, 150, 300, 150, 300, 150, 300],
         requireInteraction: !ehEstoqueBaixo && !ehTeste,
-        tag: ehEstoqueBaixo
+        tag: ehVespera
+          ? `vespera-${dados.dia}`
+          : ehEstoqueBaixo
           ? `estoque-${dados.remedioId}`
           : `remedio-${dados.remedioId}-${dados.dia}-${dados.horario}-${dados.tentativa || Date.now()}`,
         data: dados,
@@ -188,6 +191,11 @@ self.addEventListener('notificationclick', (evento) => {
   evento.notification.close();
   const dados = evento.notification.data || {};
 
+  if (dados.tipo === 'vespera') {
+    evento.waitUntil(self.clients.openWindow('/'));
+    return;
+  }
+
   if (dados.tipo === 'estoque_baixo') {
     evento.waitUntil(abrirTelaMeusRemedios());
     return;
@@ -211,7 +219,7 @@ self.addEventListener('notificationclick', (evento) => {
 // Usuário limpou/dispensou a notificação sem tocar (ex: "limpar tudo")
 self.addEventListener('notificationclose', (evento) => {
   const dados = evento.notification.data || {};
-  if (dados.tipo === 'estoque_baixo' || dados.tipo === 'teste') return; // dispensar um aviso de estoque não deve abrir o app sozinho
+  if (dados.tipo === 'estoque_baixo' || dados.tipo === 'vespera' || dados.tipo === 'teste') return; // dispensar um aviso de estoque não deve abrir o app sozinho
   // só tenta abrir a tela se não foi um botão de ação que já resolveu o problema
   if (!evento.action) {
     evento.waitUntil(abrirTelaAlarme(dados));
