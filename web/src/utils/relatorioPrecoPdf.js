@@ -168,8 +168,8 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = f
     let custoDiarioEstimado = null;
     if (maisRecente.quantidade > 0) {
       const precoPorUnidade = maisRecente.preco / maisRecente.quantidade;
-      const mediaDosesPorDia = mediaDosesPorDia(remedio);
-      custoDiarioEstimado = precoPorUnidade * doseDoDia(remedio, formatarData(new Date())) * mediaDosesPorDia;
+      const dosesPorDia = mediaDosesPorDia(remedio);
+      custoDiarioEstimado = precoPorUnidade * doseDoDia(remedio, formatarData(new Date())) * dosesPorDia;
     }
 
     const locais = [...new Set(compras.filter((c) => c.local).map((c) => c.local))];
