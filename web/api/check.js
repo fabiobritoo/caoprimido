@@ -10,7 +10,9 @@ import {
   nomeResumido,
   rotuloUnidade,
   formatarQuantidade,
-  estoqueBaixo,
+  estoqueEmAlerta,
+  diasRestantesDeEstoque,
+  dataFuturaCurta,
   descreverDose,
   doseValeNoDia,
 } from './_logica.js';
@@ -384,7 +386,7 @@ export default async function handler(req, res) {
         ? remedios.filter(
             (remedio) =>
               remedioEstaAtivo(remedio, hoje) &&
-              estoqueBaixo(remedio)
+              estoqueEmAlerta(remedio, hoje)
           )
         : [];
 
@@ -422,7 +424,11 @@ export default async function handler(req, res) {
                 titulo:
                   `📦 Estoque baixo: ${remedio.nome}`,
                 corpo:
-                  `Restam ${remedio.quantidadeAtual} ${unidadeTexto}. Hora de comprar mais.`,
+                  `Restam ${formatarQuantidade(remedio.quantidadeAtual)} ${unidadeTexto}${
+                    diasRestantesDeEstoque(remedio, hoje) != null
+                      ? ` (dura ~${diasRestantesDeEstoque(remedio, hoje)} dia(s), até ${dataFuturaCurta(hoje, diasRestantesDeEstoque(remedio, hoje))})`
+                      : ''
+                  }. Hora de comprar mais.`,
                 remedioId: remedio.id,
               }),
               { TTL: TTL_PUSH_ESTOQUE_SEGUNDOS }

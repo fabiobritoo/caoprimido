@@ -2,6 +2,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { listarRemedios, obterRegistros } from './storage.js';
 import { obterTodasCompras } from './compras.js';
+import { entregarPdf } from './pdfSaida.js';
 import { rotuloUnidade, remedioEstaAtivo, formatarData, doseDoDia, formatarQuantidade, formatarDataBR, formatarPreco, formatarVariacao, mediaDosesPorDia } from './constantes.js';
 
 function obterPaletaPdf(modoBob) {
@@ -82,18 +83,8 @@ function carregarImagemComoBase64(url) {
   });
 }
 
-function abrirOuSalvarPdf(doc, janela, nomeArquivo) {
-  doc.setProperties({ title: nomeArquivo.replace('.pdf', '') });
-  const blobUrl = doc.output('bloburl');
-  if (janela) {
-    janela.location.href = blobUrl;
-  } else {
-    doc.save(nomeArquivo);
-  }
-}
-
-export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
-  const janela = window.open('', '_blank');
+export async function gerarRelatorioPrecoPdf({ modoBob = false, compartilhar = false } = {}) {
+  const janela = compartilhar ? null : window.open('', '_blank');
 
   const paleta = obterPaletaPdf(modoBob);
   const { PRIMARIA, PRIMARIA_ESCURA, DOURADO, CREME, TEXTO_PRINCIPAL, TEXTO_SECUNDARIO, BRANCO, SUCESSO, PERIGO } =
@@ -154,7 +145,7 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.text('Nenhum registro de preço/compra cadastrado ainda.', larguraPagina / 2, y + 10, {
       align: 'center',
     });
-    abrirOuSalvarPdf(doc, janela, 'caoprimido-relatorio-precos.pdf');
+    await entregarPdf(doc, janela, 'caoprimido-relatorio-precos.pdf', compartilhar);
     return;
   }
 
@@ -385,5 +376,5 @@ export async function gerarRelatorioPrecoPdf({ modoBob = false } = {}) {
     doc.text(`Página ${i} de ${totalPaginas}`, 14, alturaPagina - 6);
   }
 
-  abrirOuSalvarPdf(doc, janela, 'caoprimido-relatorio-precos.pdf');
+  await entregarPdf(doc, janela, 'caoprimido-relatorio-precos.pdf', compartilhar);
 }

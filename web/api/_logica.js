@@ -231,6 +231,14 @@ export function diasRestantesDeEstoque(remedio, hojeStr) {
   return Math.floor(Number(remedio.quantidadeAtual) / consumoPorDia);
 }
 
+// Avisar quando o estoque cobre poucos dias OU está no mínimo definido
+export const DIAS_ALERTA_ESTOQUE = 7;
+export function estoqueEmAlerta(remedio, hojeStr) {
+  if (estoqueBaixo(remedio)) return true;
+  const dias = diasRestantesDeEstoque(remedio, hojeStr);
+  return dias !== null && dias <= DIAS_ALERTA_ESTOQUE;
+}
+
 // "YYYY-MM-DD" + N dias -> "DD/MM"
 export function dataFuturaCurta(hojeStr, dias) {
   const d = new Date(`${hojeStr}T12:00:00`);

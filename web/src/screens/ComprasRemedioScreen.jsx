@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Plus, Trash2, Pencil, Tag, MapPin, X, TrendingUp, TrendingDown } from 'lucide-react';
 import { listarComprasDoRemedio, adicionarCompra, atualizarCompra, removerCompra } from '../utils/compras.js';
-import { listarRemedios } from '../utils/storage.js';
-import { formatarData, dataHoje, formatarDataBR, formatarPreco, formatarVariacao, formatarNumero } from '../utils/constantes.js';
+import { listarRemedios, atualizarRemedio, obterIdDispositivo } from '../utils/storage.js';
+import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
+import { formatarQuantidade, formatarData, dataHoje, formatarDataBR, formatarPreco, formatarVariacao, formatarNumero } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -28,11 +29,14 @@ export default function ComprasRemedioScreen() {
   const [local, setLocal] = useState('');
   const [quantidade, setQuantidade] = useState('');
   const [anotacoes, setAnotacoes] = useState('');
+  const [remedio, setRemedio] = useState(null);
+  const [somarEstoque, setSomarEstoque] = useState(true);
 
   const carregar = async () => {
     const remedios = await listarRemedios();
     const remedio = remedios.find((r) => r.id === remedioId);
     setNomeRemedio(remedio?.nome || 'Remédio');
+    setRemedio(remedio || null);
     setCompras(await listarComprasDoRemedio(remedioId));
     setCarregando(false);
   };
@@ -78,6 +82,14 @@ export default function ComprasRemedioScreen() {
       setCompras(await atualizarCompra(idEditando, dados));
     } else {
       setCompras(await adicionarCompra(dados));
+      // compra com quantidade: soma ao estoque (se a pessoa quiser), pra não
+      // precisar ir editar o remédio depois
+      if (somarEstoque && dados.quantidade > 0 && remedio) {
+        const novoEstoque = Math.round(((Number(remedio.quantidadeAtual) || 0) + dados.quantidade) * 1000) / 1000;
+        const lista = await atualizarRemedio(remedioId, { quantidadeAtual: novoEstoque });
+        setRemedio({ ...remedio, quantidadeAtual: novoEstoque });
+        await sincronizarNotificacoesServidor(obterIdDispositivo(), lista);
+      }
     }
     limpar();
     setFormularioAberto(false);
@@ -161,6 +173,16 @@ export default function ComprasRemedioScreen() {
               onChange={(e) => setQuantidade(e.target.value)}
               style={estilos.input}
             />
+
+            {!idEditando && remedio && Number(quantidade) > 0 && (
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12, fontSize: 14, color: CORES.textoPrincipal }}>
+                <input type="checkbox" checked={somarEstoque} onChange={(e) => setSomarEstoque(e.target.checked)} />
+                <span>
+                  Somar ao estoque: {formatarQuantidade(Number(remedio.quantidadeAtual) || 0)} →{' '}
+                  <strong>{formatarQuantidade((Number(remedio.quantidadeAtual) || 0) + Number(quantidade))}</strong>
+                </span>
+              </label>
+            )}
 
             <label style={estilos.label}>Anotações (opcional)</label>
             <textarea

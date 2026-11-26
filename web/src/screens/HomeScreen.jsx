@@ -12,7 +12,7 @@ import {
   alternarDose,
   obterIdDispositivo,
 } from '../utils/storage.js';
-import { rotuloUnidade, diasDaSemanaContendo, remedioAplicavelNoDia, remedioNoDia, formatarQuantidade, formatarData, formatarDataPorExtenso, somarDias, dataHoje, doseValeNoDia, formatarHoraDeTimestamp, formatarDataCurtaBR, estoqueBaixo, dataFuturaCurta } from '../utils/constantes.js';
+import { rotuloUnidade, diasDaSemanaContendo, remedioAplicavelNoDia, remedioNoDia, formatarQuantidade, formatarData, formatarDataPorExtenso, somarDias, dataHoje, doseValeNoDia, formatarHoraDeTimestamp, formatarDataCurtaBR, estoqueEmAlerta, descreverDuracaoEstoque, dataFuturaCurta } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -25,6 +25,7 @@ import { estaInstalado } from '../utils/instalacao.js';
 import { atualizarSeloLocal } from '../utils/selo.js';
 import { dosesParaStatus } from '../utils/evolucao.js';
 import { backupNuvemAtivo, codigoJaAnotado } from '../utils/backupNuvem.js';
+import { pedirPermissaoNotificacao, sincronizarNotificacoesServidor } from '../utils/notifications.js';
 
 const LIMIAR_SWIPE = 45; // pixels mínimos de arrasto pra contar como swipe
 
@@ -36,6 +37,8 @@ export default function HomeScreen() {
   const { CORES, pastaMascote } = useTema();
   const estilos = criarEstilos(CORES);
   const [remedios, setRemedios] = useState([]);
+  const [carregou, setCarregou] = useState(false);
+  const [notifLiberada, setNotifLiberada] = useState(typeof Notification !== 'undefined' && Notification.permission === 'granted');
   const [registros, setRegistros] = useState({});
   const [proximaConsulta, setProximaConsulta] = useState(null);
   const [diaSelecionado, setDiaSelecionado] = useState(HOJE);
@@ -67,6 +70,7 @@ export default function HomeScreen() {
     const lista = await listarRemedios();
     const regs = await obterRegistros();
     setRemedios(lista);
+    setCarregou(true);
     setRegistros(regs);
     setSequenciaDias(calcularSequenciaDias(lista, regs));
     atualizarSeloLocal(lista, regs);
@@ -272,7 +276,7 @@ export default function HomeScreen() {
       // se essa confirmação deixou o estoque no limite (ou abaixo), avisa na
       // hora — não depende de notificação push, que só repete a cada 3 dias
       const remedioAtualizado = resultado.remedios.find((r) => r.id === item.remedio.id);
-      if (remedioAtualizado && estoqueBaixo(remedioAtualizado)) {
+      if (remedioAtualizado && estoqueEmAlerta(remedioAtualizado, HOJE)) {
         setAvisoEstoque(remedioAtualizado);
       }
 
@@ -497,7 +501,43 @@ export default function HomeScreen() {
           </div>
         )}
 
-        {dosesDoDia.length === 0 && (
+        {carregou && remedios.length === 0 && (
+          <div style={estilos.primeiroUso}>
+            <img src={`/${pastaMascote}/mascote-hora-remedio.png`} alt="" style={{ width: 110, margin: '0 auto 6px', display: 'block' }} />
+            <div style={{ fontSize: 18, fontWeight: 700, color: CORES.textoPrincipal, textAlign: 'center' }}>Vamos começar?</div>
+            <div style={{ fontSize: 13.5, color: CORES.textoSecundario, textAlign: 'center', margin: '4px 0 14px' }}>
+              Três passos rápidos pra o Cãoprimido cuidar dos seus horários.
+            </div>
+            <div style={estilos.passoPrimeiroUso}>
+              <span style={estilos.numeroPasso}>1</span>
+              <span style={{ flex: 1 }}>Cadastre o primeiro remédio</span>
+              <button onClick={() => navigate('/novo')} style={estilos.botaoPasso}>Cadastrar</button>
+            </div>
+            <div style={estilos.passoPrimeiroUso}>
+              <span style={estilos.numeroPasso}>{notifLiberada ? '✓' : '2'}</span>
+              <span style={{ flex: 1 }}>Ative as notificações (o alarme na hora certa)</span>
+              {!notifLiberada && (
+                <button
+                  onClick={async () => {
+                    const ok = await pedirPermissaoNotificacao();
+                    setNotifLiberada(!!ok);
+                    if (ok) sincronizarNotificacoesServidor(obterIdDispositivo(), remedios);
+                  }}
+                  style={estilos.botaoPasso}
+                >
+                  Ativar
+                </button>
+              )}
+            </div>
+            <div style={estilos.passoPrimeiroUso}>
+              <span style={estilos.numeroPasso}>{jaInstalado ? '✓' : '3'}</span>
+              <span style={{ flex: 1 }}>Instale o app na tela inicial</span>
+              {!jaInstalado && <button onClick={instalarAgora} style={estilos.botaoPasso}>Instalar</button>}
+            </div>
+          </div>
+        )}
+
+        {carregou && remedios.length > 0 && dosesDoDia.length === 0 && (
           <div style={estilos.vazioContainer}>
             <img src={`/${pastaMascote}/mascote-dormindo.png`} alt="" style={estilos.mascoteVazio} />
             <div style={estilos.vazioTexto}>Nenhum remédio agendado para esse dia.</div>
@@ -633,7 +673,7 @@ export default function HomeScreen() {
               <strong>
                 {formatarQuantidade(avisoEstoque.quantidadeAtual)} {rotuloUnidade(avisoEstoque.unidade).toLowerCase()}
               </strong>{' '}
-              restantes. Bom já pensar em comprar mais.
+              restantes{descreverDuracaoEstoque(avisoEstoque, HOJE) ? ` — ${descreverDuracaoEstoque(avisoEstoque, HOJE)}` : ''}. Bom já pensar em comprar mais.
             </div>
             <div style={estilos.botoesAvisoEstoque}>
               <button
@@ -787,6 +827,43 @@ function criarEstilos(CORES) {
       padding: '10px 0',
       minHeight: 40,
       boxSizing: 'border-box',
+    },
+    primeiroUso: {
+      backgroundColor: CORES.fundoCard,
+      borderRadius: RAIO.medio,
+      boxShadow: SOMBRA.card,
+      padding: 18,
+    },
+    passoPrimeiroUso: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
+      padding: '10px 0',
+      borderTop: `1px solid ${CORES.borda}`,
+      fontSize: 14,
+      color: CORES.textoPrincipal,
+    },
+    numeroPasso: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: CORES.primariaClara,
+      color: CORES.primariaEscura,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontWeight: 700,
+      fontSize: 13,
+      flexShrink: 0,
+    },
+    botaoPasso: {
+      backgroundColor: CORES.primaria,
+      color: '#fff',
+      border: 'none',
+      borderRadius: RAIO.pill,
+      padding: '7px 14px',
+      fontSize: 13,
+      fontWeight: 700,
     },
     avisos: {
       margin: '12px 16px 0',

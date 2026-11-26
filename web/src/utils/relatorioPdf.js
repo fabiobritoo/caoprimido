@@ -5,6 +5,7 @@ import { listarRegistrosSaude } from './saude.js';
 import { calcularAdesaoPorRemedio, calcularAdesaoGeral } from './evolucao.js';
 import { calcularSequenciaDias } from './streak.js';
 import { obterPerfil } from './perfil.js';
+import { entregarPdf } from './pdfSaida.js';
 import { rotuloUnidade, descreverFrequencia, remedioEstaAtivo, formatarData, doseDoDia, formatarQuantidade, formatarDataBR } from './constantes.js';
 
 // Paleta da marca (mesmos tons do app, em RGB pro jsPDF)
@@ -74,11 +75,11 @@ function carregarImagemComoBase64(url) {
   });
 }
 
-export async function gerarRelatorioPdf({ modoBob = false } = {}) {
+export async function gerarRelatorioPdf({ modoBob = false, compartilhar = false } = {}) {
   // abre a aba já aqui, ANTES de qualquer await — se abrir só depois de
   // esperar imagens/dados carregarem, o Safari/iOS bloqueia como popup
   // indesejado por não estar mais "dentro" do clique do usuário
-  const janela = window.open('', '_blank');
+  const janela = compartilhar ? null : window.open('', '_blank');
 
   const paleta = obterPaletaPdf(modoBob);
   const ROSA = paleta.PRIMARIA;
@@ -344,13 +345,5 @@ export async function gerarRelatorioPdf({ modoBob = false } = {}) {
     doc.text(`Página ${i} de ${totalPaginas}`, 14, alturaPagina - 6);
   }
 
-  doc.setProperties({ title: 'caoprimido-relatorio' });
-  const blobUrl = doc.output('bloburl');
-
-  if (janela) {
-    janela.location.href = blobUrl;
-  } else {
-    // navegador bloqueou o popup mesmo assim — cai pro download tradicional
-    doc.save('caoprimido-relatorio.pdf');
-  }
+  await entregarPdf(doc, janela, 'caoprimido-relatorio.pdf', compartilhar);
 }

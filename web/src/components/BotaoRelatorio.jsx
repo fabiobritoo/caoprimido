@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FileDown, Tag } from 'lucide-react';
+import { FileDown, Tag, Share2 } from 'lucide-react';
 import { useTema } from '../utils/ThemeContext.jsx';
 import { criarBotaoSecundario } from '../utils/tema.js';
 
@@ -9,15 +9,15 @@ export default function BotaoRelatorio({ tipo, rotulo, style }) {
   const { CORES, modoBob } = useTema();
   const [gerando, setGerando] = useState(false);
 
-  async function gerar() {
+  async function gerar(compartilhar = false) {
     setGerando(true);
     try {
       if (tipo === 'preco') {
         const { gerarRelatorioPrecoPdf } = await import('../utils/relatorioPrecoPdf.js');
-        await gerarRelatorioPrecoPdf({ modoBob });
+        await gerarRelatorioPrecoPdf({ modoBob, compartilhar });
       } else {
         const { gerarRelatorioPdf } = await import('../utils/relatorioPdf.js');
-        await gerarRelatorioPdf({ modoBob });
+        await gerarRelatorioPdf({ modoBob, compartilhar });
       }
     } catch (e) {
       console.error('Erro ao gerar PDF', e);
@@ -27,10 +27,23 @@ export default function BotaoRelatorio({ tipo, rotulo, style }) {
   }
 
   const Icone = tipo === 'preco' ? Tag : FileDown;
+  const podeCompartilhar = typeof navigator !== 'undefined' && !!navigator.share && !!navigator.canShare;
   return (
-    <button onClick={gerar} disabled={gerando} style={{ ...criarBotaoSecundario(CORES), width: '100%', ...style }}>
-      <Icone size={16} strokeWidth={2.3} />
-      {gerando ? 'Gerando PDF...' : rotulo}
-    </button>
+    <div style={{ display: 'flex', gap: 8, ...style }}>
+      <button onClick={() => gerar(false)} disabled={gerando} style={{ ...criarBotaoSecundario(CORES), flex: 1 }}>
+        <Icone size={16} strokeWidth={2.3} />
+        {gerando ? 'Gerando PDF...' : rotulo}
+      </button>
+      {podeCompartilhar && (
+        <button
+          onClick={() => gerar(true)}
+          disabled={gerando}
+          aria-label="Compartilhar PDF"
+          style={{ ...criarBotaoSecundario(CORES), width: 52, padding: 0, flexShrink: 0 }}
+        >
+          <Share2 size={17} strokeWidth={2.3} />
+        </button>
+      )}
+    </div>
   );
 }

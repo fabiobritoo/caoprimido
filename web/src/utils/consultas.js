@@ -22,6 +22,12 @@ export async function adicionarConsulta(consulta) {
   return listarConsultas();
 }
 
+export async function atualizarConsulta(id, dados) {
+  const lista = await listarConsultas();
+  await salvarConsultas(lista.map((c) => (c.id === id ? { ...c, ...dados } : c)));
+  return listarConsultas();
+}
+
 export async function removerConsulta(id) {
   const lista = await listarConsultas();
   const novaLista = lista.filter((c) => c.id !== id);

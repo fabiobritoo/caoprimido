@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, CalendarClock, MapPin, User, X } from 'lucide-react';
-import { listarConsultas, adicionarConsulta, removerConsulta } from '../utils/consultas.js';
+import { Plus, Trash2, Pencil, CalendarClock, MapPin, User, X } from 'lucide-react';
+import { listarConsultas, adicionarConsulta, atualizarConsulta, removerConsulta } from '../utils/consultas.js';
 import { formatarData, dataHoje, formatarDataBR } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
@@ -19,6 +19,7 @@ export default function ConsultasScreen() {
   const [medico, setMedico] = useState('');
   const [local, setLocal] = useState('');
   const [anotacoes, setAnotacoes] = useState('');
+  const [idEditando, setIdEditando] = useState(null);
 
   const carregar = async () => setConsultas(await listarConsultas());
 
@@ -32,6 +33,17 @@ export default function ConsultasScreen() {
     setMedico('');
     setLocal('');
     setAnotacoes('');
+    setIdEditando(null);
+  }
+
+  function abrirParaEditar(c) {
+    setData(c.data);
+    setHora(c.hora || '');
+    setMedico(c.medico);
+    setLocal(c.local || '');
+    setAnotacoes(c.anotacoes || '');
+    setIdEditando(c.id);
+    setFormularioAberto(true);
   }
 
   async function salvar() {
@@ -39,13 +51,15 @@ export default function ConsultasScreen() {
       alert('Informe ao menos o nome do médico ou especialidade.');
       return;
     }
-    await adicionarConsulta({
+    const dados = {
       data,
       hora,
       medico: medico.trim(),
       local: local.trim() || null,
       anotacoes: anotacoes.trim() || null,
-    });
+    };
+    if (idEditando) await atualizarConsulta(idEditando, dados);
+    else await adicionarConsulta(dados);
     limpar();
     setFormularioAberto(false);
     await carregar();
@@ -74,9 +88,14 @@ export default function ConsultasScreen() {
               {formatarDataBR(c.data)} {c.hora && `às ${c.hora}`}
             </span>
           </div>
-          <button onClick={() => excluir(c.id)} style={estilos.botaoExcluir}>
-            <Trash2 size={15} />
-          </button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <button onClick={() => abrirParaEditar(c)} style={estilos.botaoExcluir} aria-label="Editar consulta">
+              <Pencil size={15} />
+            </button>
+            <button onClick={() => excluir(c.id)} style={estilos.botaoExcluir} aria-label="Excluir consulta">
+              <Trash2 size={15} />
+            </button>
+          </div>
         </div>
         <div style={estilos.linhaInfo}>
           <User size={13} color={CORES.textoSecundario} />
@@ -158,7 +177,7 @@ export default function ConsultasScreen() {
                 <X size={16} /> Cancelar
               </button>
               <button onClick={salvar} style={estilos.botaoSalvar}>
-                Salvar consulta
+                {idEditando ? 'Salvar alterações' : 'Salvar consulta'}
               </button>
             </div>
           </div>

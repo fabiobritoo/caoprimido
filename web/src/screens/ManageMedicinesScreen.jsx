@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Plus, Pencil, Trash2, Pill, Clock, Package, Tag, Archive, ArchiveRestore, X } from 'lucide-react';
 import { listarRemedios, atualizarRemedio, removerRemedio, obterIdDispositivo, obterRegistros, doseTomada } from '../utils/storage.js';
 import { sincronizarNotificacoesServidor } from '../utils/notifications.js';
-import { formatarPreco, formatarDataCurtaBR, somarDias, rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, diasRestantesDeEstoque, estoqueInformado } from '../utils/constantes.js';
+import { formatarPreco, formatarDataCurtaBR, somarDias, rotuloUnidade, descreverFrequencia, remedioEstaAtivo, remedioNoDia, formatarQuantidade, formatarData, dataHoje, formatarDataBR, estoqueBaixo, descreverDuracaoEstoque, estoqueEmAlerta, estoqueInformado } from '../utils/constantes.js';
 import { RAIO, SOMBRA } from '../utils/tema.js';
 import { useTema } from '../utils/ThemeContext.jsx';
 import CabecalhoTopo from '../components/CabecalhoTopo.jsx';
@@ -100,13 +100,12 @@ export default function ManageMedicinesScreen() {
           const doseHoje = remedioNoDia(item, HOJE);
           const fase = doseHoje.faseDoDia;
           const duracao = descreverDuracaoEstoque(item, HOJE);
-          const diasEstoque = diasRestantesDeEstoque(item, HOJE);
           // alerta: abaixo do mínimo definido, ou estoque pra 7 dias ou menos
           // compra mais recente: preço total e por unidade, pra ver o custo junto do estoque
           const ultimaCompra = compras
             .filter((c) => c.remedioId === item.id)
             .sort((a, b) => b.data.localeCompare(a.data))[0];
-          const alerta = estoqueBaixo(item) || (diasEstoque !== null && diasEstoque <= 7);
+          const alerta = estoqueEmAlerta(item, HOJE);
           return (
             <div key={item.id} style={estilos.card}>
               <div style={estilos.linhaConteudo}>
@@ -142,7 +141,7 @@ export default function ManageMedicinesScreen() {
                         ? `Estoque: ${formatarQuantidade(item.quantidadeAtual)} ${unidadeTexto}`
                         : 'Estoque não informado'}
                       {duracao ? ` · ${duracao}` : ''}
-                      {estoqueBaixo(item) && ' · baixo!'}
+                      {alerta && ' · acabando!'}
                     </span>
                   </div>
 

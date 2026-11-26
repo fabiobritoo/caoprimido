@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { listarRemedios } from '../utils/storage.js';
 import { Plus, Trash2, Pencil, Scale, HeartPulse, Activity, FileText, X } from 'lucide-react';
 import {
   listarRegistrosSaude,
@@ -6,7 +7,7 @@ import {
   removerRegistroSaude,
   atualizarRegistroSaude,
 } from '../utils/saude.js';
-import { formatarData, somarDias, dataHoje, formatarDataBR, formatarDataCurtaBR, formatarNumero, formatarVariacao } from '../utils/constantes.js';
+import { fasesDoRemedio, calcularFasesComDatas, formatarQuantidade, formatarData, somarDias, dataHoje, formatarDataBR, formatarDataCurtaBR, formatarNumero, formatarVariacao } from '../utils/constantes.js';
 import { RAIO, SOMBRA, criarBotaoPrimario } from '../utils/tema.js';
 
 const INICIO_DOS_TEMPOS = '1970-01-01'; // usado como "sem filtro de início", pra mostrar todo o histórico
@@ -30,7 +31,19 @@ export default function SaudeSecao({ CORES }) {
   const [frequencia, setFrequencia] = useState('');
   const [anotacoes, setAnotacoes] = useState('');
 
+  const [marcasDose, setMarcasDose] = useState([]);
+
   const carregar = async () => {
+    // início de cada fase de dose dos remédios com esquema escalonado: marcado no gráfico do peso
+    const remedios = await listarRemedios();
+    const marcas = [];
+    for (const r of remedios) {
+      if (!fasesDoRemedio(r).length || !r.dataInicio) continue;
+      calcularFasesComDatas(fasesDoRemedio(r), r.dataInicio).forEach((f) => {
+        marcas.push({ data: f.inicio, rotulo: `${r.nome.split(' ')[0]} ${formatarQuantidade(f.quantidadePorDose)}` });
+      });
+    }
+    setMarcasDose(marcas);
     setRegistros(await listarRegistrosSaude());
     setCarregando(false);
   };
@@ -152,7 +165,7 @@ export default function SaudeSecao({ CORES }) {
       </div>
 
       {pontosPeso.length >= 2 ? (
-        <GraficoPeso pontos={pontosPeso} CORES={CORES} />
+        <GraficoPeso pontos={pontosPeso} marcas={marcasDose} CORES={CORES} />
       ) : (
         <div style={estilos.semDadosPeriodo}>
           {registros.some((r) => r.peso != null)
@@ -302,7 +315,7 @@ export default function SaudeSecao({ CORES }) {
 }
 
 
-function GraficoPeso({ pontos, CORES }) {
+function GraficoPeso({ pontos, marcas = [], CORES }) {
   const largura = 320;
   const altura = 150;
   const padding = 24;
@@ -323,6 +336,13 @@ function GraficoPeso({ pontos, CORES }) {
   const indicesComRotulo = new Set();
   for (let i = 0; i < pontos.length; i += passo) indicesComRotulo.add(i);
   indicesComRotulo.add(pontos.length - 1);
+
+  // início de fases de dose que caem dentro do período mostrado: linha tracejada
+  // na posição do primeiro registro de peso a partir daquela data
+  const marcasNoGrafico = marcas
+    .filter((m) => m.data <= pontos[pontos.length - 1].data)
+    .map((m) => ({ ...m, indice: Math.max(0, pontos.findIndex((p) => p.data >= m.data)) }))
+    .filter((m, i, todas) => todas.findIndex((o) => o.indice === m.indice && o.rotulo === m.rotulo) === i);
 
   const pesoInicial = pontos[0].peso;
   const pesoFinal = pontos[pontos.length - 1].peso;
@@ -353,6 +373,12 @@ function GraficoPeso({ pontos, CORES }) {
           strokeLinejoin="round"
           strokeLinecap="round"
         />
+        {marcasNoGrafico.map((m, i) => (
+          <g key={`fase-${i}`}>
+            <line x1={coordX(m.indice)} x2={coordX(m.indice)} y1={14} y2={alturaLinha} stroke={CORES.atencao} strokeWidth="1.2" strokeDasharray="3 3" />
+            <text x={coordX(m.indice)} y={i % 2 === 0 ? 9 : 20} fontSize="8.5" fontWeight="700" fill={CORES.atencao} textAnchor="middle">{m.rotulo}</text>
+          </g>
+        ))}
         {pontos.map((p, i) => (
           <circle key={i} cx={coordX(i)} cy={coordY(p.peso)} r="3.5" fill={CORES.primaria} />
         ))}
@@ -373,6 +399,11 @@ function GraficoPeso({ pontos, CORES }) {
         )}
       </svg>
 
+      {marcasNoGrafico.length > 0 && (
+        <div style={{ fontSize: 11.5, color: CORES.textoSecundario, margin: '2px 0 8px' }}>
+          Linhas tracejadas: início de cada fase de dose.
+        </div>
+      )}
       {!semMudanca ? (
         <div
           style={{
